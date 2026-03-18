@@ -50,8 +50,39 @@ docker compose down -v
 docker compose up -d
 ```
 
-[![Coverage](https://img.shields.io/codecov/c/gh/ric3bas/portal-sso/main)](https://codecov.io/gh/ric3bas/portal-sso)
+# portal-sso
 
-   Para gerar cobertura local:
-   1. `dotnet test tests/sso-tests.csproj --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./coverage/`
-   2. Envie `coverage.opencover.xml` para o serviço (Codecov) via `bash <(curl -s https://codecov.io/bash)` ou uso do action.
+[![Build and Coverage](https://github.com/ric3bas/portal-sso/actions/workflows/coverage.yml/badge.svg)](https://github.com/ric3bas/portal-sso/actions/workflows/coverage.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/ric3bas/portal-sso/master?label=coverage)](https://app.codecov.io/gh/ric3bas/portal-sso)
+
+## Relatório de cobertura no GitHub
+
+Este repositório publica cobertura de testes automaticamente via **GitHub Actions** + **Codecov**.
+
+### Como funciona
+
+- O workflow está em `.github/workflows/coverage.yml`
+- A cada `push`/`pull request` na branch `master`:
+  - restaura os pacotes
+  - executa os testes do projeto `tests/sso-tests.csproj`
+  - gera o arquivo `coverage.cobertura.xml`
+  - envia a cobertura para o Codecov
+
+### Configuração no GitHub
+
+1. Acesse [Codecov](https://app.codecov.io/) e conecte o repositório `ric3bas/portal-sso`.
+2. Em **GitHub > Settings > Secrets and variables > Actions**, crie o secret:
+   - Nome: `CODECOV_TOKEN`
+   - Valor: token do projeto no Codecov
+
+> Para repositórios públicos, o token pode não ser obrigatório, mas manter o secret evita falhas de upload.
+
+### Execução local (opcional)
+
+```powershell
+dotnet test tests/sso-tests.csproj --configuration Release --collect:"XPlat Code Coverage" --results-directory ./TestResults
+```
+
+O relatório será gerado em:
+
+- `TestResults/<guid>/coverage.cobertura.xml`
