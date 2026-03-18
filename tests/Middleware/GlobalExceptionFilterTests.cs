@@ -1,0 +1,95 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Logging;
+using NSubstitute;
+using Portal.Dominio.Validations;
+using Portal.Middleware;
+
+namespace sso.global;
+
+public class GlobalExceptionFilterTests
+{
+    private static ExceptionContext CreateContext(Exception exception)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.TraceIdentifier = "trace-123";
+        httpContext.Request.Path = "/api/test";
+
+        var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
+        return new ExceptionContext(actionContext, new List<IFilterMetadata>())
+        {
+            Exception = exception
+        };
+    }
+
+    [Fact]
+    public void OnException_WithValidationException_ReturnsBadRequestProblem()
+    {
+        var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
+        var filter = new GlobalExceptionFilter(logger);
+        var context = CreateContext(new ValidationException("campo inválido"));
+
+        filter.OnException(context);
+
+        Assert.True(context.ExceptionHandled);
+        var result = Assert.IsType<JsonResult>(context.Result);
+        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+
+        var problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Equal("Erro de validação", problem.Title);
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.Status);
+    }
+
+    [Fact]
+    public void OnException_WithNotFoundException_ReturnsNotFoundProblem()
+    {
+        var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
+        var filter = new GlobalExceptionFilter(logger);
+        var context = CreateContext(new NotFoundException("não encontrado"));
+
+        filter.OnException(context);
+
+        Assert.True(context.ExceptionHandled);
+        var result = Assert.IsType<JsonResult>(context.Result);
+        Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+
+        var problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Equal("Nenhum registro encontrado", problem.Title);
+        Assert.Equal(StatusCodes.Status404NotFound, problem.Status);
+    }
+
+    [Fact]
+    public void OnException_WithBusinessException_ReturnsUnprocessableEntityProblem()
+    {
+        var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
+        var filter = new GlobalExceptionFilter(logger);
+        var context = CreateContext(new BusinessException("regra de negócio"));
+
+        filter.OnException(context);
+
+        Assert.True(context.ExceptionHandled);
+        var result = Assert.IsType<JsonResult>(context.Result);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.StatusCode);
+
+        var problem = Assert.IsType<ProblemDetails>(result.Value);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, problem.Status);
+    }
+
+    [Fact]
+    public void OnException_WithGenericException_ReturnsInternalServerError()
+    {
+        var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
+        var filter = new GlobalExceptionFilter(logger);
+        var context = CreateContext(new Exception("erro genérico"));
+
+        filter.OnException(context);
+
+        Assert.True(context.ExceptionHandled);
+        var result = Assert.IsType<JsonResult>(context.Result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
+        Assert.NotNull(result.Value);
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug sso",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/bin/Debug/net8.0/sso.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "console": "internalConsole",
+            "launchBrowser": {
+                "enabled": true,
+                "args": "https://localhost:7059/swagger/index.html",
+                "windows": {
+                    "command": "cmd.exe",
+                    "args": "/C start https://localhost:7059/swagger/index.html"
+                }
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "internalConsoleOptions": "openOnSessionStart"
+        }
+    ]
+}
