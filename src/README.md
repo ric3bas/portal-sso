@@ -4,11 +4,11 @@ Projeto WebAPI com arquitetura vertical slice.
 
 ## Estrutura
 
-- Usuario
-  - Controller
-  - Service
-  - Infra
-  - Domain
+    - Usuario
+        - Controller                
+  	- Service
+          - Infra
+              - Domain
 
 Domínio é obrigatório.
 
@@ -48,3 +48,9 @@ Para recriar do zero (aplicando o script novamente):
 docker compose down -v
 docker compose up -d
 ```
+
+Para gerar e publicar cobertura:
+1. `dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover`
+2. Enviar `coverage.opencover.xml` para o Codecov/serviço escolhido via Action.
+
+[![Coverage](https://img.shields.io/codecov/c/gh/ric3bas/portal-sso/main)](https://codecov.io/gh/ric3bas/portal-sso)
