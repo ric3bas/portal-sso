@@ -1,0 +1,14 @@
+name: Coverage
+   on: [push, pull_request]
+   jobs:
+     coverage:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v4
+         - uses: actions/setup-dotnet@v3
+           with: dotnet-version: "10.0.x"
+         - run: dotnet restore
+         - run: dotnet test tests/sso-tests.csproj --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./coverage/
+         - uses: codecov/codecov-action@v4
+           with:
+             files: coverage/coverage.opencover.xml

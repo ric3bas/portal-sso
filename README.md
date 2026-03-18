@@ -5,7 +5,8 @@ Projeto WebAPI com arquitetura vertical slice.
 ## Estrutura
 
     - Usuario
-        - Controller                
+        - Controller            
+    
   	- Service
           - Infra
               - Domain
@@ -49,8 +50,8 @@ docker compose down -v
 docker compose up -d
 ```
 
-Para gerar e publicar cobertura:
-1. `dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover`
-2. Enviar `coverage.opencover.xml` para o Codecov/serviço escolhido via Action.
-
 [![Coverage](https://img.shields.io/codecov/c/gh/ric3bas/portal-sso/main)](https://codecov.io/gh/ric3bas/portal-sso)
+
+   Para gerar cobertura local:
+   1. `dotnet test tests/sso-tests.csproj --configuration Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput=./coverage/`
+   2. Envie `coverage.opencover.xml` para o serviço (Codecov) via `bash <(curl -s https://codecov.io/bash)` ou uso do action.
