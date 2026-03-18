@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Portal.Features.Usuario.Controller;
 using Portal.Features.Usuario.Domain;
 using Portal.Features.Usuario.Domain.Interfaces;
@@ -18,6 +20,15 @@ public class UsuariosControllerTests
         var controller = new UsuariosController(service);
 
         Assert.NotNull(controller);
+    }
+
+    [Fact]
+    public void Controller_HasExpectedClassAttributes()
+    {
+        Assert.True(_controller.GetCustomAttributes(typeof(ApiControllerAttribute), false).Length > 0);
+        Assert.True(_controller.GetCustomAttributes(typeof(AuthorizeAttribute), false).Length > 0);
+        Assert.True(_controller.GetCustomAttributes(typeof(ApiVersionAttribute), false).Length > 0);
+        Assert.True(_controller.GetCustomAttributes(typeof(RouteAttribute), false).Length > 0);
     }
 
     [Theory]
@@ -52,6 +63,29 @@ public class UsuariosControllerTests
     }
 
     [Fact]
+    public async Task ListarAsync_CallsServiceWithSameCancellationToken()
+    {
+        var service = Substitute.For<IUsuarioService>();
+        service.ListarAsync(Arg.Any<CancellationToken>()).Returns(new List<UsuarioComPerfilResponse>());
+        var controller = new UsuariosController(service);
+        using var cts = new CancellationTokenSource();
+
+        await controller.ListarAsync(cts.Token);
+
+        await service.Received(1).ListarAsync(cts.Token);
+    }
+
+    [Fact]
+    public async Task ListarAsync_WhenServiceThrows_PropagatesException()
+    {
+        var service = Substitute.For<IUsuarioService>();
+        service.ListarAsync(Arg.Any<CancellationToken>()).Throws(new InvalidOperationException("erro"));
+        var controller = new UsuariosController(service);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.ListarAsync(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task RegisterAsync_Returns200()
     {
         var service = Substitute.For<IUsuarioService>();
@@ -67,4 +101,33 @@ public class UsuariosControllerTests
         Assert.Equal("Usuário criado com sucesso", okResult.Value);
     }
 
+    [Fact]
+    public async Task RegisterAsync_CallsServiceWithSameRequest()
+    {
+        var service = Substitute.For<IUsuarioService>();
+        service.RegisterAsync(Arg.Any<RegisterRequest>()).Returns(Task.CompletedTask);
+        var controller = new UsuariosController(service);
+        var request = new RegisterRequest
+        {
+            Nome = "User Test",
+            Login = "user.test",
+            Email = "user@test.com",
+            Senha = "Senha@123",
+            PerfilId = 1
+        };
+
+        await controller.RegisterAsync(request);
+
+        await service.Received(1).RegisterAsync(request);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WhenServiceThrows_PropagatesException()
+    {
+        var service = Substitute.For<IUsuarioService>();
+        service.RegisterAsync(Arg.Any<RegisterRequest>()).Throws(new InvalidOperationException("erro"));
+        var controller = new UsuariosController(service);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.RegisterAsync(new RegisterRequest()));
+    }
 }
