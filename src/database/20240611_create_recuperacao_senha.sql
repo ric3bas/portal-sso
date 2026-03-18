@@ -1,5 +1,6 @@
 ---- DROP SCHEMA sso;
 
+
 --CREATE SCHEMA sso AUTHORIZATION "admin";
 
 ---- DROP SEQUENCE sso.escopo_id_seq;
