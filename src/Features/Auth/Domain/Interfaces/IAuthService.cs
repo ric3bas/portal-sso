@@ -11,5 +11,5 @@ namespace Portal.Features.Auth.Domain.Interfaces
         Task<RecuperarSenhaResponse> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request);
         Task<ValidarTokenRecuperacaoResponse> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request);
         Task<TrocarSenhaResponse> TrocarSenhaAsync(TrocarSenhaRequest request);
-    }
+     }
 }

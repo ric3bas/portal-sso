@@ -74,8 +74,18 @@ try
 {
 
 var builder = WebApplication.CreateBuilder(args);
-// Custom policy para TenantId (ParceiroId)
-builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Portal.Dominio.TenantIdHandler>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+        policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader());
+});
+
+
+
+    // Custom policy para TenantId (ParceiroId)
+    builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Portal.Dominio.TenantIdHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("TenantIdPolicy", policy =>
@@ -269,6 +279,7 @@ if (app.Environment.IsDevelopment()) {
         c.RoutePrefix = "swagger";
     });
 }
+app.UseCors("AllowAll");
 
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
@@ -276,7 +287,6 @@ app.UseMiddleware<JwtValidationMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers(); // Mantém para compatibilidade
-
 app.Run();
 }
 catch (Exception ex)

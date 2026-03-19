@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Portal.Dominio;
@@ -5,6 +6,9 @@ using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Auth.Domain.Responses;
 using Swashbuckle.AspNetCore.Annotations;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json.Serialization;
+using static Google.Apis.Requests.BatchRequest;
 
 namespace Portal.Features.Auth.Controller
 {
@@ -29,6 +33,12 @@ namespace Portal.Features.Auth.Controller
         {
             var response = await _authService.LoginAsync(request);
             return Ok(response);
+        }
+
+        [HttpGet("login-google")]
+        public IActionResult Login()
+        {
+            return Challenge(new AuthenticationProperties { RedirectUri = "/" }, "Google");
         }
 
         [SwaggerOperation(Summary = "Renova o access token a partir de um refresh token válido")]
@@ -82,5 +92,15 @@ namespace Portal.Features.Auth.Controller
             var result = await _authService.TrocarSenhaAsync(request);
             return Ok(result);
         }
+
+        #region Google
+        //[ProducesResponseType(typeof(LoginResponse), 200)]
+        //[HttpGet("callback")]
+        //public async Task<IActionResult> Callback(string code)
+        //{
+        //    var response = _authService.TesteGoogle(codd);
+        //    return Ok(response);
+        //}
+        #endregion
     }
 }

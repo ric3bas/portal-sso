@@ -5,6 +5,8 @@ using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Auth.Domain.Responses;
 using Portal.Infra;
+using System.IdentityModel.Tokens.Jwt;
+using static Portal.Features.Auth.Controller.AuthController;
 
 namespace Portal.Features.Auth.Service
 {
@@ -230,5 +232,77 @@ namespace Portal.Features.Auth.Service
             await _emailService.EnviarEmailAsync(usuario.Email, assunto, corpo);
             return new RecuperarSenhaResponse { EmailEnviado = true };
         }
+
+
+        #region Google
+        //public async Task<LoginResponse> LoginGoogle(string code)
+        //{
+        //    var client = new HttpClient();
+        //    var jwtGoogleSection = _config.GetSection("Authentication.Google");
+
+        //    var tokenResponse = await client.PostAsync("https://oauth2.googleapis.com/token",
+        //        new FormUrlEncodedContent(new Dictionary<string, string>
+        //        {
+        //            { "code", code },
+        //            { "client_id", jwtGoogleSection["ClientId"] ?? string.Empty  },
+        //            { "client_secret", jwtGoogleSection["ClientSecret"] ?? string.Empty  },
+        //            { "redirect_uri", "https://localhost:44349/api/v1/auth/callback" },
+        //            { "grant_type", "authorization_code" }
+        //        }));
+
+        //    var json = await tokenResponse.Content.ReadAsStringAsync();
+        //    var tokens = System.Text.Json.JsonSerializer.Deserialize<GoogleTokenResponse>(json);
+
+        //    var handler = new JwtSecurityTokenHandler();
+        //    var jwt = handler.ReadJwtToken(tokens?.Id_Token);
+
+        //    var email = jwt.Claims.FirstOrDefault(c => c.Type == "email")?.Value;
+        //    var name = jwt.Claims.FirstOrDefault(c => c.Type == "name")?.Value;
+
+
+        //    var jwtSection = _config.GetSection("Jwt");
+        //    var accessTokenExpireMinutes = int.Parse(jwtSection["AccessTokenExpireMinutes"] ?? "0");
+
+        //    var accessToken = JwtHelper.GenerateToken(
+        //        email ?? string.Empty,
+        //        name ?? string.Empty,
+        //        email ?? string.Empty,
+        //        accessTokenExpireMinutes,
+        //        string.Empty,
+        //        jwtSection["Key"] ?? string.Empty,
+        //        jwtSection["Issuer"] ?? string.Empty,
+        //        jwtSection["Audience"] ?? string.Empty,
+        //        string.Empty,
+        //        []);
+
+        //    var refreshToken = Token.GenerateRefreshToken();
+
+        //    _unitOfWork.Begin();
+        //    try
+        //    {
+        //        await _tokenRepo.InserirAsync(new TokenAtualizacao
+        //        {
+        //            Token = refreshToken,
+        //            ExpiraEm = DateTime.UtcNow.AddMinutes(int.Parse(jwtSection["RefreshTokenExpireDays"] ?? "0")),
+        //            Revogado = false,
+        //            UsuarioId = default(int)
+        //        });
+        //        _unitOfWork.Commit();
+        //    }
+        //    catch
+        //    {
+        //        _unitOfWork.Rollback();
+        //        throw;
+        //    }
+
+        //    return new LoginResponse
+        //    {
+        //        AccessToken = accessToken,
+        //        RefreshToken = refreshToken,
+        //        ExpireInMinutes = jwtSection["AccessTokenExpireMinutes"] ?? "0"
+        //    };
+        //}
+
+        #endregion
     }
 }
