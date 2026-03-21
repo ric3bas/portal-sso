@@ -5,11 +5,11 @@ namespace Portal.Features.Auth.Domain.Interfaces
 {
     public interface IAuthService
     {
-        Task<LoginResponse> LoginAsync(LoginRequest request);
-        Task<LoginResponse> RefreshAsync(RefreshTokenRequest request);
-        Task LogoutAsync(LogoutRequest request);
-        Task<RecuperarSenhaResponse> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request);
-        Task<ValidarTokenRecuperacaoResponse> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request);
-        Task<TrocarSenhaResponse> TrocarSenhaAsync(TrocarSenhaRequest request);
+        Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
+        Task<LoginResponse> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken);
+        Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken);
+        Task<RecuperarSenhaResponse> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request, CancellationToken cancellationToken);
+        Task<ValidarTokenRecuperacaoResponse> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request, CancellationToken cancellationToken);
+        Task<TrocarSenhaResponse> TrocarSenhaAsync(TrocarSenhaRequest request, CancellationToken cancellationToken);
      }
 }

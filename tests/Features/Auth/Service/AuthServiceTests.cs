@@ -9,6 +9,7 @@ using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Auth.Domain.Responses;
 using Portal.Features.Auth.Service;
+using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Infra;
 using Portal.Infra.Email;
 
@@ -44,13 +45,13 @@ public class AuthServiceTests
 
     private AuthService CreateService()
     {
-        return new AuthService(_authRepository, _tokenRepo, _config, _unitOfWork, _httpContextAccessor, _emailService);
+        return new AuthService(_authRepository, _tokenRepo, _config, _unitOfWork, _httpContextAccessor, _emailService, Substitute.For<IUsuarioRepository>());
     }
 
     [Fact]
     public void Constructor_InitializesAllFields()
     {
-        var service = new AuthService(_authRepository, _tokenRepo, _config, _unitOfWork, _httpContextAccessor, _emailService);
+        var service = new AuthService(_authRepository, _tokenRepo, _config, _unitOfWork, _httpContextAccessor, _emailService, Substitute.For<IUsuarioRepository>());
 
         Assert.NotNull(service);
     }
@@ -61,7 +62,7 @@ public class AuthServiceTests
         var service = CreateService();
         var request = new LoginRequest { Login = "", Senha = "" };
 
-        await Assert.ThrowsAsync<ValidationException>(() => service.LoginAsync(request));
+        await Assert.ThrowsAsync<ValidationException>(() => service.LoginAsync(request, CancellationToken.None));
     }
 
     [Fact]
@@ -70,9 +71,9 @@ public class AuthServiceTests
         var service = CreateService();
         var request = new LoginRequest { Login = "testuser", Senha = "password" };
         var loginData = new LoginData { Usuario = null, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>()).Returns(loginData);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request, CancellationToken.None));
 
         Assert.Contains("Usuário ou senha inválidos", ex.Errors);
     }
@@ -93,9 +94,9 @@ public class AuthServiceTests
             ParceiroId = Guid.NewGuid()
         };
         var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>()).Returns(loginData);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request, CancellationToken.None));
 
         Assert.Contains("Usuário ou senha inválidos", ex.Errors);
     }
@@ -119,9 +120,9 @@ public class AuthServiceTests
         var perfil = new UsuarioPerfilItemResponse { Id = 1, Nome = "Admin" };
         var escopos = new List<string> { "read", "write" };
         var loginData = new LoginData { Usuario = usuario, Perfil = perfil, Escopos = escopos };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>()).Returns(loginData);
 
-        var result = await service.LoginAsync(request);
+        var result = await service.LoginAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -152,7 +153,7 @@ public class AuthServiceTests
         var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = escopos };
         _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
 
-        var result = await service.LoginAsync(request);
+        var result = await service.LoginAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -179,7 +180,7 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
         _tokenRepo.InserirAsync(Arg.Any<TokenAtualizacao>()).Throws(new Exception("Database error"));
 
-        await Assert.ThrowsAsync<Exception>(() => service.LoginAsync(request));
+        await Assert.ThrowsAsync<Exception>(() => service.LoginAsync(request, CancellationToken.None));
 
         _unitOfWork.Received(1).Begin();
         _unitOfWork.Received(1).Rollback();
@@ -205,7 +206,7 @@ public class AuthServiceTests
         var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
         _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
 
-        await service.LoginAsync(request);
+        await service.LoginAsync(request, CancellationToken.None);
 
         _config.Received(1).GetSection("Jwt");
         var _ = _jwtSection.Received()["AccessTokenExpireMinutes"];
@@ -221,7 +222,7 @@ public class AuthServiceTests
         var service = CreateService();
         var request = new RefreshTokenRequest { RefreshToken = "" };
 
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RefreshAsync(request));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RefreshAsync(request, CancellationToken.None));
 
         Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
     }
@@ -232,7 +233,7 @@ public class AuthServiceTests
         var service = CreateService();
         var request = new RefreshTokenRequest { RefreshToken = "   " };
 
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RefreshAsync(request));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RefreshAsync(request, CancellationToken.None));
 
         Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
     }
@@ -242,9 +243,9 @@ public class AuthServiceTests
     {
         var service = CreateService();
         var request = new RefreshTokenRequest { RefreshToken = "invalid-token" };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns((TokenAtualizacao?)null);
+        _tokenRepo.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>()).Returns((TokenAtualizacao?)null);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
 
         Assert.Contains("Refresh token inválido ou expirado", ex.Errors);
     }
@@ -263,7 +264,7 @@ public class AuthServiceTests
         };
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
 
         Assert.Contains("Refresh token inválido ou expirado", ex.Errors);
     }
@@ -282,7 +283,7 @@ public class AuthServiceTests
         };
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
 
         Assert.Contains("Refresh token inválido ou expirado", ex.Errors);
     }
@@ -303,7 +304,7 @@ public class AuthServiceTests
         var loginData = new LoginData { Usuario = null, Escopos = new List<string>() };
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
 
         Assert.Contains("Usuário não encontrado", ex.Errors);
     }
@@ -334,7 +335,7 @@ public class AuthServiceTests
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
 
-        var result = await service.RefreshAsync(request);
+        var result = await service.RefreshAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -371,7 +372,7 @@ public class AuthServiceTests
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
 
-        var result = await service.RefreshAsync(request);
+        var result = await service.RefreshAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -402,7 +403,7 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
         _tokenRepo.RevogarAsync(request.RefreshToken).Throws(new Exception("Database error"));
 
-        await Assert.ThrowsAsync<Exception>(() => service.RefreshAsync(request));
+        await Assert.ThrowsAsync<Exception>(() => service.RefreshAsync(request, CancellationToken.None));
 
         _unitOfWork.Received(1).Begin();
         _unitOfWork.Received(1).Rollback();
@@ -433,7 +434,7 @@ public class AuthServiceTests
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
 
-        await service.RefreshAsync(request);
+        await service.RefreshAsync(request, CancellationToken.None);
 
         _config.Received(1).GetSection("Jwt");
         var _ = _jwtSection.Received()["AccessTokenExpireMinutes"];
@@ -449,7 +450,7 @@ public class AuthServiceTests
         var service = CreateService();
         var request = new LogoutRequest { RefreshToken = "" };
 
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.LogoutAsync(request));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.LogoutAsync(request, CancellationToken.None));
 
         Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
     }
@@ -460,7 +461,7 @@ public class AuthServiceTests
         var service = CreateService();
         var request = new LogoutRequest { RefreshToken = "   " };
 
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.LogoutAsync(request));
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.LogoutAsync(request, CancellationToken.None));
 
         Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
     }
@@ -472,7 +473,7 @@ public class AuthServiceTests
         var request = new LogoutRequest { RefreshToken = "invalid-token" };
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns((TokenAtualizacao?)null);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LogoutAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LogoutAsync(request, CancellationToken.None));
 
         Assert.Contains("Refresh token inválido ou já revogado", ex.Errors);
     }
@@ -491,7 +492,7 @@ public class AuthServiceTests
         };
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LogoutAsync(request));
+        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LogoutAsync(request, CancellationToken.None));
 
         Assert.Contains("Refresh token inválido ou já revogado", ex.Errors);
     }
@@ -510,7 +511,7 @@ public class AuthServiceTests
         };
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        await service.LogoutAsync(request);
+        await service.LogoutAsync(request, CancellationToken.None);
 
         await _tokenRepo.Received(1).RevogarAsync(request.RefreshToken);
     }
@@ -534,7 +535,7 @@ public class AuthServiceTests
         var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = new List<string>() };
         _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
 
-        var result = await service.LoginAsync(request);
+        var result = await service.LoginAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -565,7 +566,7 @@ public class AuthServiceTests
         _jwtSection["AccessTokenExpireMinutes"].Returns("30");
         _jwtSection["RefreshTokenExpireDays"].Returns("7");
 
-        var result = await service.LoginAsync(request);
+        var result = await service.LoginAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -596,7 +597,7 @@ public class AuthServiceTests
         _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
 
-        var result = await service.RefreshAsync(request);
+        var result = await service.RefreshAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -632,7 +633,7 @@ public class AuthServiceTests
         _jwtSection["AccessTokenExpireMinutes"].Returns("30");
         _jwtSection["RefreshTokenExpireDays"].Returns("7");
 
-        var result = await service.RefreshAsync(request);
+        var result = await service.RefreshAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.AccessToken);
@@ -663,7 +664,7 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
         _jwtSection["AccessTokenExpireMinutes"].Returns((string?)null);
 
-        var result = await service.RefreshAsync(request);
+        var result = await service.RefreshAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.Equal("0", result.ExpireInMinutes);
@@ -694,7 +695,7 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
         _jwtSection["RefreshTokenExpireDays"].Returns((string?)null);
 
-        var result = await service.RefreshAsync(request);
+        var result = await service.RefreshAsync(request, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.RefreshToken);
@@ -756,7 +757,7 @@ public class AuthServiceTests
         var service = CreateService();
         _authRepository.ObterDadosLoginAsync(Arg.Any<string>()).Returns(new LoginData { Usuario = null, Escopos = new List<string>() });
 
-        var result = await service.SolicitarRecuperacaoAsync(new RecuperarSenhaRequest { Login = "missing" });
+        var result = await service.SolicitarRecuperacaoAsync(new RecuperarSenhaRequest { Login = "missing" }, CancellationToken.None);
 
         Assert.False(result.EmailEnviado);
         await _authRepository.DidNotReceive().InserirRecuperacaoSenhaAsync(Arg.Any<RecuperacaoSenhaEntity>());
@@ -770,7 +771,7 @@ public class AuthServiceTests
         var usuario = new UsuarioEntity { Id = 99, Email = "user@teste.com", ParceiroId = Guid.NewGuid() };
         _authRepository.ObterDadosLoginAsync("user").Returns(new LoginData { Usuario = usuario, Escopos = new List<string>() });
 
-        var result = await service.SolicitarRecuperacaoAsync(new RecuperarSenhaRequest { Login = "user" });
+        var result = await service.SolicitarRecuperacaoAsync(new RecuperarSenhaRequest { Login = "user" }, CancellationToken.None);
 
         Assert.True(result.EmailEnviado);
         await _authRepository.Received(1).InserirRecuperacaoSenhaAsync(Arg.Is<RecuperacaoSenhaEntity>(x => x.UsuarioId == usuario.Id));
@@ -790,7 +791,7 @@ public class AuthServiceTests
         };
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync("token").Returns(entidade);
 
-        var result = await service.ValidarTokenAsync(new ValidarTokenRecuperacaoRequest { Token = "token" });
+        var result = await service.ValidarTokenAsync(new ValidarTokenRecuperacaoRequest { Token = "token" }, CancellationToken.None);
 
         Assert.Equal("Token válido, pode prosseguir com alteração de senha", result.Mensagem);
     }
@@ -801,7 +802,7 @@ public class AuthServiceTests
         var service = CreateService();
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync("token").Returns((RecuperacaoSenhaEntity?)null);
 
-        await Assert.ThrowsAsync<BusinessException>(() => service.ValidarTokenAsync(new ValidarTokenRecuperacaoRequest { Token = "token" }));
+        await Assert.ThrowsAsync<BusinessException>(() => service.ValidarTokenAsync(new ValidarTokenRecuperacaoRequest { Token = "token" }, CancellationToken.None));
     }
 
     [Fact]
@@ -819,7 +820,7 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(entidade.Token).Returns(entidade);
         _authRepository.AtualizarSenhaUsuarioAsync(entidade.UsuarioId, Arg.Any<string>()).Returns(true);
 
-        var result = await service.TrocarSenhaAsync(new TrocarSenhaRequest { Token = "token", NovaSenha = "Nova@123", ConfirmarSenha = "Nova@123" });
+        var result = await service.TrocarSenhaAsync(new TrocarSenhaRequest { Token = "token", NovaSenha = "Nova@123", ConfirmarSenha = "Nova@123" }, CancellationToken.None);
 
         Assert.Equal("Senha alterada com sucesso", result.Mensagem);
         await _authRepository.Received(1).AtualizarSenhaUsuarioAsync(entidade.UsuarioId, Arg.Any<string>());
@@ -832,6 +833,6 @@ public class AuthServiceTests
         var service = CreateService();
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync("token").Returns((RecuperacaoSenhaEntity?)null);
 
-        await Assert.ThrowsAsync<BusinessException>(() => service.TrocarSenhaAsync(new TrocarSenhaRequest { Token = "token", NovaSenha = "nova", ConfirmarSenha = "nova" }));
+        await Assert.ThrowsAsync<BusinessException>(() => service.TrocarSenhaAsync(new TrocarSenhaRequest { Token = "token", NovaSenha = "nova", ConfirmarSenha = "nova" }, CancellationToken.None));
     }
 }

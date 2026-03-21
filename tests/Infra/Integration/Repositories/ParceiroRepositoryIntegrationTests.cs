@@ -236,7 +236,7 @@ public sealed class ParceiroRepositoryIntegrationTests
         // Consulta escopos do usuário via AuthRepository (ou outro repo que faça a consulta)
         using var uow = _fixture.CreateUnitOfWork();
         var authRepo = new Portal.Features.Auth.Infra.AuthRepository(uow);
-        var escopos = await authRepo.ObterEscoposDoUsuarioAsync(usuarioId);
+        var escopos = await authRepo.ObterEscoposDoUsuarioAsync(usuarioId, CancellationToken.None);
 
         Assert.Contains("escopoTeste", escopos);
     }

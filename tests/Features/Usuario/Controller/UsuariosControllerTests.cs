@@ -89,12 +89,12 @@ public class UsuariosControllerTests
     public async Task RegisterAsync_Returns200()
     {
         var service = Substitute.For<IUsuarioService>();
-        service.RegisterAsync(Arg.Any<RegisterRequest>())
+        service.RegisterAsync(Arg.Any<RegisterRequest>(), Arg.Any<CancellationToken>())
                .Returns(Task.CompletedTask);
 
         var controller = new UsuariosController(service);
 
-        var result = await controller.RegisterAsync(new RegisterRequest());
+        var result = await controller.RegisterAsync(new RegisterRequest(), CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
@@ -105,7 +105,7 @@ public class UsuariosControllerTests
     public async Task RegisterAsync_CallsServiceWithSameRequest()
     {
         var service = Substitute.For<IUsuarioService>();
-        service.RegisterAsync(Arg.Any<RegisterRequest>()).Returns(Task.CompletedTask);
+        service.RegisterAsync(Arg.Any<RegisterRequest>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         var controller = new UsuariosController(service);
         var request = new RegisterRequest
         {
@@ -116,18 +116,18 @@ public class UsuariosControllerTests
             PerfilId = 1
         };
 
-        await controller.RegisterAsync(request);
+        await controller.RegisterAsync(request, CancellationToken.None);
 
-        await service.Received(1).RegisterAsync(request);
+        await service.Received(1).RegisterAsync(request, Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task RegisterAsync_WhenServiceThrows_PropagatesException()
     {
         var service = Substitute.For<IUsuarioService>();
-        service.RegisterAsync(Arg.Any<RegisterRequest>()).Throws(new InvalidOperationException("erro"));
+        service.RegisterAsync(Arg.Any<RegisterRequest>(), Arg.Any<CancellationToken>()).Throws(new InvalidOperationException("erro"));
         var controller = new UsuariosController(service);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.RegisterAsync(new RegisterRequest()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => controller.RegisterAsync(new RegisterRequest(), CancellationToken.None));
     }
 }

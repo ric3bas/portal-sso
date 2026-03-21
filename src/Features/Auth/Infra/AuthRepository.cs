@@ -10,14 +10,14 @@ namespace Portal.Features.Auth.Infra
     {
         public AuthRepository(IUnitOfWork unitOfWork) : base(unitOfWork) {}
 
-        public async Task<bool> AtualizarSenhaUsuarioAsync(int usuarioId, string novaSenhaHash)
+        public async Task<bool> AtualizarSenhaUsuarioAsync(int usuarioId, string novaSenhaHash, CancellationToken cancellationToken)
         {
             const string sql = "UPDATE sso.usuario SET senha = @novaSenha WHERE id = @usuarioId";
-            var result = await Task.Run(() => _unitOfWork.Connection.Execute(sql, new { novaSenha = novaSenhaHash, usuarioId }, _unitOfWork.Transaction));
+            var result = await Task.Run(() => _unitOfWork.Connection.Execute(sql, new { novaSenha = novaSenhaHash, usuarioId }, _unitOfWork.Transaction), cancellationToken);
             return result > 0;
         }
 
-        public async Task<Portal.Dominio.Entities.UsuarioEntity?> ObterPorNomeEParceiroAsync(string login, string parceiroId)
+        public async Task<Portal.Dominio.Entities.UsuarioEntity?> ObterPorNomeEParceiroAsync(string login, string parceiroId, CancellationToken cancellationToken)
         {
             const string sql = @"SELECT u.id,
                                         u.nome,
@@ -29,10 +29,10 @@ namespace Portal.Features.Auth.Infra
                                  WHERE u.login = @login
                                    AND u.parceiro_id::text = @parceiroId
                                  LIMIT 1";
-            return await Task.Run(() => QuerySingle(sql, new { login, parceiroId }));
+            return await Task.Run(() => QuerySingle(sql, new { login, parceiroId }), cancellationToken);
         }
 
-        public async Task<UsuarioPerfilItemResponse> ObterPerfisDoUsuarioAsync(int usuarioId)
+        public async Task<UsuarioPerfilItemResponse> ObterPerfisDoUsuarioAsync(int usuarioId, CancellationToken cancellationToken)
         {
             const string sql = @"SELECT p.id,
                                         p.nome
@@ -40,11 +40,11 @@ namespace Portal.Features.Auth.Infra
                                  INNER JOIN sso.perfil p ON p.id = u.perfil_id
                                  WHERE u.id = @usuarioId";
 
-            var perfis = await Task.Run(() => _unitOfWork.Connection.QuerySingle<UsuarioPerfilItemResponse>(sql, new { usuarioId }, _unitOfWork.Transaction));
+            var perfis = await Task.Run(() => _unitOfWork.Connection.QuerySingle<UsuarioPerfilItemResponse>(sql, new { usuarioId }, _unitOfWork.Transaction), cancellationToken);
             return perfis;
         }
 
-        public async Task<IReadOnlyCollection<string>> ObterEscoposDoUsuarioAsync(int usuarioId)
+        public async Task<IReadOnlyCollection<string>> ObterEscoposDoUsuarioAsync(int usuarioId, CancellationToken cancellationToken)
         {
             const string sql = @"SELECT DISTINCT e.nome
                                  FROM sso.usuario u
@@ -52,12 +52,14 @@ namespace Portal.Features.Auth.Infra
                                  INNER JOIN sso.escopo e ON e.id = pe.escopo_id
                                  WHERE u.id = @usuarioId
                                  ORDER BY e.nome";
-            var escopos = await Task.Run(() => _unitOfWork.Connection.Query<string>(sql, new { usuarioId }, _unitOfWork.Transaction));
+            var escopos = await Task.Run(() => _unitOfWork.Connection.Query<string>(sql, new { usuarioId }, _unitOfWork.Transaction), cancellationToken);
             return escopos.ToList();
         }
 
-        public async Task<LoginData> ObterDadosLoginAsync(string login)
+        public async Task<LoginData> ObterDadosLoginAsync(string login, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = @"
                 SELECT u.id, u.nome, u.login, u.senha, u.email, u.parceiro_id AS ParceiroId
                 FROM sso.usuario u
@@ -81,14 +83,16 @@ namespace Portal.Features.Auth.Infra
 
             return new LoginData
             {
-                Usuario = await multi.ReadSingleOrDefaultAsync<Portal.Dominio.Entities.UsuarioEntity>(),
+                Usuario = await multi.ReadSingleOrDefaultAsync<Dominio.Entities.UsuarioEntity>(),
                 Perfil  = await multi.ReadSingleOrDefaultAsync<UsuarioPerfilItemResponse>(),
                 Escopos = (await multi.ReadAsync<string>()).ToList()
             };
         }
 
-        public async Task<LoginData> ObterDadosLoginPorIdAsync(int usuarioId)
+        public async Task<LoginData> ObterDadosLoginPorIdAsync(int usuarioId, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = @"
                 SELECT u.id, u.nome, u.login, u.senha, u.email, u.parceiro_id AS ParceiroId
                 FROM sso.usuario u
@@ -118,29 +122,35 @@ namespace Portal.Features.Auth.Infra
             };
         }
         // Recuperação de Senha
-        public async Task<int> InserirRecuperacaoSenhaAsync(Portal.Dominio.Entities.RecuperacaoSenhaEntity entity)
+        public async Task<int> InserirRecuperacaoSenhaAsync(Portal.Dominio.Entities.RecuperacaoSenhaEntity entity, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = @"INSERT INTO sso.recuperacao_senha (usuario_id, token, expira_em, usado)
                                  VALUES (@UsuarioId, @Token, @ExpiraEm, @Usado)
                                  RETURNING id";
-            return await Task.Run(() => _unitOfWork.Connection.QuerySingle<int>(sql, entity, _unitOfWork.Transaction));
+            return await Task.Run(() => _unitOfWork.Connection.QuerySingle<int>(sql, entity, _unitOfWork.Transaction), cancellationToken);
         }
 
-        public async Task<Portal.Dominio.Entities.RecuperacaoSenhaEntity?> ObterRecuperacaoSenhaPorTokenAsync(string token)
+        public async Task<Portal.Dominio.Entities.RecuperacaoSenhaEntity?> ObterRecuperacaoSenhaPorTokenAsync(string token, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = @"SELECT id, usuario_id AS UsuarioId, token, expira_em AS ExpiraEm, usado
                                  FROM sso.recuperacao_senha
                                  WHERE token = @token
                                  AND usado = FALSE
                                  ORDER BY id DESC
                                  LIMIT 1";
-            return await Task.Run(() => _unitOfWork.Connection.QuerySingleOrDefault<Portal.Dominio.Entities.RecuperacaoSenhaEntity>(sql, new { token }, _unitOfWork.Transaction));
+            return await Task.Run(() => _unitOfWork.Connection.QuerySingleOrDefault<Portal.Dominio.Entities.RecuperacaoSenhaEntity>(sql, new { token }, _unitOfWork.Transaction), cancellationToken);
         }
 
-        public async Task MarcarRecuperacaoSenhaComoUsadoAsync(int id)
+        public async Task MarcarRecuperacaoSenhaComoUsadoAsync(int id, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = "UPDATE sso.recuperacao_senha SET usado = TRUE WHERE id = @id";
-            await Task.Run(() => _unitOfWork.Connection.Execute(sql, new { id }, _unitOfWork.Transaction));
+            await Task.Run(() => _unitOfWork.Connection.Execute(sql, new { id }, _unitOfWork.Transaction), cancellationToken);
         }
     }
 }

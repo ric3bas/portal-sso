@@ -9,5 +9,8 @@ namespace Portal.Dominio.Entities
         public string? Senha { get; set; }
         public Guid ParceiroId { get; set; }
         public int? PerfilId { get; set; }
+        public int TentativasLogin { get; set; }
+        public DateTime? UltimoErroLogin { get; set; }
+        public bool Bloqueado { get; set; }
     }
 }

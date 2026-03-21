@@ -39,7 +39,7 @@ public sealed class UsuarioRepositoryIntegrationTests
             PerfilId = perfilId
         };
 
-        var id = await repository.InserirAsync(entity);
+        var id = await repository.InserirAsync(entity, CancellationToken.None);
         var usuarios = (await repository.ListarAsync(parceiroId)).ToList();
         var loginExiste = await repository.ExisteLoginAsync(entity.Login!, parceiroId);
 
@@ -81,7 +81,7 @@ public sealed class UsuarioRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repo = new AuthRepository(uow);
 
-        var login = await repo.ObterDadosLoginPorIdAsync(usuarioId);
+        var login = await repo.ObterDadosLoginPorIdAsync(usuarioId, CancellationToken.None);
 
         Assert.NotNull(login.Usuario);
         Assert.Equal(usuarioId, login.Usuario!.Id);

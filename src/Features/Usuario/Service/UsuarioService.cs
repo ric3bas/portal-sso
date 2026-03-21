@@ -37,7 +37,7 @@ namespace Portal.Features.Usuario.Service
             return result;
         }
 
-        public async Task RegisterAsync(RegisterRequest request)
+        public async Task RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
         {
             // 1. Validação dos campos obrigatórios
             if (!request.IsValid())
@@ -45,7 +45,7 @@ namespace Portal.Features.Usuario.Service
 
             // 2. Validar parceiro, login duplicado e perfil em uma única chamada ao banco
             var parceiroId = ObterTenantId();
-            var validacao  = await _usuarioRepository.ValidarRegistroAsync(request.Login, parceiroId, request.PerfilId);
+            var validacao  = await _usuarioRepository.ValidarRegistroAsync(request.Login, parceiroId, request.PerfilId, cancellationToken);
 
             if (!validacao.ParceiroExiste)
                 throw new NotFoundException($"Parceiro '{parceiroId}' não encontrado");
@@ -60,13 +60,16 @@ namespace Portal.Features.Usuario.Service
                 Login      = request.Login,
                 Senha      = BCrypt.Net.BCrypt.HashPassword(request.Senha),
                 ParceiroId = parceiroId,
-                PerfilId   = request.PerfilId
+                PerfilId   = request.PerfilId,
+                TentativasLogin = 0,
+                UltimoErroLogin = null,
+                Bloqueado = false
             };
 
             _unitOfWork.Begin();
             try
             {
-                _ = await _usuarioRepository.InserirAsync(usuario);
+                _ = await _usuarioRepository.InserirAsync(usuario, cancellationToken);
                 _unitOfWork.Commit();
             }
             catch
@@ -74,6 +77,27 @@ namespace Portal.Features.Usuario.Service
                 _unitOfWork.Rollback();
                 throw;
             }
+        }
+
+        public async Task IncrementarTentativaLogin(int usuarioId, CancellationToken cancellationToken)
+        {
+            await _usuarioRepository.IncrementarTentativaLoginAsync(usuarioId, cancellationToken);
+        }
+
+        public async Task ResetarTentativasLogin(int usuarioId, CancellationToken cancellationToken)
+        {
+            await _usuarioRepository.ResetarTentativasLoginAsync(usuarioId, cancellationToken);
+        }
+
+        public async Task BloquearUsuarioAsync(int usuarioId, CancellationToken cancellationToken)
+        {
+            var usuario = await _usuarioRepository.ObterPorIdAsync(usuarioId, cancellationToken);
+            if (usuario == null)
+                throw new NotFoundException("Usuário não encontrado");
+
+            usuario.Bloqueado = true;
+
+            await _usuarioRepository.AtualizarAsync(usuario, cancellationToken);
         }
 
     }

@@ -43,7 +43,7 @@ public class AuthControllerTests
             RefreshToken = "test_refresh_token",
             ExpireInMinutes = "60"
         };
-        authService.LoginAsync(Arg.Any<LoginRequest>())
+        authService.LoginAsync(Arg.Any<LoginRequest>(), Arg.Any<CancellationToken>())
                .Returns(Task.FromResult(expectedResponse));
 
         var controller = new AuthController(authService);
@@ -53,7 +53,7 @@ public class AuthControllerTests
             Senha = "testpassword"
         };
 
-        var result = await controller.Login(request);
+        var result = await controller.Login(request, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
@@ -71,9 +71,9 @@ public class AuthControllerTests
             Senha = "testpassword"
         };
 
-        await controller.Login(request);
+        await controller.Login(request, CancellationToken.None);
 
-        await authService.Received(1).LoginAsync(request);
+        await authService.Received(1).LoginAsync(request, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class AuthControllerTests
             RefreshToken = "new_refresh_token",
             ExpireInMinutes = "60"
         };
-        authService.RefreshAsync(Arg.Any<RefreshTokenRequest>())
+        authService.RefreshAsync(Arg.Any<RefreshTokenRequest>(), Arg.Any<CancellationToken>())
                .Returns(Task.FromResult(expectedResponse));
 
         var controller = new AuthController(authService);
@@ -95,7 +95,7 @@ public class AuthControllerTests
             RefreshToken = "old_refresh_token"
         };
 
-        var result = await controller.RefreshTokenAsync(request);
+        var result = await controller.RefreshTokenAsync(request, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
@@ -112,16 +112,16 @@ public class AuthControllerTests
             RefreshToken = "old_refresh_token"
         };
 
-        await controller.RefreshTokenAsync(request);
+        await controller.RefreshTokenAsync(request, CancellationToken.None);
 
-        await authService.Received(1).RefreshAsync(request);
+        await authService.Received(1).RefreshAsync(request, Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task LogoutAsync_ReturnsNoContent()
     {
         var authService = Substitute.For<IAuthService>();
-        authService.LogoutAsync(Arg.Any<LogoutRequest>())
+        authService.LogoutAsync(Arg.Any<LogoutRequest>(), Arg.Any<CancellationToken>())
                .Returns(Task.CompletedTask);
 
         var controller = new AuthController(authService);
@@ -130,7 +130,7 @@ public class AuthControllerTests
             RefreshToken = "test_refresh_token"
         };
 
-        var result = await controller.LogoutAsync(request);
+        var result = await controller.LogoutAsync(request, CancellationToken.None);
 
         var noContentResult = Assert.IsType<NoContentResult>(result);
         Assert.Equal(204, noContentResult.StatusCode);
@@ -146,9 +146,9 @@ public class AuthControllerTests
             RefreshToken = "test_refresh_token"
         };
 
-        await controller.LogoutAsync(request);
+        await controller.LogoutAsync(request, CancellationToken.None);
 
-        await authService.Received(1).LogoutAsync(request);
+        await authService.Received(1).LogoutAsync(request, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -156,11 +156,11 @@ public class AuthControllerTests
     {
         var authService = Substitute.For<IAuthService>();
         var expectedResponse = new Portal.Features.Auth.Domain.Responses.RecuperarSenhaResponse { EmailEnviado = true };
-        authService.SolicitarRecuperacaoAsync(Arg.Any<Portal.Features.Auth.Domain.Requests.RecuperarSenhaRequest>())
+        authService.SolicitarRecuperacaoAsync(Arg.Any<Portal.Features.Auth.Domain.Requests.RecuperarSenhaRequest>(), Arg.Any<CancellationToken>())
             .Returns(expectedResponse);
         var controller = new AuthController(authService);
         var request = new Portal.Features.Auth.Domain.Requests.RecuperarSenhaRequest { Login = "testuser" };
-        var result = await controller.Solicitar(request);
+        var result = await controller.Solicitar(request, CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
@@ -171,17 +171,17 @@ public class AuthControllerTests
     {
         var authService = Substitute.For<IAuthService>();
         var expectedResponse = new ValidarTokenRecuperacaoResponse { Mensagem = "Token válido" };
-        authService.ValidarTokenAsync(Arg.Any<ValidarTokenRecuperacaoRequest>())
+        authService.ValidarTokenAsync(Arg.Any<ValidarTokenRecuperacaoRequest>(), Arg.Any<CancellationToken>())
             .Returns(expectedResponse);
 
         var controller = new AuthController(authService);
-        var result = await controller.ValidarToken("sample-token");
+        var result = await controller.ValidarToken("sample-token", CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
         await authService.Received(1).ValidarTokenAsync(
-            Arg.Is<ValidarTokenRecuperacaoRequest>(request => request.Token == "sample-token"));
+            Arg.Is<ValidarTokenRecuperacaoRequest>(request => request.Token == "sample-token"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -195,15 +195,15 @@ public class AuthControllerTests
             NovaSenha = "nova@123",
             ConfirmarSenha = "nova@123"
         };
-        authService.TrocarSenhaAsync(Arg.Any<TrocarSenhaRequest>())
+        authService.TrocarSenhaAsync(Arg.Any<TrocarSenhaRequest>(), Arg.Any<CancellationToken>())
             .Returns(expectedResponse);
 
         var controller = new AuthController(authService);
-        var result = await controller.TrocarSenha(request);
+        var result = await controller.TrocarSenha(request, CancellationToken.None);
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
-        await authService.Received(1).TrocarSenhaAsync(request);
+        await authService.Received(1).TrocarSenhaAsync(request, Arg.Any<CancellationToken>());
     }
 }

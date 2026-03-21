@@ -38,6 +38,10 @@ CREATE TABLE IF NOT EXISTS sso.usuario (
     perfil_id int NULL REFERENCES sso.perfil(id)
 );
 
+ALTER TABLE sso.usuario
+ADD COLUMN IF NOT EXISTS tentativas_login INT NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS ultimo_erro_login TIMESTAMPTZ NULL;
+
 CREATE TABLE IF NOT EXISTS sso.token_atualizacao (
     id SERIAL PRIMARY KEY,
     token text NOT NULL,

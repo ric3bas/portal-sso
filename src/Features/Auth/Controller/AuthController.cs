@@ -29,16 +29,10 @@ namespace Portal.Features.Auth.Controller
         [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
         {
-            var response = await _authService.LoginAsync(request);
+            var response = await _authService.LoginAsync(request, cancellationToken);
             return Ok(response);
-        }
-
-        [HttpGet("login-google")]
-        public IActionResult Login()
-        {
-            return Challenge(new AuthenticationProperties { RedirectUri = "/" }, "Google");
         }
 
         [SwaggerOperation(Summary = "Renova o access token a partir de um refresh token válido")]
@@ -46,9 +40,9 @@ namespace Portal.Features.Auth.Controller
         [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<IActionResult> RefreshTokenAsync([FromBody] RefreshTokenRequest request)
+        public async Task<IActionResult> RefreshTokenAsync([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
         {
-            var response = await _authService.RefreshAsync(request);
+            var response = await _authService.RefreshAsync(request, cancellationToken);
             return Ok(response);
         }
 
@@ -56,9 +50,9 @@ namespace Portal.Features.Auth.Controller
         [HttpPost("logout")]
         [ProducesResponseType(204)]
         [ProducesBadRequestProblem]
-        public async Task<IActionResult> LogoutAsync([FromBody] LogoutRequest request)
+        public async Task<IActionResult> LogoutAsync([FromBody] LogoutRequest request, CancellationToken cancellationToken)
         {
-            await _authService.LogoutAsync(request);
+            await _authService.LogoutAsync(request, cancellationToken);
             return NoContent();
         }
 
@@ -66,9 +60,9 @@ namespace Portal.Features.Auth.Controller
         [HttpPost("esqueceu-senha")]
         [ProducesResponseType(typeof(RecuperarSenhaResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<ActionResult<RecuperarSenhaResponse>> Solicitar([FromBody] RecuperarSenhaRequest request)
+        public async Task<ActionResult<RecuperarSenhaResponse>> Solicitar([FromBody] RecuperarSenhaRequest request, CancellationToken cancellationToken)
         {
-            var result = await _authService.SolicitarRecuperacaoAsync(request);
+            var result = await _authService.SolicitarRecuperacaoAsync(request, cancellationToken);
             return Ok(result);
         }
 
@@ -76,10 +70,10 @@ namespace Portal.Features.Auth.Controller
         [HttpGet("validar-token")]
         [ProducesResponseType(typeof(ValidarTokenRecuperacaoResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<ActionResult<ValidarTokenRecuperacaoResponse>> ValidarToken([FromQuery] string token)
+        public async Task<ActionResult<ValidarTokenRecuperacaoResponse>> ValidarToken([FromQuery] string token, CancellationToken cancellationToken)
         {
             var request = new ValidarTokenRecuperacaoRequest { Token = token };
-            var result = await _authService.ValidarTokenAsync(request);
+            var result = await _authService.ValidarTokenAsync(request, cancellationToken);
             return Ok(result);
         }
 
@@ -87,9 +81,9 @@ namespace Portal.Features.Auth.Controller
         [HttpPost("trocar-senha")]
         [ProducesResponseType(typeof(TrocarSenhaResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<ActionResult<TrocarSenhaResponse>> TrocarSenha([FromBody] TrocarSenhaRequest request)
+        public async Task<ActionResult<TrocarSenhaResponse>> TrocarSenha([FromBody] TrocarSenhaRequest request, CancellationToken cancellationToken)
         {
-            var result = await _authService.TrocarSenhaAsync(request);
+            var result = await _authService.TrocarSenhaAsync(request, cancellationToken);
             return Ok(result);
         }
 

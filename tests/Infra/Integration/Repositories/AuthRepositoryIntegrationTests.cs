@@ -35,8 +35,8 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new AuthRepository(uow);
 
-        var login = await repository.ObterDadosLoginAsync("login");
-        var escopos = await repository.ObterEscoposDoUsuarioAsync(usuarioId);
+        var login = await repository.ObterDadosLoginAsync("login", CancellationToken.None);
+        var escopos = await repository.ObterEscoposDoUsuarioAsync(usuarioId, CancellationToken.None);
 
         Assert.Equal(usuarioId, login.Usuario?.Id);
         Assert.Equal("Admin", login.Perfil?.Nome);
@@ -56,7 +56,7 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repo = new AuthRepository(uow);
 
-        var usuario = await repo.ObterPorNomeEParceiroAsync("login", parceiroId.ToString());
+        var usuario = await repo.ObterPorNomeEParceiroAsync("login", parceiroId.ToString(), CancellationToken.None);
         Assert.NotNull(usuario);
         Assert.Equal(usuarioId, usuario!.Id);
     }
@@ -68,7 +68,7 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repo = new AuthRepository(uow);
 
-        var usuario = await repo.ObterPorNomeEParceiroAsync("naoexiste", Guid.NewGuid().ToString());
+        var usuario = await repo.ObterPorNomeEParceiroAsync("naoexiste", Guid.NewGuid().ToString(), CancellationToken.None);
         Assert.Null(usuario);
     }
 
@@ -84,7 +84,7 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repo = new AuthRepository(uow);
 
-        var perfil = await repo.ObterPerfisDoUsuarioAsync(usuarioId);
+        var perfil = await repo.ObterPerfisDoUsuarioAsync(usuarioId, CancellationToken.None);
         Assert.NotNull(perfil);
         Assert.Equal(perfilId, perfil.Id);
     }
@@ -101,7 +101,7 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repo = new AuthRepository(uow);
 
-        var escopos = await repo.ObterEscoposDoUsuarioAsync(usuarioId);
+        var escopos = await repo.ObterEscoposDoUsuarioAsync(usuarioId, CancellationToken.None);
         Assert.NotNull(escopos);
         Assert.Empty(escopos);
     }
@@ -210,7 +210,7 @@ public sealed class AuthRepositoryIntegrationTests
         var repository = new AuthRepository(uow);
 
         var novaSenhaHash = "new-hash-value";
-        var resultado = await repository.AtualizarSenhaUsuarioAsync(usuarioId, novaSenhaHash);
+        var resultado = await repository.AtualizarSenhaUsuarioAsync(usuarioId, novaSenhaHash, CancellationToken.None);
 
         Assert.True(resultado);
 
@@ -228,7 +228,7 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new AuthRepository(uow);
 
-        var resultado = await repository.AtualizarSenhaUsuarioAsync(9999, "hash");
+        var resultado = await repository.AtualizarSenhaUsuarioAsync(9999, "hash", CancellationToken.None);
 
         Assert.False(resultado);
     }

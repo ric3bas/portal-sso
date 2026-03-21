@@ -11,8 +11,10 @@ namespace Portal.Features.Usuario.Infra
         public UsuarioRepository(IUnitOfWork unitOfWork) : base(unitOfWork) {}
         public readonly string perfilMaster = "MASTER";
 
-        public async Task<int> InserirAsync(UsuarioEntity usuario)
+        public async Task<int> InserirAsync(UsuarioEntity usuario, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = "INSERT INTO sso.usuario (nome, email,login, senha, parceiro_id, perfil_id) " +
                 "VALUES (@Nome, @Email, @login, @Senha, @ParceiroId, @PerfilId) RETURNING id";
 
@@ -24,11 +26,13 @@ namespace Portal.Features.Usuario.Infra
                 usuario.Login, 
                 usuario.Senha, 
                 usuario.ParceiroId,
-                perfilId}, _unitOfWork.Transaction));
+                perfilId}, _unitOfWork.Transaction), cancellationToken);
         }
 
         public async Task<bool> ExisteLoginAsync(string login, Guid parceiroId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = "SELECT COUNT(1) FROM sso.usuario WHERE login = @Login AND parceiro_id = @ParceiroId";
             var count = await _unitOfWork.Connection.ExecuteScalarAsync<int>(sql, new { Login = login, ParceiroId = parceiroId }, _unitOfWork.Transaction);
             return count > 0;
@@ -36,6 +40,8 @@ namespace Portal.Features.Usuario.Infra
 
         public async Task<RegistroValidacao> ValidarRegistroAsync(string login, Guid parceiroId, int perfilId, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = @"
                 SELECT COUNT(1) FROM sso.parceiro WHERE id = @ParceiroId;
                 SELECT COUNT(1) FROM sso.usuario  WHERE login = @Login AND parceiro_id = @ParceiroId;
@@ -77,6 +83,54 @@ namespace Portal.Features.Usuario.Infra
             const string sql = "SELECT COUNT(1) FROM sso.usuario WHERE id = @usuarioId AND parceiro_id = @parceiroId";
             var total = await _unitOfWork.Connection.ExecuteScalarAsync<int>(sql, new { usuarioId, parceiroId }, _unitOfWork.Transaction);
             return total > 0;
+        }
+
+        public async Task IncrementarTentativaLoginAsync(int usuarioId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            const string sql = "UPDATE sso.usuario SET tentativas_login = tentativas_login + 1, ultimo_erro_login = NOW() WHERE id = @usuarioId";
+            await _unitOfWork.Connection.ExecuteAsync(sql, new { usuarioId }, _unitOfWork.Transaction);
+        }
+
+        public async Task ResetarTentativasLoginAsync(int usuarioId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            const string sql = "UPDATE sso.usuario SET tentativas_login = 0, ultimo_erro_login = NULL WHERE id = @usuarioId";
+            await _unitOfWork.Connection.ExecuteAsync(sql, new { usuarioId }, _unitOfWork.Transaction);
+        }
+
+        public async Task BloquearUsuarioAsync(int usuarioId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            const string sql = "UPDATE sso.usuario SET tentativas_login = 5 WHERE id = @usuarioId";
+            await _unitOfWork.Connection.ExecuteAsync(sql, new { usuarioId }, _unitOfWork.Transaction);
+        }
+
+        public async Task<UsuarioEntity?> ObterPorIdAsync(int usuarioId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            const string sql = "SELECT id, nome, email, login, senha, parceiro_id, perfil_id, tentativas_login, ultimo_erro_login FROM sso.usuario WHERE id = @usuarioId";
+            return await _unitOfWork.Connection.QuerySingleOrDefaultAsync<UsuarioEntity>(sql, new { usuarioId }, _unitOfWork.Transaction);
+        }
+
+        public async Task AtualizarAsync(UsuarioEntity usuario, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            const string sql = @"UPDATE sso.usuario SET
+                nome = @Nome,
+                email = @Email,
+                login = @Login,
+                senha = @Senha,
+                parceiro_id = @ParceiroId,
+                perfil_id = @PerfilId,
+                tentativas_login = @TentativasLogin,
+                ultimo_erro_login = @UltimoErroLogin
+                WHERE id = @Id";
+            await _unitOfWork.Connection.ExecuteAsync(sql, usuario, _unitOfWork.Transaction);
         }
 
     }

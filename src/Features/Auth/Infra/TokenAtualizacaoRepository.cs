@@ -8,8 +8,10 @@ namespace Portal.Features.Auth.Infra
     {
         public TokenAtualizacaoRepository(IUnitOfWork unitOfWork) : base(unitOfWork) { }
 
-        public async Task<TokenAtualizacao?> ObterPorTokenAsync(string token)
+        public async Task<TokenAtualizacao?> ObterPorTokenAsync(string token, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = @"SELECT id,
                                         token,
                                         expira_em AS ExpiraEm,
@@ -22,15 +24,19 @@ namespace Portal.Features.Auth.Infra
             return await Task.Run(() => QuerySingle(sql, new { token }));
         }
 
-        public async Task InserirAsync(TokenAtualizacao token)
+        public async Task InserirAsync(TokenAtualizacao token, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = @"INSERT INTO sso.token_atualizacao (token, expira_em, revogado, usuario_id)
                                  VALUES (@Token, @ExpiraEm, @Revogado, @UsuarioId)";
             await Task.Run(() => Execute(sql, token));
         }
 
-        public async Task RevogarAsync(string token)
+        public async Task RevogarAsync(string token, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             const string sql = "UPDATE sso.token_atualizacao SET revogado = TRUE WHERE token = @token";
             await Task.Run(() => Execute(sql, new { token }));
         }

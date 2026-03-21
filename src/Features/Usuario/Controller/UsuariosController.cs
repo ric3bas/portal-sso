@@ -34,9 +34,9 @@ namespace Portal.Features.Usuario.Controller
         [SwaggerOperation(Summary = "Registra um novo usuário")]
         [ProducesResponseType(200)]
         [ProducesBadRequestProblem]
-        public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request)
+        public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request, CancellationToken cancellationToken)
         {
-            await _usuarioService.RegisterAsync(request);
+            await _usuarioService.RegisterAsync(request, cancellationToken);
             return Ok("Usuário criado com sucesso");
         }
 

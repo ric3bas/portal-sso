@@ -4,6 +4,7 @@ using Portal.Dominio.Validations;
 using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Auth.Domain.Responses;
+using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Infra;
 using System.IdentityModel.Tokens.Jwt;
 using static Portal.Features.Auth.Controller.AuthController;
@@ -14,27 +15,30 @@ namespace Portal.Features.Auth.Service
     public class AuthService : BaseService, IAuthService
     {
         private readonly IAuthRepository _authRepository;
+        private readonly IUsuarioRepository _usuarioRepository;
+
         private readonly ITokenAtualizacaoRepository _tokenRepo;
         private readonly IConfiguration _config;
         private readonly IUnitOfWork _unitOfWork;
         private readonly Portal.Infra.Email.IEmailService _emailService;
 
         public AuthService(IAuthRepository authRepo, ITokenAtualizacaoRepository tokenRepo, IConfiguration config, IUnitOfWork unitOfWork,
-             IHttpContextAccessor httpContextAccessor, Portal.Infra.Email.IEmailService emailService) : base(httpContextAccessor)
+             IHttpContextAccessor httpContextAccessor, Portal.Infra.Email.IEmailService emailService, IUsuarioRepository usuarioRepository) : base(httpContextAccessor)
         {
             _authRepository = authRepo;
-            _config         = config;
-            _tokenRepo      = tokenRepo;
-            _unitOfWork     = unitOfWork;
-            _emailService   = emailService;
+            _config = config;
+            _tokenRepo = tokenRepo;
+            _unitOfWork = unitOfWork;
+            _emailService = emailService;
+            _usuarioRepository = usuarioRepository;
         }
 
-        public async Task<TrocarSenhaResponse> TrocarSenhaAsync(TrocarSenhaRequest request)
+        public async Task<TrocarSenhaResponse> TrocarSenhaAsync(TrocarSenhaRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
 
-            var entity = await _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token);
+            var entity = await _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, cancellationToken);
 
             #region ValidaRetorno
             if (entity == null)
@@ -49,19 +53,19 @@ namespace Portal.Features.Auth.Service
 
             var novaSenhaHash = BCrypt.Net.BCrypt.HashPassword(request.NovaSenha);
 
-            _ = await _authRepository.AtualizarSenhaUsuarioAsync(entity.UsuarioId, novaSenhaHash);
+            _ = await _authRepository.AtualizarSenhaUsuarioAsync(entity.UsuarioId, novaSenhaHash, cancellationToken);
 
-            await _authRepository.MarcarRecuperacaoSenhaComoUsadoAsync(entity.Id);
+            await _authRepository.MarcarRecuperacaoSenhaComoUsadoAsync(entity.Id, cancellationToken);
 
             return new TrocarSenhaResponse { Mensagem = "Senha alterada com sucesso" };
         }
 
-        public async Task<ValidarTokenRecuperacaoResponse> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request)
+        public async Task<ValidarTokenRecuperacaoResponse> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
 
-            var entity = await _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token);
+            var entity = await _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, cancellationToken);
 
             #region ValidaRetorno
             if (entity == null)
@@ -77,15 +81,29 @@ namespace Portal.Features.Auth.Service
             return new ValidarTokenRecuperacaoResponse { Mensagem = "Token válido, pode prosseguir com alteração de senha"};
         }
 
-        public async Task<LoginResponse> LoginAsync(LoginRequest request)
+        public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
 
-            var dados = await _authRepository.ObterDadosLoginAsync(request.Login);
+            var dados = await _authRepository.ObterDadosLoginAsync(request.Login, cancellationToken);
 
-            if (dados.Usuario is null || !BCrypt.Net.BCrypt.Verify(request.Senha, dados.Usuario.Senha))
+            if (dados.Usuario is null)
                 throw new BusinessException("Usuário ou senha inválidos");
+
+            // Controle de tentativas de login
+            if (dados.Usuario.TentativasLogin >= 5)
+                throw new BusinessException("Usuário bloqueado por excesso de tentativas. Aguarde ou redefina sua senha.");
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Senha, dados.Usuario.Senha))
+            {
+                // Incrementa tentativas
+                await _usuarioRepository.IncrementarTentativaLoginAsync(dados.Usuario.Id, cancellationToken);
+                throw new BusinessException("Usuário ou senha inválidos");
+            }
+
+            // Login bem-sucedido: zera tentativas
+            await _usuarioRepository.ResetarTentativasLoginAsync(dados.Usuario.Id, cancellationToken);
 
             var jwtSection = _config.GetSection("Jwt");
             var accessTokenExpireMinutes = int.Parse(jwtSection["AccessTokenExpireMinutes"] ?? "0");
@@ -130,17 +148,17 @@ namespace Portal.Features.Auth.Service
             };
         }
 
-        public async Task<LoginResponse> RefreshAsync(RefreshTokenRequest request)
+        public async Task<LoginResponse> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
 
-            var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken);
+            var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken, cancellationToken);
 
             if (token is null || token.Revogado || token.ExpiraEm < DateTime.UtcNow)
                 throw new BusinessException("Refresh token inválido ou expirado");
 
-            var dados = await _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId);
+            var dados = await _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId, cancellationToken);
 
             if (dados.Usuario is null)
                 throw new BusinessException("Usuário não encontrado");
@@ -166,7 +184,7 @@ namespace Portal.Features.Auth.Service
             _unitOfWork.Begin();
             try
             {
-                await _tokenRepo.RevogarAsync(request.RefreshToken);
+                await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);
                 await _tokenRepo.InserirAsync(new TokenAtualizacao
                 {
                     Token     = novoRefreshToken,
@@ -190,20 +208,20 @@ namespace Portal.Features.Auth.Service
             };
         }
 
-        public async Task LogoutAsync(LogoutRequest request)
+        public async Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
 
-            var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken);
+            var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken, cancellationToken);
 
             if (token is null || token.Revogado)
                 throw new BusinessException("Refresh token inválido ou já revogado");
 
-            await _tokenRepo.RevogarAsync(request.RefreshToken);
+            await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);
         }
 
-        public async Task<RecuperarSenhaResponse> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request)
+        public async Task<RecuperarSenhaResponse> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request, CancellationToken cancellationToken)
         {
             var loginData = await _authRepository.ObterDadosLoginAsync(request.Login);
             var usuario = loginData.Usuario;
