@@ -2,13 +2,15 @@ using Portal.Dominio.Entities;
 using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Infra;
 
+
 namespace Portal.Features.Auth.Infra
 {
-    public class TokenAtualizacaoRepository : DapperRepository<TokenAtualizacao>, IDapperRepository<TokenAtualizacao>, ITokenAtualizacaoRepository
+    [DbContext("SSO_POSTGRES")]
+    public class TokenAtualizacaoRepository : DapperRepository, IDapperRepository, ITokenAtualizacaoRepository
     {
         public TokenAtualizacaoRepository(IUnitOfWork unitOfWork) : base(unitOfWork) { }
 
-        public async Task<TokenAtualizacao?> ObterPorTokenAsync(string token, CancellationToken cancellationToken = default)
+        public async Task<TokenAtualizacaoEntity?> ObterPorTokenAsync(string token, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -21,13 +23,13 @@ namespace Portal.Features.Auth.Infra
                                  WHERE token = @token
                                  ORDER BY id DESC
                                  LIMIT 1";
-            return await Task.Run(() => QuerySingle(sql, new { token }));
+            return await QuerySingleAsync<TokenAtualizacaoEntity>(sql, new { token });
         }
 
-        public async Task InserirAsync(TokenAtualizacao token, CancellationToken cancellationToken = default)
+        public async Task InserirAsync(TokenAtualizacaoEntity token, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
+            
             const string sql = @"INSERT INTO sso.token_atualizacao (token, expira_em, revogado, usuario_id)
                                  VALUES (@Token, @ExpiraEm, @Revogado, @UsuarioId)";
             await Task.Run(() => Execute(sql, token));

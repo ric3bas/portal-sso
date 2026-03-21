@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
+using Portal.Dominio;
 using Portal.Dominio.Entities;
 using Portal.Dominio.Validations;
 using Portal.Features.Auth.Domain;
@@ -10,829 +10,881 @@ using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Auth.Domain.Responses;
 using Portal.Features.Auth.Service;
 using Portal.Features.Usuario.Domain.Interfaces;
-using Portal.Infra;
 using Portal.Infra.Email;
 
-namespace sso.services;
+namespace sso_tests;
 
 public class AuthServiceTests
 {
     private readonly IAuthRepository _authRepository;
-    private readonly ITokenAtualizacaoRepository _tokenRepo;
-    private readonly IConfiguration _config;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly ITokenAtualizacaoRepository _tokenRepository;
+    private readonly IConfiguration _configuration;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IConfigurationSection _jwtSection;
     private readonly IEmailService _emailService;
+    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly AuthService _service;
+
     public AuthServiceTests()
     {
         _authRepository = Substitute.For<IAuthRepository>();
-        _tokenRepo = Substitute.For<ITokenAtualizacaoRepository>();
-        _config = Substitute.For<IConfiguration>();
-        _unitOfWork = Substitute.For<IUnitOfWork>();
+        _tokenRepository = Substitute.For<ITokenAtualizacaoRepository>();
+        _configuration = Substitute.For<IConfiguration>();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
-        _jwtSection = Substitute.For<IConfigurationSection>();
         _emailService = Substitute.For<IEmailService>();
+        _usuarioRepository = Substitute.For<IUsuarioRepository>();
 
-        _config.GetSection("Jwt").Returns(_jwtSection);
-        _jwtSection["AccessTokenExpireMinutes"].Returns("30");
-        _jwtSection["RefreshTokenExpireDays"].Returns("7");
-        _jwtSection["Key"].Returns("test-key-with-at-least-32-characters-for-security");
-        _jwtSection["Issuer"].Returns("test-issuer");
-        _jwtSection["Audience"].Returns("test-audience");
-       
-    }
-
-    private AuthService CreateService()
-    {
-        return new AuthService(_authRepository, _tokenRepo, _config, _unitOfWork, _httpContextAccessor, _emailService, Substitute.For<IUsuarioRepository>());
+        _service = new AuthService(
+            _authRepository,
+            _tokenRepository,
+            _configuration,
+            _httpContextAccessor,
+            _emailService,
+            _usuarioRepository);
     }
 
     [Fact]
-    public void Constructor_InitializesAllFields()
+    public void Constructor_InitializesAllDependencies()
     {
-        var service = new AuthService(_authRepository, _tokenRepo, _config, _unitOfWork, _httpContextAccessor, _emailService, Substitute.For<IUsuarioRepository>());
+        // Arrange
+        var authRepository = Substitute.For<IAuthRepository>();
+        var tokenRepository = Substitute.For<ITokenAtualizacaoRepository>();
+        var configuration = Substitute.For<IConfiguration>();
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        var emailService = Substitute.For<IEmailService>();
+        var usuarioRepository = Substitute.For<IUsuarioRepository>();
 
+        // Act
+        var service = new AuthService(
+            authRepository,
+            tokenRepository,
+            configuration,
+            httpContextAccessor,
+            emailService,
+            usuarioRepository);
+
+        // Assert
         Assert.NotNull(service);
     }
+
+    #region TrocarSenhaAsync Tests
+
+    [Fact]
+    public async Task TrocarSenhaAsync_InvalidRequest_ThrowsValidationException()
+    {
+        // Arrange - invalid request without token
+        var request = new TrocarSenhaRequest();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _service.TrocarSenhaAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task TrocarSenhaAsync_TokenNotFound_ThrowsBusinessException()
+    {
+        // Arrange
+        var request = new TrocarSenhaRequest
+        {
+            Token = "invalid-token",
+            NovaSenha = "NewPassword123!",
+            ConfirmarSenha = "NewPassword123!"
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns((RecuperacaoSenhaEntity?)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.TrocarSenhaAsync(request, CancellationToken.None));
+        Assert.Contains("Token inválido", exception.Errors);
+    }
+
+    [Fact]
+    public async Task TrocarSenhaAsync_TokenAlreadyUsed_ThrowsBusinessException()
+    {
+        // Arrange
+        var request = new TrocarSenhaRequest
+        {
+            Token = "used-token",
+            NovaSenha = "NewPassword123!",
+            ConfirmarSenha = "NewPassword123!"
+        };
+
+        var entity = new RecuperacaoSenhaEntity
+        {
+            Id = 1,
+            Token = "used-token",
+            Usado = true,
+            ExpiraEm = DateTime.UtcNow.AddHours(1),
+            UsuarioId = 1
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns(entity);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.TrocarSenhaAsync(request, CancellationToken.None));
+        Assert.Contains("Token já utilizado", exception.Errors);
+    }
+
+    [Fact]
+    public async Task TrocarSenhaAsync_TokenExpired_ThrowsBusinessException()
+    {
+        // Arrange
+        var request = new TrocarSenhaRequest
+        {
+            Token = "expired-token",
+            NovaSenha = "NewPassword123!",
+            ConfirmarSenha = "NewPassword123!"
+        };
+
+        var entity = new RecuperacaoSenhaEntity
+        {
+            Id = 1,
+            Token = "expired-token",
+            Usado = false,
+            ExpiraEm = DateTime.UtcNow.AddHours(-1),
+            UsuarioId = 1
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns(entity);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.TrocarSenhaAsync(request, CancellationToken.None));
+        Assert.Contains("Token expirado", exception.Errors);
+    }
+
+    [Fact]
+    public async Task TrocarSenhaAsync_ValidRequest_UpdatesPasswordAndMarksTokenAsUsed()
+    {
+        // Arrange
+        var request = new TrocarSenhaRequest
+        {
+            Token = "valid-token",
+            NovaSenha = "NewPassword123!",
+            ConfirmarSenha = "NewPassword123!"
+        };
+
+        var entity = new RecuperacaoSenhaEntity
+        {
+            Id = 1,
+            Token = "valid-token",
+            Usado = false,
+            ExpiraEm = DateTime.UtcNow.AddHours(1),
+            UsuarioId = 123
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns(entity);
+        _authRepository.AtualizarSenhaUsuarioAsync(entity.UsuarioId, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        // Act
+        var result = await _service.TrocarSenhaAsync(request, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Senha alterada com sucesso", result.Mensagem);
+        await _authRepository.Received(1).AtualizarSenhaUsuarioAsync(
+            entity.UsuarioId,
+            Arg.Is<string>(s => BCrypt.Net.BCrypt.Verify(request.NovaSenha, s)),
+            Arg.Any<CancellationToken>());
+        await _authRepository.Received(1).MarcarRecuperacaoSenhaComoUsadoAsync(entity.Id, Arg.Any<CancellationToken>());
+    }
+
+    #endregion
+
+    #region ValidarTokenAsync Tests
+
+    [Fact]
+    public async Task ValidarTokenAsync_InvalidRequest_ThrowsValidationException()
+    {
+        // Arrange - invalid request without token
+        var request = new ValidarTokenRecuperacaoRequest();
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _service.ValidarTokenAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ValidarTokenAsync_TokenNotFound_ThrowsBusinessException()
+    {
+        // Arrange
+        var request = new ValidarTokenRecuperacaoRequest
+        {
+            Token = "invalid-token"
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns((RecuperacaoSenhaEntity?)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.ValidarTokenAsync(request, CancellationToken.None));
+        Assert.Contains("Token inválido", exception.Errors);
+    }
+
+    [Fact]
+    public async Task ValidarTokenAsync_TokenAlreadyUsed_ThrowsBusinessException()
+    {
+        // Arrange
+        var request = new ValidarTokenRecuperacaoRequest
+        {
+            Token = "used-token"
+        };
+
+        var entity = new RecuperacaoSenhaEntity
+        {
+            Id = 1,
+            Token = "used-token",
+            Usado = true,
+            ExpiraEm = DateTime.UtcNow.AddHours(1),
+            UsuarioId = 1
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns(entity);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.ValidarTokenAsync(request, CancellationToken.None));
+        Assert.Contains("Token já utilizado", exception.Errors);
+    }
+
+    [Fact]
+    public async Task ValidarTokenAsync_TokenExpired_ThrowsBusinessException()
+    {
+        // Arrange
+        var request = new ValidarTokenRecuperacaoRequest
+        {
+            Token = "expired-token"
+        };
+
+        var entity = new RecuperacaoSenhaEntity
+        {
+            Id = 1,
+            Token = "expired-token",
+            Usado = false,
+            ExpiraEm = DateTime.UtcNow.AddHours(-1),
+            UsuarioId = 1
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns(entity);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.ValidarTokenAsync(request, CancellationToken.None));
+        Assert.Contains("Token expirado", exception.Errors);
+    }
+
+    [Fact]
+    public async Task ValidarTokenAsync_ValidToken_ReturnsSuccessResponse()
+    {
+        // Arrange
+        var request = new ValidarTokenRecuperacaoRequest
+        {
+            Token = "valid-token"
+        };
+
+        var entity = new RecuperacaoSenhaEntity
+        {
+            Id = 1,
+            Token = "valid-token",
+            Usado = false,
+            ExpiraEm = DateTime.UtcNow.AddHours(1),
+            UsuarioId = 1
+        };
+
+        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
+            .Returns(entity);
+
+        // Act
+        var result = await _service.ValidarTokenAsync(request, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Token válido, pode prosseguir com alteração de senha", result.Mensagem);
+    }
+
+    #endregion
+
+    #region LoginAsync Tests
 
     [Fact]
     public async Task LoginAsync_InvalidRequest_ThrowsValidationException()
     {
-        var service = CreateService();
-        var request = new LoginRequest { Login = "", Senha = "" };
+        // Arrange - invalid request without login/password
+        var request = new LoginRequest();
 
-        await Assert.ThrowsAsync<ValidationException>(() => service.LoginAsync(request, CancellationToken.None));
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _service.LoginAsync(request, CancellationToken.None));
     }
 
     [Fact]
     public async Task LoginAsync_UserNotFound_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var request = new LoginRequest { Login = "testuser", Senha = "password" };
-        var loginData = new LoginData { Usuario = null, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>()).Returns(loginData);
+        // Arrange
+        var request = new LoginRequest
+        {
+            Login = "test@example.com",
+            Senha = "password"
+        };
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request, CancellationToken.None));
+        var dados = new LoginData
+        {
+            Usuario = null,
+            Perfil = null,
+            Escopos = new List<string>()
+        };
 
-        Assert.Contains("Usuário ou senha inválidos", ex.Errors);
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(dados);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.LoginAsync(request, CancellationToken.None));
+        Assert.Contains("Usuário ou senha inválidos", exception.Errors);
     }
 
     [Fact]
-    public async Task LoginAsync_InvalidPassword_ThrowsBusinessException()
+    public async Task LoginAsync_UserBlockedByLoginAttempts_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword("correctpassword");
-        var request = new LoginRequest { Login = "testuser", Senha = "wrongpassword" };
-        var usuario = new UsuarioEntity
+        // Arrange
+        var request = new LoginRequest
         {
-            Id = 1,
-            Login = "testuser",
-            Senha = hashedPassword,
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
+            Login = "test@example.com",
+            Senha = "password"
         };
-        var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>()).Returns(loginData);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request, CancellationToken.None));
+        var dados = new LoginData
+        {
+            Usuario = new UsuarioEntity
+            {
+                Id = 1,
+                Login = "test@example.com",
+                Senha = BCrypt.Net.BCrypt.HashPassword("password"),
+                TentativasLogin = 5,
+                ParceiroId = Guid.NewGuid()
+            },
+            Perfil = null,
+            Escopos = new List<string>()
+        };
 
-        Assert.Contains("Usuário ou senha inválidos", ex.Errors);
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(dados);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.LoginAsync(request, CancellationToken.None));
+        Assert.Contains("Usuário bloqueado por excesso de tentativas. Aguarde ou redefina sua senha.", exception.Errors);
     }
 
     [Fact]
-    public async Task LoginAsync_ValidCredentials_ReturnsLoginResponse()
+    public async Task LoginAsync_InvalidPassword_IncrementsAttemptsAndThrowsBusinessException()
     {
-        var service = CreateService();
-        var password = "password123";
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-        var request = new LoginRequest { Login = "testuser", Senha = password };
-        var usuario = new UsuarioEntity
+        // Arrange
+        var request = new LoginRequest
         {
-            Id = 1,
-            Login = "testuser",
-            Senha = hashedPassword,
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
+            Login = "test@example.com",
+            Senha = "wrongpassword"
         };
-        var perfil = new UsuarioPerfilItemResponse { Id = 1, Nome = "Admin" };
-        var escopos = new List<string> { "read", "write" };
-        var loginData = new LoginData { Usuario = usuario, Perfil = perfil, Escopos = escopos };
-        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>()).Returns(loginData);
 
-        var result = await service.LoginAsync(request, CancellationToken.None);
+        var dados = new LoginData
+        {
+            Usuario = new UsuarioEntity
+            {
+                Id = 1,
+                Login = "test@example.com",
+                Senha = BCrypt.Net.BCrypt.HashPassword("correctpassword"),
+                TentativasLogin = 2,
+                ParceiroId = Guid.NewGuid()
+            },
+            Perfil = null,
+            Escopos = new List<string>()
+        };
 
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(dados);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.LoginAsync(request, CancellationToken.None));
+        Assert.Contains("Usuário ou senha inválidos", exception.Errors);
+        await _usuarioRepository.Received(1).IncrementarTentativaLoginAsync(dados.Usuario.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task LoginAsync_ValidCredentials_ResetsAttemptsAndReturnsTokens()
+    {
+        // Arrange
+        var request = new LoginRequest
+        {
+            Login = "test@example.com",
+            Senha = "correctpassword"
+        };
+
+        var parceiroId = Guid.NewGuid();
+        var dados = new LoginData
+        {
+            Usuario = new UsuarioEntity
+            {
+                Id = 1,
+                Login = "test@example.com",
+                Nome = "Test User",
+                Email = "test@example.com",
+                Senha = BCrypt.Net.BCrypt.HashPassword("correctpassword"),
+                TentativasLogin = 2,
+                ParceiroId = parceiroId
+            },
+            Perfil = new UsuarioPerfilItemResponse { Nome = "Admin" },
+            Escopos = new List<string> { "read", "write" }
+        };
+
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(dados);
+
+        var configSection = Substitute.For<IConfigurationSection>();
+        configSection["AccessTokenExpireMinutes"].Returns("60");
+        configSection["RefreshTokenExpireDays"].Returns("7");
+        configSection["Key"].Returns("test-secret-key-with-at-least-32-characters");
+        configSection["Issuer"].Returns("test-issuer");
+        configSection["Audience"].Returns("test-audience");
+        _configuration.GetSection("Jwt").Returns(configSection);
+
+        // Act
+        var result = await _service.LoginAsync(request, CancellationToken.None);
+
+        // Assert
         Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-        Assert.NotEmpty(result.RefreshToken);
-        Assert.Equal("30", result.ExpireInMinutes);
-        await _tokenRepo.Received(1).InserirAsync(Arg.Any<TokenAtualizacao>());
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Commit();
+        Assert.NotNull(result.AccessToken);
+        Assert.NotNull(result.RefreshToken);
+        Assert.Equal("60", result.ExpireInMinutes);
+        await _usuarioRepository.Received(1).ResetarTentativasLoginAsync(dados.Usuario.Id, Arg.Any<CancellationToken>());
+        await _tokenRepository.Received(1).InserirAsync(Arg.Is<TokenAtualizacaoEntity>(t =>
+            t.Token == result.RefreshToken &&
+            t.Revogado == false &&
+            t.UsuarioId == dados.Usuario.Id));
     }
 
-    [Fact]
-    public async Task LoginAsync_ValidCredentialsWithNullPerfil_ReturnsLoginResponse()
-    {
-        var service = CreateService();
-        var password = "password123";
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-        var request = new LoginRequest { Login = "testuser", Senha = password };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "testuser",
-            Senha = hashedPassword,
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var escopos = new List<string> { "read" };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = escopos };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
+    #endregion
 
-        var result = await service.LoginAsync(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-        Assert.NotEmpty(result.RefreshToken);
-    }
+    #region RefreshAsync Tests
 
     [Fact]
-    public async Task LoginAsync_TokenInsertionFails_RollsBackAndThrows()
+    public async Task RefreshAsync_InvalidRequest_ThrowsValidationException()
     {
-        var service = CreateService();
-        var password = "password123";
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-        var request = new LoginRequest { Login = "testuser", Senha = password };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "testuser",
-            Senha = hashedPassword,
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
-        _tokenRepo.InserirAsync(Arg.Any<TokenAtualizacao>()).Throws(new Exception("Database error"));
+        // Arrange - invalid request without refresh token
+        var request = new RefreshTokenRequest();
 
-        await Assert.ThrowsAsync<Exception>(() => service.LoginAsync(request, CancellationToken.None));
-
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Rollback();
-        _unitOfWork.Received(0).Commit();
-    }
-
-    [Fact]
-    public async Task LoginAsync_UsesConfigurationValues()
-    {
-        var service = CreateService();
-        var password = "password123";
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-        var request = new LoginRequest { Login = "testuser", Senha = password };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "testuser",
-            Senha = hashedPassword,
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
-
-        await service.LoginAsync(request, CancellationToken.None);
-
-        _config.Received(1).GetSection("Jwt");
-        var _ = _jwtSection.Received()["AccessTokenExpireMinutes"];
-        var __ = _jwtSection.Received()["RefreshTokenExpireDays"];
-        var ___ = _jwtSection.Received()["Key"];
-        var ____ = _jwtSection.Received()["Issuer"];
-        var _____ = _jwtSection.Received()["Audience"];
-    }
-
-    [Fact]
-    public async Task RefreshAsync_EmptyRefreshToken_ThrowsValidationException()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "" };
-
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RefreshAsync(request, CancellationToken.None));
-
-        Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_WhitespaceRefreshToken_ThrowsValidationException()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "   " };
-
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.RefreshAsync(request, CancellationToken.None));
-
-        Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _service.RefreshAsync(request, CancellationToken.None));
     }
 
     [Fact]
     public async Task RefreshAsync_TokenNotFound_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "invalid-token" };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>()).Returns((TokenAtualizacao?)null);
+        // Arrange
+        var request = new RefreshTokenRequest
+        {
+            RefreshToken = "invalid-token"
+        };
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns((TokenAtualizacaoEntity?)null);
 
-        Assert.Contains("Refresh token inválido ou expirado", ex.Errors);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.RefreshAsync(request, CancellationToken.None));
+        Assert.Contains("Refresh token inválido ou expirado", exception.Errors);
     }
 
     [Fact]
-    public async Task RefreshAsync_RevokedToken_ThrowsBusinessException()
+    public async Task RefreshAsync_TokenRevoked_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "revoked-token" };
-        var token = new TokenAtualizacao
+        // Arrange
+        var request = new RefreshTokenRequest
         {
+            RefreshToken = "revoked-token"
+        };
+
+        var token = new TokenAtualizacaoEntity
+        {
+            Id = 1,
             Token = "revoked-token",
             Revogado = true,
             ExpiraEm = DateTime.UtcNow.AddDays(1),
             UsuarioId = 1
         };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns(token);
 
-        Assert.Contains("Refresh token inválido ou expirado", ex.Errors);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.RefreshAsync(request, CancellationToken.None));
+        Assert.Contains("Refresh token inválido ou expirado", exception.Errors);
     }
 
     [Fact]
-    public async Task RefreshAsync_ExpiredToken_ThrowsBusinessException()
+    public async Task RefreshAsync_TokenExpired_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "expired-token" };
-        var token = new TokenAtualizacao
+        // Arrange
+        var request = new RefreshTokenRequest
         {
+            RefreshToken = "expired-token"
+        };
+
+        var token = new TokenAtualizacaoEntity
+        {
+            Id = 1,
             Token = "expired-token",
             Revogado = false,
             ExpiraEm = DateTime.UtcNow.AddDays(-1),
             UsuarioId = 1
         };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns(token);
 
-        Assert.Contains("Refresh token inválido ou expirado", ex.Errors);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.RefreshAsync(request, CancellationToken.None));
+        Assert.Contains("Refresh token inválido ou expirado", exception.Errors);
     }
 
     [Fact]
     public async Task RefreshAsync_UserNotFound_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
+        // Arrange
+        var request = new RefreshTokenRequest
         {
+            RefreshToken = "valid-token"
+        };
+
+        var token = new TokenAtualizacaoEntity
+        {
+            Id = 1,
             Token = "valid-token",
             Revogado = false,
             ExpiraEm = DateTime.UtcNow.AddDays(1),
             UsuarioId = 1
         };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        var loginData = new LoginData { Usuario = null, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.RefreshAsync(request, CancellationToken.None));
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns(token);
 
-        Assert.Contains("Usuário não encontrado", ex.Errors);
+        var dados = new LoginData
+        {
+            Usuario = null,
+            Perfil = null,
+            Escopos = new List<string>()
+        };
+
+        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId, Arg.Any<CancellationToken>())
+            .Returns(dados);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.RefreshAsync(request, CancellationToken.None));
+        Assert.Contains("Usuário não encontrado", exception.Errors);
     }
 
     [Fact]
-    public async Task RefreshAsync_ValidToken_ReturnsNewTokens()
+    public async Task RefreshAsync_ValidToken_RevokesOldTokenAndReturnsNewTokens()
     {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
+        // Arrange
+        var request = new RefreshTokenRequest
         {
+            RefreshToken = "valid-token"
+        };
+
+        var token = new TokenAtualizacaoEntity
+        {
+            Id = 1,
             Token = "valid-token",
             Revogado = false,
             ExpiraEm = DateTime.UtcNow.AddDays(1),
             UsuarioId = 1
         };
-        var usuario = new UsuarioEntity
+
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns(token);
+
+        var parceiroId = Guid.NewGuid();
+        var dados = new LoginData
         {
-            Id = 1,
-            Login = "testuser",
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
+            Usuario = new UsuarioEntity
+            {
+                Id = 1,
+                Login = "test@example.com",
+                Nome = "Test User",
+                Email = "test@example.com",
+                ParceiroId = parceiroId
+            },
+            Perfil = new UsuarioPerfilItemResponse { Nome = "Admin" },
+            Escopos = new List<string> { "read", "write" }
         };
-        var perfil = new UsuarioPerfilItemResponse { Id = 1, Nome = "Admin" };
-        var escopos = new List<string> { "read", "write" };
-        var loginData = new LoginData { Usuario = usuario, Perfil = perfil, Escopos = escopos };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
 
-        var result = await service.RefreshAsync(request, CancellationToken.None);
+        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId, Arg.Any<CancellationToken>())
+            .Returns(dados);
 
+        var configSection = Substitute.For<IConfigurationSection>();
+        configSection["AccessTokenExpireMinutes"].Returns("60");
+        configSection["RefreshTokenExpireDays"].Returns("7");
+        configSection["Key"].Returns("test-secret-key-with-at-least-32-characters");
+        configSection["Issuer"].Returns("test-issuer");
+        configSection["Audience"].Returns("test-audience");
+        _configuration.GetSection("Jwt").Returns(configSection);
+
+        // Act
+        var result = await _service.RefreshAsync(request, CancellationToken.None);
+
+        // Assert
         Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-        Assert.NotEmpty(result.RefreshToken);
-        Assert.Equal("30", result.ExpireInMinutes);
-        await _tokenRepo.Received(1).RevogarAsync(request.RefreshToken);
-        await _tokenRepo.Received(1).InserirAsync(Arg.Any<TokenAtualizacao>());
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Commit();
+        Assert.NotNull(result.AccessToken);
+        Assert.NotNull(result.RefreshToken);
+        Assert.Equal("60", result.ExpireInMinutes);
+        await _tokenRepository.Received(1).RevogarAsync(request.RefreshToken, Arg.Any<CancellationToken>());
+        await _tokenRepository.Received(1).InserirAsync(Arg.Is<TokenAtualizacaoEntity>(t =>
+            t.Token == result.RefreshToken &&
+            t.Revogado == false &&
+            t.UsuarioId == token.UsuarioId));
     }
 
-    [Fact]
-    public async Task RefreshAsync_ValidTokenWithNullPerfil_ReturnsNewTokens()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
-        {
-            Token = "valid-token",
-            Revogado = false,
-            ExpiraEm = DateTime.UtcNow.AddDays(1),
-            UsuarioId = 1
-        };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "testuser",
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var escopos = new List<string> { "read" };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = escopos };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
+    #endregion
 
-        var result = await service.RefreshAsync(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-    }
+    #region LogoutAsync Tests
 
     [Fact]
-    public async Task RefreshAsync_TokenOperationFails_RollsBackAndThrows()
+    public async Task LogoutAsync_InvalidRequest_ThrowsValidationException()
     {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
-        {
-            Token = "valid-token",
-            Revogado = false,
-            ExpiraEm = DateTime.UtcNow.AddDays(1),
-            UsuarioId = 1
-        };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "testuser",
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
-        _tokenRepo.RevogarAsync(request.RefreshToken).Throws(new Exception("Database error"));
+        // Arrange - invalid request without refresh token
+        var request = new LogoutRequest();
 
-        await Assert.ThrowsAsync<Exception>(() => service.RefreshAsync(request, CancellationToken.None));
-
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Rollback();
-        _unitOfWork.Received(0).Commit();
-    }
-
-    [Fact]
-    public async Task RefreshAsync_UsesConfigurationValues()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
-        {
-            Token = "valid-token",
-            Revogado = false,
-            ExpiraEm = DateTime.UtcNow.AddDays(1),
-            UsuarioId = 1
-        };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "testuser",
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
-
-        await service.RefreshAsync(request, CancellationToken.None);
-
-        _config.Received(1).GetSection("Jwt");
-        var _ = _jwtSection.Received()["AccessTokenExpireMinutes"];
-        var __ = _jwtSection.Received()["RefreshTokenExpireDays"];
-        var ___ = _jwtSection.Received()["Key"];
-        var ____ = _jwtSection.Received()["Issuer"];
-        var _____ = _jwtSection.Received()["Audience"];
-    }
-
-    [Fact]
-    public async Task LogoutAsync_EmptyRefreshToken_ThrowsValidationException()
-    {
-        var service = CreateService();
-        var request = new LogoutRequest { RefreshToken = "" };
-
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.LogoutAsync(request, CancellationToken.None));
-
-        Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
-    }
-
-    [Fact]
-    public async Task LogoutAsync_WhitespaceRefreshToken_ThrowsValidationException()
-    {
-        var service = CreateService();
-        var request = new LogoutRequest { RefreshToken = "   " };
-
-        var ex = await Assert.ThrowsAsync<ValidationException>(() => service.LogoutAsync(request, CancellationToken.None));
-
-        Assert.Contains("Campo Refresh Token obrigatório", ex.Errors);
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _service.LogoutAsync(request, CancellationToken.None));
     }
 
     [Fact]
     public async Task LogoutAsync_TokenNotFound_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var request = new LogoutRequest { RefreshToken = "invalid-token" };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns((TokenAtualizacao?)null);
+        // Arrange
+        var request = new LogoutRequest
+        {
+            RefreshToken = "invalid-token"
+        };
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LogoutAsync(request, CancellationToken.None));
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns((TokenAtualizacaoEntity?)null);
 
-        Assert.Contains("Refresh token inválido ou já revogado", ex.Errors);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.LogoutAsync(request, CancellationToken.None));
+        Assert.Contains("Refresh token inválido ou já revogado", exception.Errors);
     }
 
     [Fact]
-    public async Task LogoutAsync_AlreadyRevokedToken_ThrowsBusinessException()
+    public async Task LogoutAsync_TokenAlreadyRevoked_ThrowsBusinessException()
     {
-        var service = CreateService();
-        var request = new LogoutRequest { RefreshToken = "revoked-token" };
-        var token = new TokenAtualizacao
+        // Arrange
+        var request = new LogoutRequest
         {
+            RefreshToken = "revoked-token"
+        };
+
+        var token = new TokenAtualizacaoEntity
+        {
+            Id = 1,
             Token = "revoked-token",
             Revogado = true,
             ExpiraEm = DateTime.UtcNow.AddDays(1),
             UsuarioId = 1
         };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LogoutAsync(request, CancellationToken.None));
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns(token);
 
-        Assert.Contains("Refresh token inválido ou já revogado", ex.Errors);
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BusinessException>(() =>
+            _service.LogoutAsync(request, CancellationToken.None));
+        Assert.Contains("Refresh token inválido ou já revogado", exception.Errors);
     }
 
     [Fact]
     public async Task LogoutAsync_ValidToken_RevokesToken()
     {
-        var service = CreateService();
-        var request = new LogoutRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
+        // Arrange
+        var request = new LogoutRequest
         {
+            RefreshToken = "valid-token"
+        };
+
+        var token = new TokenAtualizacaoEntity
+        {
+            Id = 1,
             Token = "valid-token",
             Revogado = false,
             ExpiraEm = DateTime.UtcNow.AddDays(1),
             UsuarioId = 1
         };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
 
-        await service.LogoutAsync(request, CancellationToken.None);
+        _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
+            .Returns(token);
 
-        await _tokenRepo.Received(1).RevogarAsync(request.RefreshToken);
+        // Act
+        await _service.LogoutAsync(request, CancellationToken.None);
+
+        // Assert
+        await _tokenRepository.Received(1).RevogarAsync(request.RefreshToken, Arg.Any<CancellationToken>());
     }
 
+    #endregion
+
+    #region SolicitarRecuperacaoAsync Tests
+
     [Fact]
-    public async Task LoginAsync_WithNullUsuarioFields_UsesEmptyStringFallbacks()
+    public async Task SolicitarRecuperacaoAsync_UserNotFound_ReturnsFalseEmailEnviado()
     {
-        var service = CreateService();
-        var password = "password123";
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-        var request = new LoginRequest { Login = "testuser", Senha = password };
-        var usuario = new UsuarioEntity
+        // Arrange
+        var request = new RecuperarSenhaRequest
         {
-            Id = 1,
-            Login = null,
-            Senha = hashedPassword,
-            Nome = null,
-            Email = null,
-            ParceiroId = Guid.NewGuid()
+            Login = "nonexistent@example.com"
         };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
 
-        var result = await service.LoginAsync(request, CancellationToken.None);
+        var loginData = new LoginData
+        {
+            Usuario = null,
+            Perfil = null,
+            Escopos = new List<string>()
+        };
 
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(loginData);
+
+        // Act
+        var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
+
+        // Assert
         Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-        Assert.NotEmpty(result.RefreshToken);
-    }
-
-    [Fact]
-    public async Task LoginAsync_WithNullJwtConfigValues_UsesEmptyStringFallbacks()
-    {
-        var service = CreateService();
-        var password = "password123";
-        var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-        var request = new LoginRequest { Login = "testuser", Senha = password };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "testuser",
-            Senha = hashedPassword,
-            Nome = "Test User",
-            Email = "test@example.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = new List<string>() };
-        _authRepository.ObterDadosLoginAsync(request.Login).Returns(loginData);
-
-        _jwtSection["Issuer"].Returns((string?)null);
-        _jwtSection["Audience"].Returns((string?)null);
-        _jwtSection["AccessTokenExpireMinutes"].Returns("30");
-        _jwtSection["RefreshTokenExpireDays"].Returns("7");
-
-        var result = await service.LoginAsync(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-        Assert.NotEmpty(result.RefreshToken);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_WithNullUsuarioFields_UsesEmptyStringFallbacks()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
-        {
-            Token = "valid-token",
-            Revogado = false,
-            ExpiraEm = DateTime.UtcNow.AddDays(1),
-            UsuarioId = 1
-        };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = null,
-            Nome = null,
-            Email = null,
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = new List<string>() };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
-
-        var result = await service.RefreshAsync(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-        Assert.NotEmpty(result.RefreshToken);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_WithNullJwtConfigValues_UsesEmptyStringFallbacks()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
-        {
-            Token = "valid-token",
-            Revogado = false,
-            ExpiraEm = DateTime.UtcNow.AddDays(1),
-            UsuarioId = 1
-        };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "user",
-            Nome = "User",
-            Email = "u@u.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = new List<string>() };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
-
-        _jwtSection["Issuer"].Returns((string?)null);
-        _jwtSection["Audience"].Returns((string?)null);
-        _jwtSection["AccessTokenExpireMinutes"].Returns("30");
-        _jwtSection["RefreshTokenExpireDays"].Returns("7");
-
-        var result = await service.RefreshAsync(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.AccessToken);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_WithNullAccessTokenExpireMinutes_UsesZeroFallback()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
-        {
-            Token = "valid-token",
-            Revogado = false,
-            ExpiraEm = DateTime.UtcNow.AddDays(1),
-            UsuarioId = 1
-        };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "user",
-            Nome = "User",
-            Email = "u@u.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = new List<string>() };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
-        _jwtSection["AccessTokenExpireMinutes"].Returns((string?)null);
-
-        var result = await service.RefreshAsync(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.Equal("0", result.ExpireInMinutes);
-    }
-
-    [Fact]
-    public async Task RefreshAsync_WithNullRefreshTokenExpireDays_UsesZeroFallback()
-    {
-        var service = CreateService();
-        var request = new RefreshTokenRequest { RefreshToken = "valid-token" };
-        var token = new TokenAtualizacao
-        {
-            Token = "valid-token",
-            Revogado = false,
-            ExpiraEm = DateTime.UtcNow.AddDays(1),
-            UsuarioId = 1
-        };
-        var usuario = new UsuarioEntity
-        {
-            Id = 1,
-            Login = "user",
-            Nome = "User",
-            Email = "u@u.com",
-            ParceiroId = Guid.NewGuid()
-        };
-        var loginData = new LoginData { Usuario = usuario, Perfil = null, Escopos = new List<string>() };
-        _tokenRepo.ObterPorTokenAsync(request.RefreshToken).Returns(token);
-        _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId).Returns(loginData);
-        _jwtSection["RefreshTokenExpireDays"].Returns((string?)null);
-
-        var result = await service.RefreshAsync(request, CancellationToken.None);
-
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.RefreshToken);
-    }
-
-    //[Fact]
-    //public async Task LoginAsync_UsuarioRevogado_ThrowsBusinessException()
-    //{
-    //    var service = CreateService();
-    //    var password = "password123";
-    //    var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-    //    var usuario = new UsuarioEntity
-    //    {
-    //        Id = 1,
-    //        Login = "testuser",
-    //        Senha = hashedPassword,
-    //        Nome = "Test User",
-    //        Email = "test@example.com",
-    //        ParceiroId = Guid.NewGuid(),
-    //        // Adicione propriedade de revogado/inativo se existir
-    //    };
-    //    var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-    //    _authRepository.ObterDadosLoginAsync("testuser").Returns(loginData);
-
-    //    // Simule a condição de revogado/inativo conforme sua entidade
-    //    // usuario.Ativo = false; // Exemplo
-
-    //    var request = new LoginRequest { Login = "testuser", Senha = password };
-    //    var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request));
-    //    Assert.Contains("Usuário inativo ou revogado", ex.Errors);
-    //}
-
-    //[Fact]
-    //public async Task LoginAsync_SemEscopos_ThrowsBusinessException()
-    //{
-    //    var service = CreateService();
-    //    var password = "password123";
-    //    var hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
-    //    var usuario = new UsuarioEntity
-    //    {
-    //        Id = 1,
-    //        Login = "testuser",
-    //        Senha = hashedPassword,
-    //        Nome = "Test User",
-    //        Email = "test@example.com",
-    //        ParceiroId = Guid.NewGuid()
-    //    };
-    //    var loginData = new LoginData { Usuario = usuario, Escopos = new List<string>() };
-    //    _authRepository.ObterDadosLoginAsync("testuser").Returns(loginData);
-
-    //    var request = new LoginRequest { Login = "testuser", Senha = password };
-    //    var ex = await Assert.ThrowsAsync<BusinessException>(() => service.LoginAsync(request));
-    //    Assert.Contains("Usuário sem escopos", ex.Errors);
-    //}
-
-    [Fact]
-    public async Task SolicitarRecuperacaoAsync_UsuarioNaoEncontrado_RetornaEmailNaoEnviado()
-    {
-        var service = CreateService();
-        _authRepository.ObterDadosLoginAsync(Arg.Any<string>()).Returns(new LoginData { Usuario = null, Escopos = new List<string>() });
-
-        var result = await service.SolicitarRecuperacaoAsync(new RecuperarSenhaRequest { Login = "missing" }, CancellationToken.None);
-
         Assert.False(result.EmailEnviado);
-        await _authRepository.DidNotReceive().InserirRecuperacaoSenhaAsync(Arg.Any<RecuperacaoSenhaEntity>());
-        await _emailService.DidNotReceive().EnviarEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Fact]
-    public async Task SolicitarRecuperacaoAsync_UsuarioEncontrado_EnviaEmail()
+    public async Task SolicitarRecuperacaoAsync_UserWithoutEmail_ReturnsFalseEmailEnviado()
     {
-        var service = CreateService();
-        var usuario = new UsuarioEntity { Id = 99, Email = "user@teste.com", ParceiroId = Guid.NewGuid() };
-        _authRepository.ObterDadosLoginAsync("user").Returns(new LoginData { Usuario = usuario, Escopos = new List<string>() });
+        // Arrange
+        var request = new RecuperarSenhaRequest
+        {
+            Login = "test@example.com"
+        };
 
-        var result = await service.SolicitarRecuperacaoAsync(new RecuperarSenhaRequest { Login = "user" }, CancellationToken.None);
+        var loginData = new LoginData
+        {
+            Usuario = new UsuarioEntity
+            {
+                Id = 1,
+                Login = "test@example.com",
+                Email = null
+            },
+            Perfil = null,
+            Escopos = new List<string>()
+        };
 
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(loginData);
+
+        // Act
+        var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.EmailEnviado);
+    }
+
+    [Fact]
+    public async Task SolicitarRecuperacaoAsync_UserWithEmptyEmail_ReturnsFalseEmailEnviado()
+    {
+        // Arrange
+        var request = new RecuperarSenhaRequest
+        {
+            Login = "test@example.com"
+        };
+
+        var loginData = new LoginData
+        {
+            Usuario = new UsuarioEntity
+            {
+                Id = 1,
+                Login = "test@example.com",
+                Email = string.Empty
+            },
+            Perfil = null,
+            Escopos = new List<string>()
+        };
+
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(loginData);
+
+        // Act
+        var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.False(result.EmailEnviado);
+    }
+
+    [Fact]
+    public async Task SolicitarRecuperacaoAsync_ValidUser_InsertsRecoveryTokenAndSendsEmail()
+    {
+        // Arrange
+        var request = new RecuperarSenhaRequest
+        {
+            Login = "test@example.com"
+        };
+
+        var loginData = new LoginData
+        {
+            Usuario = new UsuarioEntity
+            {
+                Id = 123,
+                Login = "test@example.com",
+                Email = "test@example.com",
+                Nome = "Test User"
+            },
+            Perfil = null,
+            Escopos = new List<string>()
+        };
+
+        _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
+            .Returns(loginData);
+
+        // Act
+        var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
         Assert.True(result.EmailEnviado);
-        await _authRepository.Received(1).InserirRecuperacaoSenhaAsync(Arg.Is<RecuperacaoSenhaEntity>(x => x.UsuarioId == usuario.Id));
-        await _emailService.Received(1).EnviarEmailAsync(usuario.Email, Arg.Any<string>(), Arg.Is<string>(x => x.Contains("Clique no <a href")));
+        
+        await _authRepository.Received(1).InserirRecuperacaoSenhaAsync(
+            Arg.Is<RecuperacaoSenhaEntity>(e =>
+                e.UsuarioId == 123 &&
+                !string.IsNullOrEmpty(e.Token) &&
+                e.Usado == false &&
+                e.ExpiraEm > DateTime.UtcNow));
+
+        await _emailService.Received(1).EnviarEmailAsync(
+            "test@example.com",
+            "Recuperação de Senha",
+            Arg.Is<string>(corpo => corpo.Contains("<html>") && corpo.Contains("Link")));
     }
 
-    [Fact]
-    public async Task ValidarTokenAsync_TokenValido_RetornaMensagem()
-    {
-        var service = CreateService();
-        var entidade = new RecuperacaoSenhaEntity
-        {
-            UsuarioId = 1,
-            Token = "token",
-            ExpiraEm = DateTime.UtcNow.AddMinutes(5),
-            Usado = false
-        };
-        _authRepository.ObterRecuperacaoSenhaPorTokenAsync("token").Returns(entidade);
-
-        var result = await service.ValidarTokenAsync(new ValidarTokenRecuperacaoRequest { Token = "token" }, CancellationToken.None);
-
-        Assert.Equal("Token válido, pode prosseguir com alteração de senha", result.Mensagem);
-    }
-
-    [Fact]
-    public async Task ValidarTokenAsync_TokenInvalido_LancaBusinessException()
-    {
-        var service = CreateService();
-        _authRepository.ObterRecuperacaoSenhaPorTokenAsync("token").Returns((RecuperacaoSenhaEntity?)null);
-
-        await Assert.ThrowsAsync<BusinessException>(() => service.ValidarTokenAsync(new ValidarTokenRecuperacaoRequest { Token = "token" }, CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task TrocarSenhaAsync_TokenValido_AtualizaSenha()
-    {
-        var service = CreateService();
-        var entidade = new RecuperacaoSenhaEntity
-        {
-            Id = 10,
-            UsuarioId = 5,
-            Token = "token",
-            ExpiraEm = DateTime.UtcNow.AddMinutes(5),
-            Usado = false
-        };
-        _authRepository.ObterRecuperacaoSenhaPorTokenAsync(entidade.Token).Returns(entidade);
-        _authRepository.AtualizarSenhaUsuarioAsync(entidade.UsuarioId, Arg.Any<string>()).Returns(true);
-
-        var result = await service.TrocarSenhaAsync(new TrocarSenhaRequest { Token = "token", NovaSenha = "Nova@123", ConfirmarSenha = "Nova@123" }, CancellationToken.None);
-
-        Assert.Equal("Senha alterada com sucesso", result.Mensagem);
-        await _authRepository.Received(1).AtualizarSenhaUsuarioAsync(entidade.UsuarioId, Arg.Any<string>());
-        await _authRepository.Received(1).MarcarRecuperacaoSenhaComoUsadoAsync(entidade.Id);
-    }
-
-    [Fact]
-    public async Task TrocarSenhaAsync_TokenInvalido_LancaBusinessException()
-    {
-        var service = CreateService();
-        _authRepository.ObterRecuperacaoSenhaPorTokenAsync("token").Returns((RecuperacaoSenhaEntity?)null);
-
-        await Assert.ThrowsAsync<BusinessException>(() => service.TrocarSenhaAsync(new TrocarSenhaRequest { Token = "token", NovaSenha = "nova", ConfirmarSenha = "nova" }, CancellationToken.None));
-    }
+    #endregion
 }

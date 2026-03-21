@@ -5,9 +5,6 @@ using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Auth.Domain.Responses;
 using Portal.Features.Usuario.Domain.Interfaces;
-using Portal.Infra;
-using System.IdentityModel.Tokens.Jwt;
-using static Portal.Features.Auth.Controller.AuthController;
 
 namespace Portal.Features.Auth.Service
 {
@@ -19,16 +16,14 @@ namespace Portal.Features.Auth.Service
 
         private readonly ITokenAtualizacaoRepository _tokenRepo;
         private readonly IConfiguration _config;
-        private readonly IUnitOfWork _unitOfWork;
         private readonly Portal.Infra.Email.IEmailService _emailService;
 
-        public AuthService(IAuthRepository authRepo, ITokenAtualizacaoRepository tokenRepo, IConfiguration config, IUnitOfWork unitOfWork,
+        public AuthService(IAuthRepository authRepo, ITokenAtualizacaoRepository tokenRepo, IConfiguration config,
              IHttpContextAccessor httpContextAccessor, Portal.Infra.Email.IEmailService emailService, IUsuarioRepository usuarioRepository) : base(httpContextAccessor)
         {
             _authRepository = authRepo;
             _config = config;
             _tokenRepo = tokenRepo;
-            _unitOfWork = unitOfWork;
             _emailService = emailService;
             _usuarioRepository = usuarioRepository;
         }
@@ -97,7 +92,6 @@ namespace Portal.Features.Auth.Service
 
             if (!BCrypt.Net.BCrypt.Verify(request.Senha, dados.Usuario.Senha))
             {
-                // Incrementa tentativas
                 await _usuarioRepository.IncrementarTentativaLoginAsync(dados.Usuario.Id, cancellationToken);
                 throw new BusinessException("Usuário ou senha inválidos");
             }
@@ -122,23 +116,13 @@ namespace Portal.Features.Auth.Service
 
             var refreshToken = Token.GenerateRefreshToken();
 
-            _unitOfWork.Begin();
-            try
+            await _tokenRepo.InserirAsync(new TokenAtualizacaoEntity
             {
-                await _tokenRepo.InserirAsync(new TokenAtualizacao
-                {
-                    Token     = refreshToken,
-                    ExpiraEm  = DateTime.UtcNow.AddMinutes(int.Parse(jwtSection["RefreshTokenExpireDays"] ?? "0")),
-                    Revogado  = false,
-                    UsuarioId = dados.Usuario.Id
-                });
-                _unitOfWork.Commit();
-            }
-            catch
-            {
-                _unitOfWork.Rollback();
-                throw;
-            }
+                Token = refreshToken,
+                ExpiraEm = DateTime.UtcNow.AddMinutes(int.Parse(jwtSection["RefreshTokenExpireDays"] ?? "0")),
+                Revogado = false,
+                UsuarioId = dados.Usuario.Id
+            });
 
             return new LoginResponse
             {
@@ -181,24 +165,14 @@ namespace Portal.Features.Auth.Service
 
             var novoRefreshToken = Token.GenerateRefreshToken();
 
-            _unitOfWork.Begin();
-            try
+            await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);
+            await _tokenRepo.InserirAsync(new TokenAtualizacaoEntity
             {
-                await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);
-                await _tokenRepo.InserirAsync(new TokenAtualizacao
-                {
-                    Token     = novoRefreshToken,
-                    ExpiraEm  = DateTime.UtcNow.AddDays(refreshTokenExpireDays),
-                    Revogado  = false,
-                    UsuarioId = token.UsuarioId
-                });
-                _unitOfWork.Commit();
-            }
-            catch
-            {
-                _unitOfWork.Rollback();
-                throw;
-            }
+                Token = novoRefreshToken,
+                ExpiraEm = DateTime.UtcNow.AddDays(refreshTokenExpireDays),
+                Revogado = false,
+                UsuarioId = token.UsuarioId
+            });
 
             return new LoginResponse
             {

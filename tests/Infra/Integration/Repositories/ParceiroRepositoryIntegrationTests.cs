@@ -1,11 +1,6 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Infra;
 using Portal.Domain.Entities;
 using Portal.Features.Escopo.Infra;
 using Portal.Features.Parceiro.Infra;
-using Xunit;
 
 namespace sso.repositories;
 

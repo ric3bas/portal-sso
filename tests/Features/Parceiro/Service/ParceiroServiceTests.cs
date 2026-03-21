@@ -4,355 +4,298 @@ using NSubstitute;
 using Portal.Dominio.Validations;
 using Portal.Features.Parceiro.Domain;
 using Portal.Features.Parceiro.Domain.Interfaces;
+using Portal.Features.Parceiro.Domain.Validations;
 using Portal.Features.Parceiro.Service;
-using Portal.Infra;
 using System.Security.Claims;
+using FluentValidation.Results;
 
-namespace sso.services;
+namespace sso_tests;
 
 public class ParceiroServiceTests
 {
     private readonly IParceiroRepository _repository;
-    private readonly Portal.Features.Parceiro.Domain.Validations.ParceiroRequestValidator _validator;
-    private readonly Portal.Features.Parceiro.Domain.Validations.ParceiroIdRequestValidator _validatorId;
+    private readonly ParceiroRequestValidator _validator;
+    private readonly ParceiroIdRequestValidator _validatorId;
     private readonly ILogger<ParceiroService> _logger;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly ParceiroService _service;
 
     public ParceiroServiceTests()
     {
         _repository = Substitute.For<IParceiroRepository>();
-        _validator = new Portal.Features.Parceiro.Domain.Validations.ParceiroRequestValidator();
-        _validatorId = new Portal.Features.Parceiro.Domain.Validations.ParceiroIdRequestValidator();
+        _validator = new ParceiroRequestValidator();
+        _validatorId = new ParceiroIdRequestValidator();
         _logger = Substitute.For<ILogger<ParceiroService>>();
-        _unitOfWork = Substitute.For<IUnitOfWork>();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         
-        _service = new ParceiroService(
-            _repository,
-            _validator,
-            _validatorId,
-            _logger,
-            _unitOfWork,
-            _httpContextAccessor);
+        // Setup default HttpContext with valid TenantId
+        var httpContext = new DefaultHttpContext();
+        var claims = new List<Claim> { new Claim("tenantId", Guid.NewGuid().ToString()) };
+        httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(claims));
+        _httpContextAccessor.HttpContext.Returns(httpContext);
     }
+
+    private ParceiroService CreateService() => new(
+        _repository,
+        _validator,
+        _validatorId,
+        _logger,
+        _httpContextAccessor);
 
     [Fact]
     public void Constructor_InitializesAllDependencies()
     {
-        // Arrange
-        var repository = Substitute.For<IParceiroRepository>();
-        var validator = new Portal.Features.Parceiro.Domain.Validations.ParceiroRequestValidator();
-        var validatorId = new Portal.Features.Parceiro.Domain.Validations.ParceiroIdRequestValidator();
-        var logger = Substitute.For<ILogger<ParceiroService>>();
-        var unitOfWork = Substitute.For<IUnitOfWork>();
-        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        var service = CreateService();
 
-        // Act
-        var service = new ParceiroService(
-            repository,
-            validator,
-            validatorId,
-            logger,
-            unitOfWork,
-            httpContextAccessor);
-
-        // Assert
         Assert.NotNull(service);
     }
 
     [Fact]
-    public async Task ListarParceirosAsync_WithResults_ReturnsResults()
+    public async Task ListarParceirosAsync_WithNoResults_ThrowsNotFoundException()
     {
-        // Arrange
+        var service = CreateService();
+        _repository.ObterTodosAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Enumerable.Empty<ParceiroResponse>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => 
+            service.ListarParceirosAsync(null, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ListarParceirosAsync_WithNullResult_ThrowsNotFoundException()
+    {
+        var service = CreateService();
+        _repository.ObterTodosAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<IEnumerable<ParceiroResponse>>(null!));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => 
+            service.ListarParceirosAsync("test", CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ListarParceirosAsync_WithResults_ReturnsAllParceiros()
+    {
+        var service = CreateService();
         var parceiros = new List<ParceiroResponse>
         {
-            new ParceiroResponse { Id = Guid.NewGuid(), Nome = "Parceiro 1", Ativo = true },
-            new ParceiroResponse { Id = Guid.NewGuid(), Nome = "Parceiro 2", Ativo = true }
+            new() { Id = Guid.NewGuid(), Nome = "Parceiro 1", Ativo = true },
+            new() { Id = Guid.NewGuid(), Nome = "Parceiro 2", Ativo = true }
         };
         _repository.ObterTodosAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(parceiros);
 
-        // Act
-        var result = await _service.ListarParceirosAsync("test", CancellationToken.None);
+        var result = await service.ListarParceirosAsync(null, CancellationToken.None);
 
-        // Assert
-        Assert.NotNull(result);
         Assert.Equal(2, result.Count());
     }
 
     [Fact]
-    public async Task ListarParceirosAsync_NoResults_ThrowsNotFoundException()
+    public async Task ListarParceirosAsync_WithNameFilter_PassesFilterToRepository()
     {
-        // Arrange
-        _repository.ObterTodosAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IEnumerable<ParceiroResponse>>(null!));
+        var service = CreateService();
+        var parceiros = new List<ParceiroResponse>
+        {
+            new() { Id = Guid.NewGuid(), Nome = "Filtered", Ativo = true }
+        };
+        _repository.ObterTodosAsync("Filtered", Arg.Any<CancellationToken>())
+            .Returns(parceiros);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.ListarParceirosAsync("test", CancellationToken.None));
-        Assert.Equal("Nenhum parceiro encontrado", exception.Message);
+        var result = await service.ListarParceirosAsync("Filtered", CancellationToken.None);
+
+        await _repository.Received(1).ObterTodosAsync("Filtered", Arg.Any<CancellationToken>());
+        Assert.Single(result);
     }
 
     [Fact]
-    public async Task ListarParceirosAsync_EmptyResults_ThrowsNotFoundException()
+    public async Task ObterParceiroAsync_WithNullId_ThrowsValidationException()
     {
-        // Arrange
-        _repository.ObterTodosAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(new List<ParceiroResponse>());
+        var service = CreateService();
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.ListarParceirosAsync("test", CancellationToken.None));
-        Assert.Equal("Nenhum parceiro encontrado", exception.Message);
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            service.ObterParceiroAsync(null, CancellationToken.None));
     }
 
     [Fact]
-    public async Task ObterParceiroAsync_ValidId_ReturnsParceiro()
+    public async Task ObterParceiroAsync_WithEmptyId_ThrowsValidationException()
     {
-        // Arrange
-        var id = Guid.NewGuid();
-        var parceiro = new ParceiroResponse { Id = id, Nome = "Test", Ativo = true };
-        _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>())
-            .Returns(parceiro);
+        var service = CreateService();
 
-        // Act
-        var result = await _service.ObterParceiroAsync(id.ToString(), CancellationToken.None);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal(id, result!.Id);
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            service.ObterParceiroAsync(string.Empty, CancellationToken.None));
     }
 
     [Fact]
-    public async Task ObterParceiroAsync_InvalidId_ThrowsValidationException()
+    public async Task ObterParceiroAsync_WithInvalidGuid_ThrowsValidationException()
     {
-        // Arrange
-        var invalidId = "invalid-guid";
+        var service = CreateService();
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<Portal.Dominio.Validations.ValidationException>(
-            () => _service.ObterParceiroAsync(invalidId, CancellationToken.None));
-        Assert.NotEmpty(exception.Errors);
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            service.ObterParceiroAsync("invalid-guid", CancellationToken.None));
     }
 
     [Fact]
-    public async Task ObterParceiroAsync_NotFound_ThrowsNotFoundException()
+    public async Task ObterParceiroAsync_WithEmptyGuid_ThrowsValidationException()
     {
-        // Arrange
+        var service = CreateService();
+
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            service.ObterParceiroAsync(Guid.Empty.ToString(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ObterParceiroAsync_WhenNotFound_ThrowsNotFoundException()
+    {
+        var service = CreateService();
         var id = Guid.NewGuid();
         _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>())
             .Returns((ParceiroResponse?)null);
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.ObterParceiroAsync(id.ToString(), CancellationToken.None));
-        Assert.Equal("Parceiro não encontrado", exception.Message);
+        await Assert.ThrowsAsync<NotFoundException>(() => 
+            service.ObterParceiroAsync(id.ToString(), CancellationToken.None));
     }
 
     [Fact]
-    public async Task CriarParceiroAsync_ValidRequest_ReturnsNewId()
+    public async Task ObterParceiroAsync_WhenFound_ReturnsParceiro()
     {
-        // Arrange
-        var tenantId = Guid.NewGuid();
-        SetupHttpContext(tenantId);
+        var service = CreateService();
+        var id = Guid.NewGuid();
+        var parceiro = new ParceiroResponse
+        {
+            Id = id,
+            Nome = "Test Parceiro",
+            Descricao = "Test Description",
+            Ativo = true
+        };
+        _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>())
+            .Returns(parceiro);
 
-        var request = new ParceiroRequest { Nome = "Novo Parceiro", Descricao = "Descrição" };
+        var result = await service.ObterParceiroAsync(id.ToString(), CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(id, result.Id);
+        Assert.Equal("Test Parceiro", result.Nome);
+    }
+
+    [Fact]
+    public async Task CriarParceiroAsync_WithInvalidRequest_ThrowsValidationException()
+    {
+        var service = CreateService();
+        var request = new ParceiroRequest { Nome = string.Empty }; // Invalid: empty name
+
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            service.CriarParceiroAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CriarParceiroAsync_WithDuplicateName_ThrowsValidationException()
+    {
+        var service = CreateService();
+        var request = new ParceiroRequest { Nome = "Existing Parceiro", Descricao = "Test" };
+        var existingParceiro = new ParceiroResponse { Id = Guid.NewGuid(), Nome = "Existing Parceiro" };
+        _repository.ObterPorNomeAsync("Existing Parceiro", Arg.Any<CancellationToken>())
+            .Returns(existingParceiro);
+
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => 
+            service.CriarParceiroAsync(request, CancellationToken.None));
+
+        Assert.Contains("Já existe um parceiro com este nome.", ex.Errors);
+    }
+
+    [Fact]
+    public async Task CriarParceiroAsync_WithValidRequest_CreatesAndReturnsId()
+    {
+        var service = CreateService();
         var newId = Guid.NewGuid();
-
-        _repository.ObterPorNomeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        var request = new ParceiroRequest { Nome = "New Parceiro", Descricao = "Description" };
+        _repository.ObterPorNomeAsync(request.Nome, Arg.Any<CancellationToken>())
             .Returns((ParceiroResponse?)null);
         _repository.InserirAsync(Arg.Any<Portal.Domain.Entities.ParceiroEntity>(), Arg.Any<CancellationToken>())
             .Returns(newId);
 
-        // Act
-        var result = await _service.CriarParceiroAsync(request, CancellationToken.None);
+        var result = await service.CriarParceiroAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.Equal(newId, result);
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Commit();
+        await _repository.Received(1).InserirAsync(
+            Arg.Is<Portal.Domain.Entities.ParceiroEntity>(e => e.Nome == request.Nome),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task CriarParceiroAsync_InvalidRequest_ThrowsValidationException()
+    public async Task AtualizarParceiroAsync_WithInvalidRequest_ThrowsValidationException()
     {
-        // Arrange
-        var request = new ParceiroRequest { Nome = null, Descricao = "Test" };
+        var service = CreateService();
+        var request = new AtualizarParceiroRequest 
+        { 
+            Id = Guid.NewGuid().ToString(),
+            Nome = string.Empty // Invalid: empty name
+        };
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<Portal.Dominio.Validations.ValidationException>(
-            () => _service.CriarParceiroAsync(request, CancellationToken.None));
-        Assert.NotEmpty(exception.Errors);
+        await Assert.ThrowsAsync<ValidationException>(() => 
+            service.AtualizarParceiroAsync(request, CancellationToken.None));
     }
 
     [Fact]
-    public async Task CriarParceiroAsync_DuplicateName_ThrowsValidationException()
+    public async Task AtualizarParceiroAsync_WhenParceiroNotExists_ThrowsNotFoundException()
     {
-        // Arrange
-        var tenantId = Guid.NewGuid();
-        SetupHttpContext(tenantId);
-
-        var request = new ParceiroRequest { Nome = "Parceiro Existente", Descricao = "Test" };
-        var existingParceiro = new ParceiroResponse { Id = Guid.NewGuid(), Nome = "Parceiro Existente", Ativo = true };
-
-        _repository.ObterPorNomeAsync(request.Nome, Arg.Any<CancellationToken>())
-            .Returns(existingParceiro);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<Portal.Dominio.Validations.ValidationException>(
-            () => _service.CriarParceiroAsync(request, CancellationToken.None));
-        Assert.Contains("Já existe um parceiro com este nome.", exception.Errors);
-    }
-
-    [Fact]
-    public async Task CriarParceiroAsync_RepositoryException_RollsBackTransaction()
-    {
-        // Arrange
-        var tenantId = Guid.NewGuid();
-        SetupHttpContext(tenantId);
-
-        var request = new ParceiroRequest { Nome = "Test", Descricao = "Test" };
-
-        _repository.ObterPorNomeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns((ParceiroResponse?)null);
-        _repository.InserirAsync(Arg.Any<Portal.Domain.Entities.ParceiroEntity>(), Arg.Any<CancellationToken>())
-            .Returns<Guid>(x => throw new Exception("Database error"));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<Exception>(
-            () => _service.CriarParceiroAsync(request, CancellationToken.None));
-
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Rollback();
-        _unitOfWork.DidNotReceive().Commit();
-    }
-
-    [Fact]
-    public async Task AtualizarParceiroAsync_ValidRequest_UpdatesParceiro()
-    {
-        // Arrange
+        var service = CreateService();
         var id = Guid.NewGuid();
         var request = new AtualizarParceiroRequest 
         { 
-            Id = id.ToString(), 
-            Nome = "Updated", 
-            Descricao = "Updated Description", 
-            Ativo = true 
+            Id = id.ToString(),
+            Nome = "Updated Name",
+            Descricao = "Updated Desc",
+            Ativo = true
         };
-
         _repository.ValidarAtualizacaoAsync(id, request.Nome, Arg.Any<CancellationToken>())
-            .Returns((true, false));
+            .Returns((false, false)); // doesn't exist
 
-        // Act
-        await _service.AtualizarParceiroAsync(request, CancellationToken.None);
-
-        // Assert
-        await _repository.Received(1).AtualizarAsync(Arg.Any<Portal.Domain.Entities.ParceiroEntity>(), Arg.Any<CancellationToken>());
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Commit();
+        await Assert.ThrowsAsync<NotFoundException>(() => 
+            service.AtualizarParceiroAsync(request, CancellationToken.None));
     }
 
     [Fact]
-    public async Task AtualizarParceiroAsync_InvalidRequest_ThrowsValidationException()
+    public async Task AtualizarParceiroAsync_WhenNameConflict_ThrowsValidationException()
     {
-        // Arrange
-        var request = new AtualizarParceiroRequest 
-        { 
-            Id = Guid.NewGuid().ToString(), 
-            Nome = "", 
-            Descricao = "Test", 
-            Ativo = true 
-        };
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<Portal.Dominio.Validations.ValidationException>(
-            () => _service.AtualizarParceiroAsync(request, CancellationToken.None));
-        Assert.NotEmpty(exception.Errors);
-    }
-
-    [Fact]
-    public async Task AtualizarParceiroAsync_NotFound_ThrowsNotFoundException()
-    {
-        // Arrange
+        var service = CreateService();
         var id = Guid.NewGuid();
         var request = new AtualizarParceiroRequest 
         { 
-            Id = id.ToString(), 
-            Nome = "Test", 
-            Descricao = "Test", 
-            Ativo = true 
+            Id = id.ToString(),
+            Nome = "Conflicting Name",
+            Descricao = "Desc",
+            Ativo = true
         };
-
         _repository.ValidarAtualizacaoAsync(id, request.Nome, Arg.Any<CancellationToken>())
-            .Returns((false, false));
+            .Returns((true, true)); // exists but name conflicts
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.AtualizarParceiroAsync(request, CancellationToken.None));
-        Assert.Equal("Parceiro não encontrado", exception.Message);
+        var ex = await Assert.ThrowsAsync<ValidationException>(() => 
+            service.AtualizarParceiroAsync(request, CancellationToken.None));
+
+        Assert.Contains("Já existe outro parceiro com este nome.", ex.Errors);
     }
 
     [Fact]
-    public async Task AtualizarParceiroAsync_DuplicateName_ThrowsValidationException()
+    public async Task AtualizarParceiroAsync_WithValidRequest_UpdatesParceiro()
     {
-        // Arrange
+        var service = CreateService();
         var id = Guid.NewGuid();
         var request = new AtualizarParceiroRequest 
         { 
-            Id = id.ToString(), 
-            Nome = "Existing Name", 
-            Descricao = "Test", 
-            Ativo = true 
+            Id = id.ToString(),
+            Nome = "Updated Name",
+            Descricao = "Updated Description",
+            Ativo = false
         };
-
         _repository.ValidarAtualizacaoAsync(id, request.Nome, Arg.Any<CancellationToken>())
-            .Returns((true, true));
+            .Returns((true, false)); // exists and no conflict
 
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<Portal.Dominio.Validations.ValidationException>(
-            () => _service.AtualizarParceiroAsync(request, CancellationToken.None));
-        Assert.Contains("Já existe outro parceiro com este nome.", exception.Errors);
-    }
+        await service.AtualizarParceiroAsync(request, CancellationToken.None);
 
-    [Fact]
-    public async Task AtualizarParceiroAsync_RepositoryException_RollsBackTransaction()
-    {
-        // Arrange
-        var id = Guid.NewGuid();
-        var request = new AtualizarParceiroRequest 
-        { 
-            Id = id.ToString(), 
-            Nome = "Test", 
-            Descricao = "Test", 
-            Ativo = true 
-        };
-
-        _repository.ValidarAtualizacaoAsync(id, request.Nome, Arg.Any<CancellationToken>())
-            .Returns((true, false));
-        _repository.AtualizarAsync(Arg.Any<Portal.Domain.Entities.ParceiroEntity>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromException(new Exception("Database error")));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<Exception>(
-            () => _service.AtualizarParceiroAsync(request, CancellationToken.None));
-
-        _unitOfWork.Received(1).Begin();
-        _unitOfWork.Received(1).Rollback();
-        _unitOfWork.DidNotReceive().Commit();
-    }
-
-    private void SetupHttpContext(Guid tenantId)
-    {
-        var httpContext = Substitute.For<HttpContext>();
-        var claims = new List<Claim>
-        {
-            new Claim("tenantId", tenantId.ToString())
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuthType");
-        var claimsPrincipal = new ClaimsPrincipal(identity);
-        httpContext.User.Returns(claimsPrincipal);
-        _httpContextAccessor.HttpContext.Returns(httpContext);
+        await _repository.Received(1).AtualizarAsync(
+            Arg.Is<Portal.Domain.Entities.ParceiroEntity>(e => 
+                e.Id == id && 
+                e.Nome == request.Nome && 
+                e.Descricao == request.Descricao &&
+                e.Ativo == request.Ativo),
+            Arg.Any<CancellationToken>());
     }
 }

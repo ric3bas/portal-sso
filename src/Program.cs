@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.OpenApi.Models;
-using Npgsql;
 using Portal.Infra;
-using Portal.Infra.Email;
 using Portal.Middleware;
 using Serilog;
 using System.Data;
@@ -97,6 +95,14 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .Enrich.FromLogContext());
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<Portal.Infra.DapperDatabaseProvider>();
+builder.Services.AddScoped<Portal.Infra.IUnitOfWork>(sp =>
+{
+    var provider = sp.GetRequiredService<Portal.Infra.DapperDatabaseProvider>();
+    // Use o contexto padrão ou ajuste conforme necessário
+    var connection = provider.CreateConnection("SSO_POSTGRES");
+    return new Portal.Infra.UnitOfWork(connection);
+});
 builder.Services.AddScoped<Portal.Features.Usuario.Domain.Interfaces.IUsuarioRepository, Portal.Features.Usuario.Infra.UsuarioRepository>();
 builder.Services.AddScoped<Portal.Features.Usuario.Domain.Interfaces.IUsuarioService, Portal.Features.Usuario.Service.UsuarioService>();
 builder.Services.AddScoped<Portal.Features.Perfil.Domain.Interfaces.IPerfilRepository, Portal.Features.Perfil.Infra.PerfilRepository>();
@@ -104,15 +110,12 @@ builder.Services.AddScoped<Portal.Features.Perfil.Domain.Interfaces.IPerfilServi
 builder.Services.AddScoped<Portal.Features.Escopo.Domain.Interfaces.IEscopoRepository, Portal.Features.Escopo.Infra.EscopoRepository>();
 builder.Services.AddScoped<Portal.Features.Escopo.Domain.Interfaces.IEscopoService, Portal.Features.Escopo.Service.EscopoService>();
 
-
 builder.Services.AddScoped<Portal.Features.Auth.Domain.Interfaces.ITokenAtualizacaoRepository, Portal.Features.Auth.Infra.TokenAtualizacaoRepository>();
 builder.Services.AddScoped<Portal.Features.Auth.Domain.Interfaces.IAuthRepository, Portal.Features.Auth.Infra.AuthRepository>();
 builder.Services.AddScoped<Portal.Features.Auth.Domain.Interfaces.IAuthService, Portal.Features.Auth.Service.AuthService>();
-    builder.Services.AddScoped<Portal.Infra.Email.IEmailService, Portal.Infra.Email.SmtpEmailService>();
+builder.Services.AddScoped<Portal.Infra.Email.IEmailService, Portal.Infra.Email.SmtpEmailService>();
 
-
-
-    builder.Services.AddValidatorsFromAssemblyContaining<Portal.Features.Parceiro.Domain.Validations.ParceiroRequestValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<Portal.Features.Parceiro.Domain.Validations.ParceiroRequestValidator>();
 builder.Services.AddControllers(options => {
     options.Filters.Add<GlobalExceptionFilter>();
 }).ConfigureApiBehaviorOptions(options => {
@@ -254,13 +257,9 @@ builder.Services.AddAuthentication(options => {
 });
 builder.Services.AddAuthorization();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection not configured.");
+    builder.Services.AddSingleton<DapperDatabaseProvider>();
 
-builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(connectionString));
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroRepository, Portal.Features.Parceiro.Infra.ParceiroRepository>();
+    builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroRepository, Portal.Features.Parceiro.Infra.ParceiroRepository>();
 builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroService, Portal.Features.Parceiro.Service.ParceiroService>();
 
 

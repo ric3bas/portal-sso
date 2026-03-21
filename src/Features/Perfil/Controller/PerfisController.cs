@@ -4,7 +4,7 @@ using Portal.Dominio;
 using Portal.Features.Perfil.Domain;
 using Portal.Features.Perfil.Domain.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
-using PerfilEntity = Portal.Dominio.Entities.Perfil;
+using PerfilEntity = Portal.Dominio.Entities.PerfilEntity;
 
 namespace Portal.Features.Perfil.Controller
 {

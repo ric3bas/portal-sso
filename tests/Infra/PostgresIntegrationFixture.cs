@@ -1,11 +1,8 @@
-using System;
-using System.Threading.Tasks;
 using Dapper;
 using Infra;
 using Npgsql;
 using Portal.Infra;
 using Testcontainers.PostgreSql;
-using Xunit;
 
 namespace sso.repositories;
 

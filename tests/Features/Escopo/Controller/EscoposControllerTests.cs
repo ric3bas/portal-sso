@@ -3,7 +3,7 @@ using NSubstitute;
 using Portal.Features.Escopo.Controller;
 using Portal.Features.Escopo.Domain;
 using Portal.Features.Escopo.Domain.Interfaces;
-using EscopoEntity = Portal.Dominio.Entities.Escopo;
+using EscopoEntity = Portal.Dominio.Entities.EscopoEntity;
 
 namespace sso.controllers;
 

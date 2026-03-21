@@ -5,7 +5,7 @@ using Portal.Features.Escopo.Domain.Interfaces;
 using Portal.Features.Perfil.Domain;
 using Portal.Features.Perfil.Domain.Interfaces;
 using Portal.Features.Perfil.Service;
-using PerfilEntity = Portal.Dominio.Entities.Perfil;
+using PerfilEntity = Portal.Dominio.Entities.PerfilEntity;
 
 namespace sso.services;
 

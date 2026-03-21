@@ -1,9 +1,5 @@
-using System;
-using System.Threading.Tasks;
-using Infra;
 using Portal.Dominio.Entities;
 using Portal.Features.Auth.Infra;
-using Xunit;
 
 namespace sso.repositories;
 
@@ -29,7 +25,7 @@ public sealed class TokenAtualizacaoRepositoryIntegrationTests
 
         using var uow = _fixture.CreateUnitOfWork();
         var repo = new TokenAtualizacaoRepository(uow);
-        var token = new TokenAtualizacao
+        var token = new TokenAtualizacaoEntity
         {
             Id = 1,
             Token = "tok123",

@@ -93,12 +93,12 @@ public class EscopoServiceTests
     {
         var service = CreateService();
         _repository.ExisteNomeAsync("admin", Arg.Any<CancellationToken>()).Returns(false);
-        _repository.InserirAsync(Arg.Any<Escopo>(), Arg.Any<CancellationToken>()).Returns(7);
+        _repository.InserirAsync(Arg.Any<EscopoEntity>(), Arg.Any<CancellationToken>()).Returns(7);
 
         var id = await service.CriarAsync("  admin  ");
 
         Assert.Equal(7, id);
-        await _repository.Received(1).InserirAsync(Arg.Is<Escopo>(x => x.Nome == "admin"), Arg.Any<CancellationToken>());
+        await _repository.Received(1).InserirAsync(Arg.Is<EscopoEntity>(x => x.Nome == "admin"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class EscopoServiceTests
     public async Task ObterPorIdAsync_WhenNotFound_ThrowsNotFoundException()
     {
         var service = CreateService();
-        _repository.ObterPorIdAsync(5, Arg.Any<CancellationToken>()).Returns((Escopo?)null);
+        _repository.ObterPorIdAsync(5, Arg.Any<CancellationToken>()).Returns((EscopoEntity?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.ObterPorIdAsync(5));
     }
@@ -124,7 +124,7 @@ public class EscopoServiceTests
     public async Task ObterPorIdAsync_WhenFound_ReturnsEscopo()
     {
         var service = CreateService();
-        var escopo = new Escopo { Id = 10, Nome = "manage" };
+        var escopo = new EscopoEntity { Id = 10, Nome = "manage" };
         _repository.ObterPorIdAsync(10, Arg.Any<CancellationToken>()).Returns(escopo);
 
         var result = await service.ObterPorIdAsync(10);

@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Portal.Dominio.Entities;
 using Portal.Dominio.Validations;
@@ -8,147 +7,421 @@ using Portal.Features.Usuario.Domain;
 using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Features.Usuario.Service;
 using Portal.Infra;
+using System.Security.Claims;
 
-namespace sso.services;
+namespace sso_tests;
 
 public class UsuarioServiceTests
 {
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IPerfilRepository _perfilRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly UsuarioService _service;
+    private readonly Guid _testTenantId = Guid.NewGuid();
 
     public UsuarioServiceTests()
     {
         _usuarioRepository = Substitute.For<IUsuarioRepository>();
-        _perfilRepository  = Substitute.For<IPerfilRepository>();
-        _unitOfWork        = Substitute.For<IUnitOfWork>();
+        _perfilRepository = Substitute.For<IPerfilRepository>();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        _unitOfWork = Substitute.For<IUnitOfWork>();
+
+        SetupHttpContext();
+
+        _service = new UsuarioService(
+            _usuarioRepository,
+            _perfilRepository,
+            _httpContextAccessor,
+            _unitOfWork);
     }
 
-    private UsuarioService CreateService()
-        => new UsuarioService(_usuarioRepository, _perfilRepository, _unitOfWork, _httpContextAccessor);
+    private void SetupHttpContext()
+    {
+        var httpContext = new DefaultHttpContext();
+        var identity = new ClaimsIdentity(new[] { new Claim("tenantId", _testTenantId.ToString()) });
+        httpContext.User = new ClaimsPrincipal(identity);
+        _httpContextAccessor.HttpContext.Returns(httpContext);
+    }
 
     [Fact]
-    public void Constructor_InitializesService()
+    public void Constructor_InitializesAllDependencies()
     {
-        var service = CreateService();
+        // Arrange
+        var usuarioRepository = Substitute.For<IUsuarioRepository>();
+        var perfilRepository = Substitute.For<IPerfilRepository>();
+        var httpContextAccessor = Substitute.For<IHttpContextAccessor>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
 
+        // Act
+        var service = new UsuarioService(
+            usuarioRepository,
+            perfilRepository,
+            httpContextAccessor,
+            unitOfWork);
+
+        // Assert
         Assert.NotNull(service);
     }
 
     [Fact]
-    public void ListarComPerfisAsync_ThrowsNotImplementedException()
+    public async Task ListarAsync_WithResults_ReturnsResults()
     {
-        var service = CreateService();
+        // Arrange
+        var usuarios = new List<UsuarioComPerfilResponse>
+        {
+            new UsuarioComPerfilResponse { Id = 1, Nome = "Usuario 1" },
+            new UsuarioComPerfilResponse { Id = 2, Nome = "Usuario 2" }
+        };
+        _usuarioRepository.ListarAsync(_testTenantId, Arg.Any<CancellationToken>()).Returns(usuarios);
 
-        var exception = Assert.ThrowsAsync<NotImplementedException>(
-            async () => await service.ListarComPerfisAsync());
+        // Act
+        var result = await _service.ListarAsync(CancellationToken.None);
 
-        Assert.NotNull(exception);
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Count());
     }
 
     [Fact]
-    public void ListarComPerfisAsync_WithCancellationToken_ThrowsNotImplementedException()
+    public async Task ListarAsync_NoResults_ThrowsNotFoundException()
     {
-        var service = CreateService();
-        var cancellationToken = new CancellationToken();
+        // Arrange
+        var usuarios = new List<UsuarioComPerfilResponse>();
+        _usuarioRepository.ListarAsync(_testTenantId, Arg.Any<CancellationToken>()).Returns(usuarios);
 
-        var exception = Assert.ThrowsAsync<NotImplementedException>(
-            async () => await service.ListarComPerfisAsync(cancellationToken));
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => _service.ListarAsync(CancellationToken.None));
+        Assert.Equal("Nenhum usuário encontrado", exception.Message);
+    }
 
-        Assert.NotNull(exception);
+    [Fact]
+    public async Task RegisterAsync_ValidRequest_InsertsUsuario()
+    {
+        // Arrange
+        var request = new RegisterRequest
+        {
+            Nome = "Test User",
+            Email = "test@test.com",
+            Login = "testuser",
+            Senha = "Password123",
+            PerfilId = 1
+        };
+
+        var validacao = new RegistroValidacao
+        {
+            ParceiroExiste = true,
+            LoginExiste = false
+        };
+
+        _usuarioRepository.ValidarRegistroAsync(
+            request.Login,
+            _testTenantId,
+            request.PerfilId,
+            Arg.Any<CancellationToken>()).Returns(validacao);
+
+        _usuarioRepository.InserirAsync(
+            Arg.Any<UsuarioEntity>(),
+            Arg.Any<CancellationToken>()).Returns(1);
+
+        // Act
+        await _service.RegisterAsync(request, CancellationToken.None);
+
+        // Assert
+        await _usuarioRepository.Received(1).InserirAsync(
+            Arg.Is<UsuarioEntity>(u =>
+                u.Nome == request.Nome &&
+                u.Email == request.Email &&
+                u.Login == request.Login &&
+                u.ParceiroId == _testTenantId &&
+                u.PerfilId == request.PerfilId &&
+                u.TentativasLogin == 0 &&
+                u.UltimoErroLogin == null &&
+                u.Bloqueado == false),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task RegisterAsync_InvalidRequest_ThrowsValidationException()
     {
-        var service = CreateService();
-        var request = new RegisterRequest();
+        // Arrange
+        var request = new RegisterRequest
+        {
+            Nome = "",
+            Email = "",
+            Login = "",
+            Senha = "",
+            PerfilId = 0
+        };
 
+        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
-            async () => await service.RegisterAsync(request, CancellationToken.None));
-
-        Assert.NotNull(exception);
+            () => _service.RegisterAsync(request, CancellationToken.None));
+        Assert.NotNull(exception.Message);
     }
 
     [Fact]
     public async Task RegisterAsync_ParceiroNotFound_ThrowsNotFoundException()
     {
-        SetupHttpContext(Guid.NewGuid());
-        var service = CreateService();
-        var request = CreateValidRequest();
+        // Arrange
+        var request = new RegisterRequest
+        {
+            Nome = "Test User",
+            Email = "test@test.com",
+            Login = "testuser",
+            Senha = "Password123",
+            PerfilId = 1
+        };
+
         var validacao = new RegistroValidacao
         {
             ParceiroExiste = false,
-            LoginExiste = false,
-            PerfilExiste = true
+            LoginExiste = false
         };
+
         _usuarioRepository.ValidarRegistroAsync(
-            Arg.Any<string>(),
-            Arg.Any<Guid>(),
-            Arg.Any<int>(),
-            Arg.Any<CancellationToken>()
-        ).Returns(validacao);
+            request.Login,
+            _testTenantId,
+            request.PerfilId,
+            Arg.Any<CancellationToken>()).Returns(validacao);
 
+        // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            async () => await service.RegisterAsync(request, CancellationToken.None));
-
-        Assert.Contains("não encontrado", exception.Message);
+            () => _service.RegisterAsync(request, CancellationToken.None));
+        Assert.Equal($"Parceiro '{_testTenantId}' não encontrado", exception.Message);
     }
 
     [Fact]
-    public async Task ListarAsync_WithoutResults_ThrowsNotFoundException()
+    public async Task RegisterAsync_LoginExists_ThrowsValidationException()
     {
-        var parceiroId = Guid.NewGuid();
-        SetupHttpContext(parceiroId);
-        var service = CreateService();
-        _usuarioRepository.ListarAsync(parceiroId, Arg.Any<CancellationToken>())
-            .Returns(Enumerable.Empty<UsuarioComPerfilResponse>());
-
-        await Assert.ThrowsAsync<NotFoundException>(() => service.ListarAsync(CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task ListarAsync_WithResults_ReturnsUsuarios()
-    {
-        var parceiroId = Guid.NewGuid();
-        SetupHttpContext(parceiroId);
-        var service = CreateService();
-        var usuarios = new List<UsuarioComPerfilResponse>
-        {
-            new() { Id = 1, Nome = "User 1", Login = "user1", Email = "u1@teste.com" }
-        };
-
-        _usuarioRepository.ListarAsync(parceiroId, Arg.Any<CancellationToken>()).Returns(usuarios);
-
-        var result = await service.ListarAsync(CancellationToken.None);
-
-        Assert.Single(result);
-    }
-
-    private void SetupHttpContext(Guid tenantId)
-    {
-        var httpContext = new DefaultHttpContext();
-        var claims = new List<Claim>
-        {
-            new Claim("tenantId", tenantId.ToString())
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuthType");
-        var claimsPrincipal = new ClaimsPrincipal(identity);
-        httpContext.User = claimsPrincipal;
-        _httpContextAccessor.HttpContext.Returns(httpContext);
-    }
-
-    private RegisterRequest CreateValidRequest()
-    {
-        return new RegisterRequest
+        // Arrange
+        var request = new RegisterRequest
         {
             Nome = "Test User",
-            Email = "test@example.com",
+            Email = "test@test.com",
             Login = "testuser",
-            Senha = "Password123!",
+            Senha = "Password123",
             PerfilId = 1
         };
+
+        var validacao = new RegistroValidacao
+        {
+            ParceiroExiste = true,
+            LoginExiste = true
+        };
+
+        _usuarioRepository.ValidarRegistroAsync(
+            request.Login,
+            _testTenantId,
+            request.PerfilId,
+            Arg.Any<CancellationToken>()).Returns(validacao);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ValidationException>(
+            () => _service.RegisterAsync(request, CancellationToken.None));
+        Assert.Contains($"Login '{request.Login}' já existe", exception.Errors);
+    }
+
+    [Fact]
+    public async Task IncrementarTentativaLogin_CallsRepository()
+    {
+        // Arrange
+        var usuarioId = 1;
+
+        // Act
+        await _service.IncrementarTentativaLogin(usuarioId, CancellationToken.None);
+
+        // Assert
+        await _usuarioRepository.Received(1).IncrementarTentativaLoginAsync(
+            usuarioId,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ResetarTentativasLogin_CallsRepository()
+    {
+        // Arrange
+        var usuarioId = 1;
+
+        // Act
+        await _service.ResetarTentativasLogin(usuarioId, CancellationToken.None);
+
+        // Assert
+        await _usuarioRepository.Received(1).ResetarTentativasLoginAsync(
+            usuarioId,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ValidRequest_HashesPassword()
+    {
+        // Arrange
+        var request = new RegisterRequest
+        {
+            Nome = "Test User",
+            Email = "test@test.com",
+            Login = "testuser",
+            Senha = "Password123",
+            PerfilId = 1
+        };
+
+        var validacao = new RegistroValidacao
+        {
+            ParceiroExiste = true,
+            LoginExiste = false
+        };
+
+        _usuarioRepository.ValidarRegistroAsync(
+            request.Login,
+            _testTenantId,
+            request.PerfilId,
+            Arg.Any<CancellationToken>()).Returns(validacao);
+
+        _usuarioRepository.InserirAsync(
+            Arg.Any<UsuarioEntity>(),
+            Arg.Any<CancellationToken>()).Returns(1);
+
+        // Act
+        await _service.RegisterAsync(request, CancellationToken.None);
+
+        // Assert
+        await _usuarioRepository.Received(1).InserirAsync(
+            Arg.Is<UsuarioEntity>(u =>
+                u.Senha != request.Senha &&
+                BCrypt.Net.BCrypt.Verify(request.Senha, u.Senha)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ListarAsync_PassesCancellationTokenToRepository()
+    {
+        // Arrange
+        var usuarios = new List<UsuarioComPerfilResponse>
+        {
+            new UsuarioComPerfilResponse { Id = 1, Nome = "Usuario 1" }
+        };
+        var cancellationToken = new CancellationToken();
+        _usuarioRepository.ListarAsync(_testTenantId, cancellationToken).Returns(usuarios);
+
+        // Act
+        await _service.ListarAsync(cancellationToken);
+
+        // Assert
+        await _usuarioRepository.Received(1).ListarAsync(_testTenantId, cancellationToken);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_PassesCancellationTokenToRepository()
+    {
+        // Arrange
+        var request = new RegisterRequest
+        {
+            Nome = "Test User",
+            Email = "test@test.com",
+            Login = "testuser",
+            Senha = "Password123",
+            PerfilId = 1
+        };
+
+        var validacao = new RegistroValidacao
+        {
+            ParceiroExiste = true,
+            LoginExiste = false
+        };
+
+        var cancellationToken = new CancellationToken();
+
+        _usuarioRepository.ValidarRegistroAsync(
+            request.Login,
+            _testTenantId,
+            request.PerfilId,
+            cancellationToken).Returns(validacao);
+
+        _usuarioRepository.InserirAsync(
+            Arg.Any<UsuarioEntity>(),
+            cancellationToken).Returns(1);
+
+        // Act
+        await _service.RegisterAsync(request, cancellationToken);
+
+        // Assert
+        await _usuarioRepository.Received(1).ValidarRegistroAsync(
+            request.Login,
+            _testTenantId,
+            request.PerfilId,
+            cancellationToken);
+        await _usuarioRepository.Received(1).InserirAsync(
+            Arg.Any<UsuarioEntity>(),
+            cancellationToken);
+    }
+
+    [Fact]
+    public async Task IncrementarTentativaLogin_PassesCancellationTokenToRepository()
+    {
+        // Arrange
+        var usuarioId = 1;
+        var cancellationToken = new CancellationToken();
+
+        // Act
+        await _service.IncrementarTentativaLogin(usuarioId, cancellationToken);
+
+        // Assert
+        await _usuarioRepository.Received(1).IncrementarTentativaLoginAsync(
+            usuarioId,
+            cancellationToken);
+    }
+
+    [Fact]
+    public async Task ResetarTentativasLogin_PassesCancellationTokenToRepository()
+    {
+        // Arrange
+        var usuarioId = 1;
+        var cancellationToken = new CancellationToken();
+
+        // Act
+        await _service.ResetarTentativasLogin(usuarioId, cancellationToken);
+
+        // Assert
+        await _usuarioRepository.Received(1).ResetarTentativasLoginAsync(
+            usuarioId,
+            cancellationToken);
+    }
+
+    [Fact]
+    public async Task BloquearUsuarioAsync_UsuarioNotFound_ThrowsNotFoundException()
+    {
+        // Arrange
+        var usuarioId = 1;
+        _usuarioRepository.ObterPorIdAsync(usuarioId, Arg.Any<CancellationToken>()).Returns((UsuarioEntity?)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => _service.BloquearUsuarioAsync(usuarioId, CancellationToken.None));
+        Assert.Equal("Usuário não encontrado", exception.Message);
+    }
+
+    [Fact]
+    public async Task BloquearUsuarioAsync_ValidUsuario_BloqueiaUsuario()
+    {
+        // Arrange
+        var usuarioId = 1;
+        var usuario = new UsuarioEntity
+        {
+            Id = usuarioId,
+            Nome = "Test User",
+            Login = "testuser",
+            Bloqueado = false
+        };
+        _usuarioRepository.ObterPorIdAsync(usuarioId, Arg.Any<CancellationToken>()).Returns(usuario);
+
+        // Act
+        await _service.BloquearUsuarioAsync(usuarioId, CancellationToken.None);
+
+        // Assert
+        Assert.True(usuario.Bloqueado);
+        await _usuarioRepository.Received(1).AtualizarAsync(
+            Arg.Is<UsuarioEntity>(u => u.Id == usuarioId && u.Bloqueado == true),
+            Arg.Any<CancellationToken>());
     }
 }

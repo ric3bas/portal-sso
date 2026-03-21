@@ -1,12 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using NSubstitute;
-using Portal.Domain.Entities;
-using Portal.Features.Parceiro.Infra;
-using Portal.Infra;
-using Xunit;
-
 namespace sso.repositories;
 
 public class DapperRepositoryTests

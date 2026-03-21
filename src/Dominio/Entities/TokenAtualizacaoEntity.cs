@@ -1,6 +1,6 @@
 namespace Portal.Dominio.Entities
 {
-    public class TokenAtualizacao
+    public class TokenAtualizacaoEntity
     {
         public int Id { get; set; }
         public string? Token { get; set; }

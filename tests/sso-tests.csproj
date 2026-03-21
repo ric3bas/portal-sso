@@ -31,7 +31,6 @@
     <Folder Include="Features\Escopo\Infra\" />
     <Folder Include="Features\Parceiro\Infra\" />
     <Folder Include="Features\Perfil\Infra\" />
-    <Folder Include="Features\Usuario\Infra\" />
   </ItemGroup>
 
 </Project>

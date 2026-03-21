@@ -1,4 +1,4 @@
-using PerfilEntity = Portal.Dominio.Entities.Perfil;
+using PerfilEntity = Portal.Dominio.Entities.PerfilEntity;
 
 namespace Portal.Features.Perfil.Domain.Interfaces
 {

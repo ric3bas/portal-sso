@@ -1,4 +1,4 @@
-using EscopoEntity = Portal.Dominio.Entities.Escopo;
+using EscopoEntity = Portal.Dominio.Entities.EscopoEntity;
 
 namespace Portal.Features.Escopo.Domain.Interfaces
 {

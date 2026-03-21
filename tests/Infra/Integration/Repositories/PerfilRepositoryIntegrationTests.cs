@@ -1,14 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Dapper;
-using Infra;
 using Npgsql;
 using Portal.Dominio.Entities;
-using Portal.Features.Perfil.Domain;
 using Portal.Features.Perfil.Infra;
-using Xunit;
 
 namespace sso.repositories;
 
@@ -43,7 +36,7 @@ public sealed class PerfilRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new PerfilRepository(uow);
 
-        var perfil = new Perfil { Nome = "Novo Perfil" };
+        var perfil = new PerfilEntity { Nome = "Novo Perfil" };
         var id = await repository.InserirAsync(perfil);
 
         Assert.True(id > 0);

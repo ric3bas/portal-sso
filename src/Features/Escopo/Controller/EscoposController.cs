@@ -4,7 +4,7 @@ using Portal.Dominio;
 using Portal.Features.Escopo.Domain;
 using Portal.Features.Escopo.Domain.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
-using EscopoEntity = Portal.Dominio.Entities.Escopo;
+using EscopoEntity = Portal.Dominio.Entities.EscopoEntity;
 
 namespace Portal.Features.Escopo.Controller
 {

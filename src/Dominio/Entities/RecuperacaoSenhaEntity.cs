@@ -1,5 +1,3 @@
-using System;
-
 namespace Portal.Dominio.Entities
 {
     public class RecuperacaoSenhaEntity

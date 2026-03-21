@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Dapper;
-using Infra;
 using Npgsql;
 using Portal.Dominio.Entities;
 using Portal.Features.Auth.Infra;
-using Xunit;
 
 namespace sso.repositories;
 

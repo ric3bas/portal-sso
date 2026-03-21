@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Portal.Dominio;
@@ -6,9 +5,6 @@ using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Auth.Domain.Responses;
 using Swashbuckle.AspNetCore.Annotations;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json.Serialization;
-using static Google.Apis.Requests.BatchRequest;
 
 namespace Portal.Features.Auth.Controller
 {
@@ -29,7 +25,7 @@ namespace Portal.Features.Auth.Controller
         [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
+        public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken)
         {
             var response = await _authService.LoginAsync(request, cancellationToken);
             return Ok(response);
@@ -60,7 +56,7 @@ namespace Portal.Features.Auth.Controller
         [HttpPost("esqueceu-senha")]
         [ProducesResponseType(typeof(RecuperarSenhaResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<ActionResult<RecuperarSenhaResponse>> Solicitar([FromBody] RecuperarSenhaRequest request, CancellationToken cancellationToken)
+        public async Task<ActionResult<RecuperarSenhaResponse>> SolicitarAsync([FromBody] RecuperarSenhaRequest request, CancellationToken cancellationToken)
         {
             var result = await _authService.SolicitarRecuperacaoAsync(request, cancellationToken);
             return Ok(result);
@@ -70,7 +66,7 @@ namespace Portal.Features.Auth.Controller
         [HttpGet("validar-token")]
         [ProducesResponseType(typeof(ValidarTokenRecuperacaoResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<ActionResult<ValidarTokenRecuperacaoResponse>> ValidarToken([FromQuery] string token, CancellationToken cancellationToken)
+        public async Task<ActionResult<ValidarTokenRecuperacaoResponse>> ValidarTokenAsync([FromQuery] string token, CancellationToken cancellationToken)
         {
             var request = new ValidarTokenRecuperacaoRequest { Token = token };
             var result = await _authService.ValidarTokenAsync(request, cancellationToken);
@@ -81,7 +77,7 @@ namespace Portal.Features.Auth.Controller
         [HttpPost("trocar-senha")]
         [ProducesResponseType(typeof(TrocarSenhaResponse), 200)]
         [ProducesBadRequestProblem]
-        public async Task<ActionResult<TrocarSenhaResponse>> TrocarSenha([FromBody] TrocarSenhaRequest request, CancellationToken cancellationToken)
+        public async Task<ActionResult<TrocarSenhaResponse>> TrocarSenhaAsync([FromBody] TrocarSenhaRequest request, CancellationToken cancellationToken)
         {
             var result = await _authService.TrocarSenhaAsync(request, cancellationToken);
             return Ok(result);

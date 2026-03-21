@@ -2,7 +2,6 @@ using Portal.Dominio;
 using Portal.Dominio.Validations;
 using Portal.Features.Parceiro.Domain;
 using Portal.Features.Parceiro.Domain.Interfaces;
-using Portal.Infra;
 
 namespace Portal.Features.Parceiro.Service {
     public class ParceiroService : BaseService, IParceiroService {
@@ -10,21 +9,18 @@ namespace Portal.Features.Parceiro.Service {
         private readonly Domain.Validations.ParceiroRequestValidator _validator;
         private readonly Domain.Validations.ParceiroIdRequestValidator _validatorId;
         private readonly ILogger<ParceiroService> _logger;
-        private readonly IUnitOfWork _unitOfWork;
 
         public ParceiroService(
             IParceiroRepository repository,
             Domain.Validations.ParceiroRequestValidator validator,
             Domain.Validations.ParceiroIdRequestValidator validatorId,
             ILogger<ParceiroService> logger,
-            IUnitOfWork unitOfWork,
             IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
         {
             _repository  = repository;
             _validator   = validator;
             _validatorId = validatorId;
             _logger      = logger;
-            _unitOfWork  = unitOfWork;
         }
         public async Task<IEnumerable<ParceiroResponse>> ListarParceirosAsync(string? nome, CancellationToken cancellationToken){
             _logger.LogInformation("Listando parceiros com filtro de nome: {Nome}", nome);
@@ -64,18 +60,9 @@ namespace Portal.Features.Parceiro.Service {
 
             var entity = parceiro.ToEntity(ObterTenantId());
 
-            _unitOfWork.Begin();
-            try
-            {
-                var id = await _repository.InserirAsync(entity, cancellationToken);
-                _unitOfWork.Commit();
-                return id;
-            }
-            catch
-            {
-                _unitOfWork.Rollback();
-                throw;
-            }
+            // Transação/commit agora é responsabilidade do repositório, se necessário
+            var id = await _repository.InserirAsync(entity, cancellationToken);
+            return id;
         }
 
         public async Task AtualizarParceiroAsync(AtualizarParceiroRequest request, CancellationToken cancellationToken)
@@ -104,17 +91,7 @@ namespace Portal.Features.Parceiro.Service {
                 Ativo     = request.Ativo
             };
 
-            _unitOfWork.Begin();
-            try
-            {
-                await _repository.AtualizarAsync(entity, cancellationToken);
-                _unitOfWork.Commit();
-            }
-            catch
-            {
-                _unitOfWork.Rollback();
-                throw;
-            }
+            await _repository.AtualizarAsync(entity, cancellationToken);
         }
     }
 }

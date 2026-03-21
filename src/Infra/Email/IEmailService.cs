@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace Portal.Infra.Email
 {
     public interface IEmailService

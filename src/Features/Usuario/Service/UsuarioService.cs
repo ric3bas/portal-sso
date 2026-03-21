@@ -12,21 +12,17 @@ namespace Portal.Features.Usuario.Service
     {
         private readonly IUsuarioRepository _usuarioRepository;
         private readonly IPerfilRepository  _perfilRepository;
-        private readonly IUnitOfWork        _unitOfWork;
-
+        private readonly IUnitOfWork _unitOfWork;
         public UsuarioService(
             IUsuarioRepository usuarioRepository,
-            IPerfilRepository  perfilRepository,
-            IUnitOfWork        unitOfWork,
-            IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+            IPerfilRepository perfilRepository,
+            IHttpContextAccessor httpContextAccessor,
+            IUnitOfWork unitOfWork) : base(httpContextAccessor)
         {
             _usuarioRepository = usuarioRepository;
-            _perfilRepository  = perfilRepository;
-            _unitOfWork        = unitOfWork;
+            _perfilRepository = perfilRepository;
+            _unitOfWork = unitOfWork;
         }
-
-        public Task<IEnumerable<UsuarioComPerfilResponse>> ListarComPerfisAsync(CancellationToken cancellationToken = default)
-            => throw new NotImplementedException();
 
         public async Task<IEnumerable<UsuarioComPerfilResponse>> ListarAsync(CancellationToken cancellationToken = default)
         {
@@ -66,17 +62,8 @@ namespace Portal.Features.Usuario.Service
                 Bloqueado = false
             };
 
-            _unitOfWork.Begin();
-            try
-            {
-                _ = await _usuarioRepository.InserirAsync(usuario, cancellationToken);
-                _unitOfWork.Commit();
-            }
-            catch
-            {
-                _unitOfWork.Rollback();
-                throw;
-            }
+            // Transação/commit agora é responsabilidade do repositório, se necessário
+            _ = await _usuarioRepository.InserirAsync(usuario, cancellationToken);
         }
 
         public async Task IncrementarTentativaLogin(int usuarioId, CancellationToken cancellationToken)
@@ -96,7 +83,7 @@ namespace Portal.Features.Usuario.Service
                 throw new NotFoundException("Usuário não encontrado");
 
             usuario.Bloqueado = true;
-
+            
             await _usuarioRepository.AtualizarAsync(usuario, cancellationToken);
         }
 

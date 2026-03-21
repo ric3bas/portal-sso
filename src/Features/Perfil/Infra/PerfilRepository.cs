@@ -1,19 +1,18 @@
-using Dapper;
 using Portal.Features.Perfil.Domain.Interfaces;
 using Portal.Infra;
 using Portal.Features.Perfil.Domain;
-using PerfilEntity = Portal.Dominio.Entities.Perfil;
+using PerfilEntity = Portal.Dominio.Entities.PerfilEntity;
 
 namespace Portal.Features.Perfil.Infra
 {
-    public class PerfilRepository : DapperRepository<PerfilEntity>, IDapperRepository<PerfilEntity>, IPerfilRepository
+    [DbContext("SSO_POSTGRES")]
+    public class PerfilRepository : DapperRepository, IDapperRepository, IPerfilRepository
     {
-
         public PerfilRepository(IUnitOfWork unitOfWork) : base(unitOfWork) { }
 
         public async Task<IEnumerable<PerfilComEscopoResponse>> ListarComEscoposAsync(CancellationToken cancellationToken = default)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();   
             const string sql = @"SELECT p.id   AS PerfilId,
                                         p.nome AS PerfilNome,
                                         e.id   AS EscopoId,
@@ -23,7 +22,7 @@ namespace Portal.Features.Perfil.Infra
                                  LEFT JOIN sso.escopo e ON e.id = pe.escopo_id
                                  ORDER BY p.id, e.id";
 
-            var rows = await _unitOfWork.Connection.QueryAsync<PerfilEscopoRowResponse>(sql, transaction: _unitOfWork.Transaction);
+            var rows = await QueryAsync<PerfilEscopoRowResponse>(sql);
 
             return rows
                 .GroupBy(r => new { r.PerfilId, r.PerfilNome })
@@ -48,21 +47,22 @@ namespace Portal.Features.Perfil.Infra
         {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = "INSERT INTO sso.perfil (nome) VALUES (@Nome) RETURNING id";
-            return await _unitOfWork.Connection.QuerySingleAsync<int>(sql, new { perfil.Nome }, _unitOfWork.Transaction);
+            var result = await QueryAsync<int>(sql, new { perfil.Nome });
+            return result.FirstOrDefault();
         }
 
         public async Task<PerfilEntity?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = "SELECT id, nome FROM sso.perfil WHERE id = @id";
-            return await _unitOfWork.Connection.QuerySingleOrDefaultAsync<PerfilEntity>(sql, new { id }, _unitOfWork.Transaction);
+            return await QuerySingleAsync<PerfilEntity>(sql, new { id });
         }
 
         public async Task<bool> ExistePerfilAsync(int perfilId, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = "SELECT COUNT(1) FROM sso.perfil WHERE id = @perfilId";
-            var total = await _unitOfWork.Connection.ExecuteScalarAsync<int>(sql, new { perfilId }, _unitOfWork.Transaction);
+            var total = await QuerySingleAsync<int>(sql, new { perfilId });
             return total > 0;
         }
 
@@ -70,7 +70,7 @@ namespace Portal.Features.Perfil.Infra
         {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = "SELECT COUNT(1) FROM sso.perfil WHERE LOWER(nome) = LOWER(@nome)";
-            var total = await _unitOfWork.Connection.ExecuteScalarAsync<int>(sql, new { nome }, _unitOfWork.Transaction);
+            var total = await QuerySingleAsync<int>(sql, new { nome });
             return total > 0;
         }
 
@@ -79,7 +79,7 @@ namespace Portal.Features.Perfil.Infra
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = "INSERT INTO sso.perfil_escopo (perfil_id, escopo_id) VALUES (@perfilId, @escopoId) ON CONFLICT DO NOTHING";
             var parametros = escopoIds.Select(escopoId => new { perfilId, escopoId });
-            await _unitOfWork.Connection.ExecuteAsync(sql, parametros, _unitOfWork.Transaction);
+            await ExecuteAsync(sql, parametros);
         }
 
     }

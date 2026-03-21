@@ -55,9 +55,9 @@ public class PerfisControllerTests
     public async Task GetByIdAsync_ReturnsOkWithPerfil()
     {
         var service = Substitute.For<IPerfilService>();
-        var expectedPerfil = new Perfil { Id = 1, Nome = "Admin" };
+        var expectedPerfil = new PerfilEntity { Id = 1, Nome = "Admin" };
         service.ObterPorIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-               .Returns(Task.FromResult<Perfil?>(expectedPerfil));
+               .Returns(Task.FromResult<PerfilEntity?>(expectedPerfil));
 
         var controller = new PerfisController(service);
         var id = 1;
