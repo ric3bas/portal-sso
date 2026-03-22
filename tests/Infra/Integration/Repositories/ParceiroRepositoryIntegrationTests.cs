@@ -1,6 +1,6 @@
-using Portal.Domain.Entities;
 using Portal.Features.Escopo.Infra;
 using Portal.Features.Parceiro.Infra;
+using Portal.Features.Usuario.Infra;
 
 namespace sso.repositories;
 
@@ -20,7 +20,7 @@ public sealed class ParceiroRepositoryIntegrationTests
         await _fixture.ResetAsync();
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new ParceiroRepository(uow);
-        var parceiro = new ParceiroEntity
+        var parceiro = new ParceiroCommand
         {
             Id = Guid.NewGuid(),
             Nome = "Acme",
@@ -183,7 +183,7 @@ public sealed class ParceiroRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repo = new ParceiroRepository(uow);
 
-        var parceiro = new Portal.Domain.Entities.ParceiroEntity
+        var parceiro = new ParceiroCommand()
         {
             Id = parceiroId,
             Nome = "NovoNome",
@@ -230,7 +230,7 @@ public sealed class ParceiroRepositoryIntegrationTests
 
         // Consulta escopos do usuário via AuthRepository (ou outro repo que faça a consulta)
         using var uow = _fixture.CreateUnitOfWork();
-        var authRepo = new Portal.Features.Auth.Infra.AuthRepository(uow);
+        var authRepo = new AuthRepository(uow);
         var escopos = await authRepo.ObterEscoposDoUsuarioAsync(usuarioId, CancellationToken.None);
 
         Assert.Contains("escopoTeste", escopos);

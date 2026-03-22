@@ -6,8 +6,12 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.OpenApi.Models;
+using Portal.Domain.Base;
+using Portal.Domain.Base.Email;
+using Portal.Features.Usuario.Domain.Interfaces;
+using Portal.Features.Usuario.Infra;
+using Portal.Features.Usuario.Service;
 using Portal.Infra;
-using Portal.Middleware;
 using Serilog;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
@@ -83,11 +87,11 @@ builder.Services.AddCors(options =>
 
 
     // Custom policy para TenantId (ParceiroId)
-    builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, Portal.Dominio.TenantIdHandler>();
+    builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, TenantIdHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("TenantIdPolicy", policy =>
-        policy.Requirements.Add(new Portal.Dominio.TenantIdRequirement()));
+        policy.Requirements.Add(new Portal.Domain.Base.TenantIdRequirement()));
 });
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
@@ -110,10 +114,10 @@ builder.Services.AddScoped<Portal.Features.Perfil.Domain.Interfaces.IPerfilServi
 builder.Services.AddScoped<Portal.Features.Escopo.Domain.Interfaces.IEscopoRepository, Portal.Features.Escopo.Infra.EscopoRepository>();
 builder.Services.AddScoped<Portal.Features.Escopo.Domain.Interfaces.IEscopoService, Portal.Features.Escopo.Service.EscopoService>();
 
-builder.Services.AddScoped<Portal.Features.Auth.Domain.Interfaces.ITokenAtualizacaoRepository, Portal.Features.Auth.Infra.TokenAtualizacaoRepository>();
-builder.Services.AddScoped<Portal.Features.Auth.Domain.Interfaces.IAuthRepository, Portal.Features.Auth.Infra.AuthRepository>();
-builder.Services.AddScoped<Portal.Features.Auth.Domain.Interfaces.IAuthService, Portal.Features.Auth.Service.AuthService>();
-builder.Services.AddScoped<Portal.Infra.Email.IEmailService, Portal.Infra.Email.SmtpEmailService>();
+builder.Services.AddScoped<ITokenAtualizacaoRepository, TokenAtualizacaoRepository>();
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Portal.Features.Parceiro.Domain.Validations.ParceiroRequestValidator>();
 builder.Services.AddControllers(options => {
@@ -282,7 +286,6 @@ app.UseCors("AllowAll");
 
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
-app.UseMiddleware<JwtValidationMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers(); // Mantém para compatibilidade

@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Portal.Dominio.Entities;
-using Portal.Dominio.Validations;
+using Portal.Domain.Exceptions;
 using Portal.Features.Escopo.Domain;
 using Portal.Features.Escopo.Domain.Interfaces;
+using Portal.Features.Escopo.Infra;
 using Portal.Features.Escopo.Service;
 
 namespace sso.services;
@@ -25,7 +25,7 @@ public class EscopoServiceTests
     public async Task ListarAsync_WithoutResults_ThrowsNotFoundException()
     {
         var service = CreateService();
-        _repository.ListarAsync(Arg.Any<CancellationToken>()).Returns(Enumerable.Empty<EscopoResponse>());
+        _repository.ListarAsync(Arg.Any<CancellationToken>()).Returns(Enumerable.Empty<EscopoQuery>());
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.ListarAsync());
     }
@@ -34,7 +34,7 @@ public class EscopoServiceTests
     public async Task ListarAsync_WithResults_ReturnsEscopos()
     {
         var service = CreateService();
-        var escopos = new List<EscopoResponse>
+        var escopos = new List<EscopoQuery>
         {
             new() { Id = 1, Nome = "read" },
             new() { Id = 2, Nome = "write" }
@@ -93,12 +93,12 @@ public class EscopoServiceTests
     {
         var service = CreateService();
         _repository.ExisteNomeAsync("admin", Arg.Any<CancellationToken>()).Returns(false);
-        _repository.InserirAsync(Arg.Any<EscopoEntity>(), Arg.Any<CancellationToken>()).Returns(7);
+        _repository.InserirAsync(Arg.Any<EscopoCommand>(), Arg.Any<CancellationToken>()).Returns(7);
 
         var id = await service.CriarAsync("  admin  ");
 
         Assert.Equal(7, id);
-        await _repository.Received(1).InserirAsync(Arg.Is<EscopoEntity>(x => x.Nome == "admin"), Arg.Any<CancellationToken>());
+        await _repository.Received(1).InserirAsync(Arg.Is<EscopoCommand>(x => x.Nome == "admin"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class EscopoServiceTests
     public async Task ObterPorIdAsync_WhenNotFound_ThrowsNotFoundException()
     {
         var service = CreateService();
-        _repository.ObterPorIdAsync(5, Arg.Any<CancellationToken>()).Returns((EscopoEntity?)null);
+        _repository.ObterPorIdAsync(5, Arg.Any<CancellationToken>()).Returns((EscopoQuery?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => service.ObterPorIdAsync(5));
     }
@@ -124,7 +124,7 @@ public class EscopoServiceTests
     public async Task ObterPorIdAsync_WhenFound_ReturnsEscopo()
     {
         var service = CreateService();
-        var escopo = new EscopoEntity { Id = 10, Nome = "manage" };
+        var escopo = new EscopoQuery { Id = 10, Nome = "manage" };
         _repository.ObterPorIdAsync(10, Arg.Any<CancellationToken>()).Returns(escopo);
 
         var result = await service.ObterPorIdAsync(10);

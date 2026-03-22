@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Portal.Dominio;
+using Portal.Domain.Base;
 
 namespace sso.global;
 

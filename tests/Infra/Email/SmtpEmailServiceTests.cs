@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
-using Portal.Infra.Email;
+using Portal.Domain.Base.Email;
 
 namespace sso.global;
 

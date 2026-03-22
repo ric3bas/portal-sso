@@ -1,15 +1,16 @@
 ﻿using Microsoft.AspNetCore.Http;
 using NSubstitute;
-using Portal.Dominio.Entities;
-using Portal.Dominio.Validations;
+using Portal.Domain.Exceptions;
 using Portal.Features.Perfil.Domain.Interfaces;
 using Portal.Features.Usuario.Domain;
 using Portal.Features.Usuario.Domain.Interfaces;
+using Portal.Features.Usuario.Infra;
 using Portal.Features.Usuario.Service;
 using Portal.Infra;
 using System.Security.Claims;
 
-namespace sso_tests;
+namespace sso.repositories;
+
 
 public class UsuarioServiceTests
 {
@@ -31,9 +32,7 @@ public class UsuarioServiceTests
 
         _service = new UsuarioService(
             _usuarioRepository,
-            _perfilRepository,
-            _httpContextAccessor,
-            _unitOfWork);
+            _httpContextAccessor);
     }
 
     private void SetupHttpContext()
@@ -56,9 +55,7 @@ public class UsuarioServiceTests
         // Act
         var service = new UsuarioService(
             usuarioRepository,
-            perfilRepository,
-            httpContextAccessor,
-            unitOfWork);
+            httpContextAccessor);
 
         // Assert
         Assert.NotNull(service);
@@ -68,10 +65,10 @@ public class UsuarioServiceTests
     public async Task ListarAsync_WithResults_ReturnsResults()
     {
         // Arrange
-        var usuarios = new List<UsuarioComPerfilResponse>
+        var usuarios = new List<UsuarioComPerfilQuery>
         {
-            new UsuarioComPerfilResponse { Id = 1, Nome = "Usuario 1" },
-            new UsuarioComPerfilResponse { Id = 2, Nome = "Usuario 2" }
+            new UsuarioComPerfilQuery { Id = 1, Nome = "Usuario 1" },
+            new UsuarioComPerfilQuery { Id = 2, Nome = "Usuario 2" }
         };
         _usuarioRepository.ListarAsync(_testTenantId, Arg.Any<CancellationToken>()).Returns(usuarios);
 
@@ -87,7 +84,7 @@ public class UsuarioServiceTests
     public async Task ListarAsync_NoResults_ThrowsNotFoundException()
     {
         // Arrange
-        var usuarios = new List<UsuarioComPerfilResponse>();
+        var usuarios = new List<UsuarioComPerfilQuery>();
         _usuarioRepository.ListarAsync(_testTenantId, Arg.Any<CancellationToken>()).Returns(usuarios);
 
         // Act & Assert
@@ -109,7 +106,7 @@ public class UsuarioServiceTests
             PerfilId = 1
         };
 
-        var validacao = new RegistroValidacao
+        var validacao = new RegistroValidacaoQuery
         {
             ParceiroExiste = true,
             LoginExiste = false
@@ -122,7 +119,7 @@ public class UsuarioServiceTests
             Arg.Any<CancellationToken>()).Returns(validacao);
 
         _usuarioRepository.InserirAsync(
-            Arg.Any<UsuarioEntity>(),
+            Arg.Any<UsuarioCommand>(),
             Arg.Any<CancellationToken>()).Returns(1);
 
         // Act
@@ -130,7 +127,7 @@ public class UsuarioServiceTests
 
         // Assert
         await _usuarioRepository.Received(1).InserirAsync(
-            Arg.Is<UsuarioEntity>(u =>
+            Arg.Is<UsuarioCommand>(u =>
                 u.Nome == request.Nome &&
                 u.Email == request.Email &&
                 u.Login == request.Login &&
@@ -174,7 +171,7 @@ public class UsuarioServiceTests
             PerfilId = 1
         };
 
-        var validacao = new RegistroValidacao
+        var validacao = new RegistroValidacaoQuery
         {
             ParceiroExiste = false,
             LoginExiste = false
@@ -205,7 +202,7 @@ public class UsuarioServiceTests
             PerfilId = 1
         };
 
-        var validacao = new RegistroValidacao
+        var validacao = new RegistroValidacaoQuery
         {
             ParceiroExiste = true,
             LoginExiste = true
@@ -266,7 +263,7 @@ public class UsuarioServiceTests
             PerfilId = 1
         };
 
-        var validacao = new RegistroValidacao
+        var validacao = new RegistroValidacaoQuery
         {
             ParceiroExiste = true,
             LoginExiste = false
@@ -279,7 +276,7 @@ public class UsuarioServiceTests
             Arg.Any<CancellationToken>()).Returns(validacao);
 
         _usuarioRepository.InserirAsync(
-            Arg.Any<UsuarioEntity>(),
+            Arg.Any<UsuarioCommand>(),
             Arg.Any<CancellationToken>()).Returns(1);
 
         // Act
@@ -287,7 +284,7 @@ public class UsuarioServiceTests
 
         // Assert
         await _usuarioRepository.Received(1).InserirAsync(
-            Arg.Is<UsuarioEntity>(u =>
+            Arg.Is<UsuarioCommand>(u =>
                 u.Senha != request.Senha &&
                 BCrypt.Net.BCrypt.Verify(request.Senha, u.Senha)),
             Arg.Any<CancellationToken>());
@@ -297,9 +294,9 @@ public class UsuarioServiceTests
     public async Task ListarAsync_PassesCancellationTokenToRepository()
     {
         // Arrange
-        var usuarios = new List<UsuarioComPerfilResponse>
+        var usuarios = new List<UsuarioComPerfilQuery>
         {
-            new UsuarioComPerfilResponse { Id = 1, Nome = "Usuario 1" }
+            new UsuarioComPerfilQuery { Id = 1, Nome = "Usuario 1" }
         };
         var cancellationToken = new CancellationToken();
         _usuarioRepository.ListarAsync(_testTenantId, cancellationToken).Returns(usuarios);
@@ -324,7 +321,7 @@ public class UsuarioServiceTests
             PerfilId = 1
         };
 
-        var validacao = new RegistroValidacao
+        var validacao = new RegistroValidacaoQuery
         {
             ParceiroExiste = true,
             LoginExiste = false
@@ -339,7 +336,7 @@ public class UsuarioServiceTests
             cancellationToken).Returns(validacao);
 
         _usuarioRepository.InserirAsync(
-            Arg.Any<UsuarioEntity>(),
+            Arg.Any<UsuarioCommand>(),
             cancellationToken).Returns(1);
 
         // Act
@@ -352,7 +349,7 @@ public class UsuarioServiceTests
             request.PerfilId,
             cancellationToken);
         await _usuarioRepository.Received(1).InserirAsync(
-            Arg.Any<UsuarioEntity>(),
+            Arg.Any<UsuarioCommand>(),
             cancellationToken);
     }
 
@@ -393,7 +390,7 @@ public class UsuarioServiceTests
     {
         // Arrange
         var usuarioId = 1;
-        _usuarioRepository.ObterPorIdAsync(usuarioId, Arg.Any<CancellationToken>()).Returns((UsuarioEntity?)null);
+        _usuarioRepository.ObterPorIdAsync(usuarioId, Arg.Any<CancellationToken>()).Returns((UsuarioQuery?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
@@ -406,7 +403,7 @@ public class UsuarioServiceTests
     {
         // Arrange
         var usuarioId = 1;
-        var usuario = new UsuarioEntity
+        var usuario = new UsuarioQuery
         {
             Id = usuarioId,
             Nome = "Test User",
@@ -421,7 +418,7 @@ public class UsuarioServiceTests
         // Assert
         Assert.True(usuario.Bloqueado);
         await _usuarioRepository.Received(1).AtualizarAsync(
-            Arg.Is<UsuarioEntity>(u => u.Id == usuarioId && u.Bloqueado == true),
+            Arg.Is<UsuarioCommand>(u => u.Id == usuarioId && u.Bloqueado == true),
             Arg.Any<CancellationToken>());
     }
 }

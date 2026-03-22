@@ -1,10 +1,10 @@
 ﻿using NSubstitute;
-using Portal.Dominio.Entities;
 using Portal.Features.Usuario.Infra;
 using Portal.Infra;
 using System.Data;
 
-namespace sso_tests;
+namespace sso.repositories;
+
 
 public class UsuarioRepositoryTests
 {
@@ -188,7 +188,7 @@ public class UsuarioRepositoryTests
         // Arrange
         var usuarioId = 123;
         var expectedSql = "SELECT id, nome, email, login, senha, parceiro_id, perfil_id, tentativas_login, ultimo_erro_login FROM sso.usuario WHERE id = @usuarioId";
-        var expectedUsuario = new UsuarioEntity
+        var expectedUsuario = new UsuarioCommand
         {
             Id = usuarioId,
             Nome = "Test User",
@@ -219,7 +219,7 @@ public class UsuarioRepositoryTests
     {
         // Arrange
         var usuarioId = 999;
-        _repository.SetQuerySingleAsyncResult<UsuarioEntity>(null);
+        _repository.SetQuerySingleAsyncResult<UsuarioQuery>(null);
 
         // Act
         var result = await _repository.ObterPorIdAsync(usuarioId);
@@ -234,7 +234,7 @@ public class UsuarioRepositoryTests
         // Arrange
         var usuarioId = 456;
         var cancellationToken = new CancellationToken();
-        _repository.SetQuerySingleAsyncResult<UsuarioEntity>(null);
+        _repository.SetQuerySingleAsyncResult<UsuarioQuery>(null);
 
         // Act
         await _repository.ObterPorIdAsync(usuarioId, cancellationToken);
@@ -260,7 +260,7 @@ public class UsuarioRepositoryTests
     public async Task AtualizarAsync_ValidUsuario_ExecutesUpdate()
     {
         // Arrange
-        var usuario = new UsuarioEntity
+        var usuario = new UsuarioCommand
         {
             Id = 123,
             Nome = "Updated User",
@@ -297,7 +297,7 @@ public class UsuarioRepositoryTests
     public async Task AtualizarAsync_WithCancellationToken_ExecutesUpdate()
     {
         // Arrange
-        var usuario = new UsuarioEntity
+        var usuario = new UsuarioCommand
         {
             Id = 456,
             Nome = "Test User",
@@ -322,7 +322,7 @@ public class UsuarioRepositoryTests
     public async Task AtualizarAsync_CancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var usuario = new UsuarioEntity
+        var usuario = new UsuarioCommand
         {
             Id = 789,
             Nome = "Test User",

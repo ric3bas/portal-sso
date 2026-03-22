@@ -1,11 +1,11 @@
 ﻿using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Portal.Dominio.Validations;
+using Portal.Domain.Exceptions;
 using Portal.Features.Escopo.Domain.Interfaces;
 using Portal.Features.Perfil.Domain;
 using Portal.Features.Perfil.Domain.Interfaces;
+using Portal.Features.Perfil.Infra;
 using Portal.Features.Perfil.Service;
-using PerfilEntity = Portal.Dominio.Entities.PerfilEntity;
 
 namespace sso.services;
 
@@ -44,10 +44,10 @@ public class PerfilServiceTests
     public async Task ListarComEscoposAsync_WithResults_ReturnsResults()
     {
         // Arrange
-        var perfis = new List<PerfilComEscopoResponse>
+        var perfis = new List<PerfilComEscopoQuery>
         {
-            new PerfilComEscopoResponse { Id = 1, Nome = "Perfil 1" },
-            new PerfilComEscopoResponse { Id = 2, Nome = "Perfil 2" }
+            new PerfilComEscopoQuery { Id = 1, Nome = "Perfil 1" },
+            new PerfilComEscopoQuery { Id = 2, Nome = "Perfil 2" }
         };
         _repository.ListarComEscoposAsync(Arg.Any<CancellationToken>()).Returns(perfis);
 
@@ -63,7 +63,7 @@ public class PerfilServiceTests
     public async Task ListarComEscoposAsync_NoResults_ThrowsNotFoundException()
     {
         // Arrange
-        var perfis = new List<PerfilComEscopoResponse>();
+        var perfis = new List<PerfilComEscopoQuery>();
         _repository.ListarComEscoposAsync(Arg.Any<CancellationToken>()).Returns(perfis);
 
         // Act & Assert
@@ -79,7 +79,7 @@ public class PerfilServiceTests
         var nome = "Perfil Teste";
         var expectedId = 1;
         _repository.ExisteNomeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        _repository.InserirAsync(Arg.Any<PerfilEntity>(), Arg.Any<CancellationToken>()).Returns(expectedId);
+        _repository.InserirAsync(Arg.Any<PerfilCommand>(), Arg.Any<CancellationToken>()).Returns(expectedId);
 
         // Act
         var result = await _service.CriarAsync(nome, CancellationToken.None);
@@ -87,7 +87,7 @@ public class PerfilServiceTests
         // Assert
         Assert.Equal(expectedId, result);
         await _repository.Received(1).InserirAsync(
-            Arg.Is<PerfilEntity>(p => p.Nome == nome.Trim()),
+            Arg.Is<PerfilCommand>(p => p.Nome == nome.Trim()),
             Arg.Any<CancellationToken>());
     }
 
@@ -171,7 +171,7 @@ public class PerfilServiceTests
         var nome = "  Perfil Teste  ";
         var expectedId = 1;
         _repository.ExisteNomeAsync("Perfil Teste", Arg.Any<CancellationToken>()).Returns(false);
-        _repository.InserirAsync(Arg.Any<PerfilEntity>(), Arg.Any<CancellationToken>()).Returns(expectedId);
+        _repository.InserirAsync(Arg.Any<PerfilCommand>(), Arg.Any<CancellationToken>()).Returns(expectedId);
 
         // Act
         var result = await _service.CriarAsync(nome, CancellationToken.None);
@@ -180,7 +180,7 @@ public class PerfilServiceTests
         Assert.Equal(expectedId, result);
         await _repository.Received(1).ExisteNomeAsync("Perfil Teste", Arg.Any<CancellationToken>());
         await _repository.Received(1).InserirAsync(
-            Arg.Is<PerfilEntity>(p => p.Nome == "Perfil Teste"),
+            Arg.Is<PerfilCommand>(p => p.Nome == "Perfil Teste"),
             Arg.Any<CancellationToken>());
     }
 
@@ -189,7 +189,7 @@ public class PerfilServiceTests
     {
         // Arrange
         var id = 1;
-        var perfil = new PerfilEntity { Id = id, Nome = "Perfil Teste" };
+        var perfil = new PerfilQuery { Id = id, Nome = "Perfil Teste" };
         _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>()).Returns(perfil);
 
         // Act
@@ -230,7 +230,7 @@ public class PerfilServiceTests
     {
         // Arrange
         var id = 99;
-        _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>()).Returns((PerfilEntity?)null);
+        _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>()).Returns((PerfilQuery?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(

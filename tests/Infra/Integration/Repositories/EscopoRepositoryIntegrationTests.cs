@@ -1,4 +1,3 @@
-using Portal.Dominio.Entities;
 using Portal.Features.Escopo.Infra;
 
 namespace sso.repositories;
@@ -20,7 +19,7 @@ public sealed class EscopoRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new EscopoRepository(uow);
 
-        var id = await repository.InserirAsync(new EscopoEntity { Nome = "finance" });
+        var id = await repository.InserirAsync(new EscopoCommand{ Nome = "finance" });
         var ids = (await repository.ObterIdsExistentesAsync(new[] { id, 99 })).ToList();
 
         Assert.Single(ids);

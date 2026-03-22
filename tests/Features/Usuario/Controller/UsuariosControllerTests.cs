@@ -5,6 +5,7 @@ using NSubstitute.ExceptionExtensions;
 using Portal.Features.Usuario.Controller;
 using Portal.Features.Usuario.Domain;
 using Portal.Features.Usuario.Domain.Interfaces;
+using Portal.Features.Usuario.Infra;
 
 namespace sso.controllers;
 
@@ -46,7 +47,7 @@ public class UsuariosControllerTests
     public async Task ListarAsync_Returns200WithPayload()
     {
         var service = Substitute.For<IUsuarioService>();
-        var payload = new List<UsuarioComPerfilResponse>
+        var payload = new List<UsuarioComPerfilQuery>
         {
             new() { Id = 1, Nome = "Ricardo", Login = "ricardo", Email = "ricardo@email.com" }
         };
@@ -66,7 +67,7 @@ public class UsuariosControllerTests
     public async Task ListarAsync_CallsServiceWithSameCancellationToken()
     {
         var service = Substitute.For<IUsuarioService>();
-        service.ListarAsync(Arg.Any<CancellationToken>()).Returns(new List<UsuarioComPerfilResponse>());
+        service.ListarAsync(Arg.Any<CancellationToken>()).Returns(new List<UsuarioComPerfilQuery>());
         var controller = new UsuariosController(service);
         using var cts = new CancellationTokenSource();
 

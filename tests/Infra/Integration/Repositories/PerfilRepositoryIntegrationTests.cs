@@ -1,6 +1,5 @@
 using Dapper;
 using Npgsql;
-using Portal.Dominio.Entities;
 using Portal.Features.Perfil.Infra;
 
 namespace sso.repositories;
@@ -36,7 +35,7 @@ public sealed class PerfilRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new PerfilRepository(uow);
 
-        var perfil = new PerfilEntity { Nome = "Novo Perfil" };
+        var perfil = new PerfilCommand { Nome = "Novo Perfil" };
         var id = await repository.InserirAsync(perfil);
 
         Assert.True(id > 0);

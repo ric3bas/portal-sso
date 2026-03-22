@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Portal.Dominio.Validations;
-using Portal.Middleware;
+using Portal.Domain.Base;
+using Portal.Domain.Exceptions;
 
 namespace sso.global;
 

@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
-using Portal.Dominio.Entities;
 using Portal.Features.Perfil.Controller;
 using Portal.Features.Perfil.Domain;
 using Portal.Features.Perfil.Domain.Interfaces;
@@ -55,9 +54,9 @@ public class PerfisControllerTests
     public async Task GetByIdAsync_ReturnsOkWithPerfil()
     {
         var service = Substitute.For<IPerfilService>();
-        var expectedPerfil = new PerfilEntity { Id = 1, Nome = "Admin" };
+        var expectedPerfil = new PerfilResponse { Id = 1, Nome = "Admin" };
         service.ObterPorIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-               .Returns(Task.FromResult<PerfilEntity?>(expectedPerfil));
+               .Returns(Task.FromResult<PerfilResponse?>(expectedPerfil));
 
         var controller = new PerfisController(service);
         var id = 1;

@@ -3,7 +3,7 @@ using NSubstitute;
 using Portal.Features.Escopo.Controller;
 using Portal.Features.Escopo.Domain;
 using Portal.Features.Escopo.Domain.Interfaces;
-using EscopoEntity = Portal.Dominio.Entities.EscopoEntity;
+using Portal.Features.Escopo.Infra;
 
 namespace sso.controllers;
 
@@ -73,7 +73,7 @@ public class EscoposControllerTests
     public async Task GetByIdAsync_ReturnsOkResult()
     {
         var service = Substitute.For<IEscopoService>();
-        var escopo = new EscopoEntity { Id = 1, Nome = "Escopo Teste" };
+        var escopo = new EscopoResponse { Id = 1, Nome = "Escopo Teste" };
         service.ObterPorIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
                .Returns(escopo);
 
@@ -93,7 +93,7 @@ public class EscoposControllerTests
         var cancellationToken = new CancellationToken();
         var escopoId = 42;
         service.ObterPorIdAsync(Arg.Any<int>(), Arg.Any<CancellationToken>())
-               .Returns(new EscopoEntity { Id = escopoId, Nome = "Teste" });
+               .Returns(new EscopoResponse{ Id = escopoId, Nome = "Teste" });
 
         var controller = new EscoposController(service);
 

@@ -1,7 +1,6 @@
 using Dapper;
 using Npgsql;
-using Portal.Dominio.Entities;
-using Portal.Features.Auth.Infra;
+using Portal.Features.Usuario.Infra;
 
 namespace sso.repositories;
 
@@ -109,7 +108,7 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new AuthRepository(uow);
 
-        var entidade = new RecuperacaoSenhaEntity
+        var entidade = new RecuperacaoSenhaCommand
         {
             UsuarioId = usuarioId,
             Token = "token-insert",
@@ -134,14 +133,14 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new AuthRepository(uow);
 
-        var primeiro = new RecuperacaoSenhaEntity
+        var primeiro = new RecuperacaoSenhaCommand
         {
             UsuarioId = usuarioId,
             Token = "dup-token",
             ExpiraEm = DateTime.UtcNow.AddMinutes(10),
             Usado = false
         };
-        var segundo = new RecuperacaoSenhaEntity
+        var segundo = new RecuperacaoSenhaCommand
         {
             UsuarioId = usuarioId,
             Token = "dup-token",
@@ -167,7 +166,7 @@ public sealed class AuthRepositoryIntegrationTests
         using var uow = _fixture.CreateUnitOfWork();
         var repository = new AuthRepository(uow);
 
-        var entidade = new RecuperacaoSenhaEntity
+        var entidade = new RecuperacaoSenhaCommand
         {
             UsuarioId = usuarioId,
             Token = "token-usado",

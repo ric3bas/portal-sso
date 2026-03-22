@@ -1,18 +1,14 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
-using Portal.Dominio;
-using Portal.Dominio.Entities;
-using Portal.Dominio.Validations;
-using Portal.Features.Auth.Domain;
-using Portal.Features.Auth.Domain.Interfaces;
+using Portal.Domain.Base.Email;
+using Portal.Domain.Exceptions;
 using Portal.Features.Auth.Domain.Requests;
-using Portal.Features.Auth.Domain.Responses;
-using Portal.Features.Auth.Service;
 using Portal.Features.Usuario.Domain.Interfaces;
-using Portal.Infra.Email;
+using Portal.Features.Usuario.Infra;
+using Portal.Features.Usuario.Service;
 
-namespace sso_tests;
+namespace sso.services;
 
 public class AuthServiceTests
 {
@@ -91,7 +87,7 @@ public class AuthServiceTests
         };
 
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
-            .Returns((RecuperacaoSenhaEntity?)null);
+            .Returns((RecuperacaoSenhaQuery?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
@@ -110,7 +106,7 @@ public class AuthServiceTests
             ConfirmarSenha = "NewPassword123!"
         };
 
-        var entity = new RecuperacaoSenhaEntity
+        var entity = new RecuperacaoSenhaQuery
         {
             Id = 1,
             Token = "used-token",
@@ -139,7 +135,7 @@ public class AuthServiceTests
             ConfirmarSenha = "NewPassword123!"
         };
 
-        var entity = new RecuperacaoSenhaEntity
+        var entity = new RecuperacaoSenhaQuery
         {
             Id = 1,
             Token = "expired-token",
@@ -168,7 +164,7 @@ public class AuthServiceTests
             ConfirmarSenha = "NewPassword123!"
         };
 
-        var entity = new RecuperacaoSenhaEntity
+        var entity = new RecuperacaoSenhaQuery
         {
             Id = 1,
             Token = "valid-token",
@@ -220,7 +216,7 @@ public class AuthServiceTests
         };
 
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
-            .Returns((RecuperacaoSenhaEntity?)null);
+            .Returns((RecuperacaoSenhaQuery?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
@@ -237,7 +233,7 @@ public class AuthServiceTests
             Token = "used-token"
         };
 
-        var entity = new RecuperacaoSenhaEntity
+        var entity = new RecuperacaoSenhaQuery
         {
             Id = 1,
             Token = "used-token",
@@ -264,7 +260,7 @@ public class AuthServiceTests
             Token = "expired-token"
         };
 
-        var entity = new RecuperacaoSenhaEntity
+        var entity = new RecuperacaoSenhaQuery
         {
             Id = 1,
             Token = "expired-token",
@@ -291,7 +287,7 @@ public class AuthServiceTests
             Token = "valid-token"
         };
 
-        var entity = new RecuperacaoSenhaEntity
+        var entity = new RecuperacaoSenhaQuery
         {
             Id = 1,
             Token = "valid-token",
@@ -336,7 +332,7 @@ public class AuthServiceTests
             Senha = "password"
         };
 
-        var dados = new LoginData
+        var dados = new LoginDataQuery
         {
             Usuario = null,
             Perfil = null,
@@ -362,9 +358,9 @@ public class AuthServiceTests
             Senha = "password"
         };
 
-        var dados = new LoginData
+        var dados = new LoginDataQuery
         {
-            Usuario = new UsuarioEntity
+            Usuario = new UsuarioQuery
             {
                 Id = 1,
                 Login = "test@example.com",
@@ -395,9 +391,9 @@ public class AuthServiceTests
             Senha = "wrongpassword"
         };
 
-        var dados = new LoginData
+        var dados = new LoginDataQuery
         {
-            Usuario = new UsuarioEntity
+            Usuario = new UsuarioQuery
             {
                 Id = 1,
                 Login = "test@example.com",
@@ -430,9 +426,9 @@ public class AuthServiceTests
         };
 
         var parceiroId = Guid.NewGuid();
-        var dados = new LoginData
+        var dados = new LoginDataQuery
         {
-            Usuario = new UsuarioEntity
+            Usuario = new UsuarioQuery
             {
                 Id = 1,
                 Login = "test@example.com",
@@ -442,7 +438,7 @@ public class AuthServiceTests
                 TentativasLogin = 2,
                 ParceiroId = parceiroId
             },
-            Perfil = new UsuarioPerfilItemResponse { Nome = "Admin" },
+            Perfil = new UsuarioPerfilItemQuery { Nome = "Admin" },
             Escopos = new List<string> { "read", "write" }
         };
 
@@ -466,7 +462,7 @@ public class AuthServiceTests
         Assert.NotNull(result.RefreshToken);
         Assert.Equal("60", result.ExpireInMinutes);
         await _usuarioRepository.Received(1).ResetarTentativasLoginAsync(dados.Usuario.Id, Arg.Any<CancellationToken>());
-        await _tokenRepository.Received(1).InserirAsync(Arg.Is<TokenAtualizacaoEntity>(t =>
+        await _tokenRepository.Received(1).InserirAsync(Arg.Is<TokenAtualizacaoCommand>(t =>
             t.Token == result.RefreshToken &&
             t.Revogado == false &&
             t.UsuarioId == dados.Usuario.Id));
@@ -497,7 +493,7 @@ public class AuthServiceTests
         };
 
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
-            .Returns((TokenAtualizacaoEntity?)null);
+            .Returns((TokenAtualizacaoQuery?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
@@ -514,7 +510,7 @@ public class AuthServiceTests
             RefreshToken = "revoked-token"
         };
 
-        var token = new TokenAtualizacaoEntity
+        var token = new TokenAtualizacaoQuery
         {
             Id = 1,
             Token = "revoked-token",
@@ -541,7 +537,7 @@ public class AuthServiceTests
             RefreshToken = "expired-token"
         };
 
-        var token = new TokenAtualizacaoEntity
+        var token = new TokenAtualizacaoQuery
         {
             Id = 1,
             Token = "expired-token",
@@ -568,7 +564,7 @@ public class AuthServiceTests
             RefreshToken = "valid-token"
         };
 
-        var token = new TokenAtualizacaoEntity
+        var token = new TokenAtualizacaoQuery
         {
             Id = 1,
             Token = "valid-token",
@@ -580,7 +576,7 @@ public class AuthServiceTests
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
             .Returns(token);
 
-        var dados = new LoginData
+        var dados = new LoginDataQuery
         {
             Usuario = null,
             Perfil = null,
@@ -605,7 +601,7 @@ public class AuthServiceTests
             RefreshToken = "valid-token"
         };
 
-        var token = new TokenAtualizacaoEntity
+        var token = new TokenAtualizacaoQuery
         {
             Id = 1,
             Token = "valid-token",
@@ -618,9 +614,9 @@ public class AuthServiceTests
             .Returns(token);
 
         var parceiroId = Guid.NewGuid();
-        var dados = new LoginData
+        var dados = new LoginDataQuery
         {
-            Usuario = new UsuarioEntity
+            Usuario = new UsuarioQuery
             {
                 Id = 1,
                 Login = "test@example.com",
@@ -628,7 +624,7 @@ public class AuthServiceTests
                 Email = "test@example.com",
                 ParceiroId = parceiroId
             },
-            Perfil = new UsuarioPerfilItemResponse { Nome = "Admin" },
+            Perfil = new UsuarioPerfilItemQuery { Nome = "Admin" },
             Escopos = new List<string> { "read", "write" }
         };
 
@@ -652,7 +648,7 @@ public class AuthServiceTests
         Assert.NotNull(result.RefreshToken);
         Assert.Equal("60", result.ExpireInMinutes);
         await _tokenRepository.Received(1).RevogarAsync(request.RefreshToken, Arg.Any<CancellationToken>());
-        await _tokenRepository.Received(1).InserirAsync(Arg.Is<TokenAtualizacaoEntity>(t =>
+        await _tokenRepository.Received(1).InserirAsync(Arg.Is<TokenAtualizacaoCommand>(t =>
             t.Token == result.RefreshToken &&
             t.Revogado == false &&
             t.UsuarioId == token.UsuarioId));
@@ -683,7 +679,7 @@ public class AuthServiceTests
         };
 
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
-            .Returns((TokenAtualizacaoEntity?)null);
+            .Returns((TokenAtualizacaoQuery?)null);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
@@ -700,7 +696,7 @@ public class AuthServiceTests
             RefreshToken = "revoked-token"
         };
 
-        var token = new TokenAtualizacaoEntity
+        var token = new TokenAtualizacaoQuery
         {
             Id = 1,
             Token = "revoked-token",
@@ -727,7 +723,7 @@ public class AuthServiceTests
             RefreshToken = "valid-token"
         };
 
-        var token = new TokenAtualizacaoEntity
+        var token = new TokenAtualizacaoQuery
         {
             Id = 1,
             Token = "valid-token",
@@ -759,7 +755,7 @@ public class AuthServiceTests
             Login = "nonexistent@example.com"
         };
 
-        var loginData = new LoginData
+        var loginData = new LoginDataQuery
         {
             Usuario = null,
             Perfil = null,
@@ -786,9 +782,9 @@ public class AuthServiceTests
             Login = "test@example.com"
         };
 
-        var loginData = new LoginData
+        var loginData = new LoginDataQuery
         {
-            Usuario = new UsuarioEntity
+            Usuario = new UsuarioQuery
             {
                 Id = 1,
                 Login = "test@example.com",
@@ -818,9 +814,9 @@ public class AuthServiceTests
             Login = "test@example.com"
         };
 
-        var loginData = new LoginData
+        var loginData = new LoginDataQuery
         {
-            Usuario = new UsuarioEntity
+            Usuario = new UsuarioQuery
             {
                 Id = 1,
                 Login = "test@example.com",
@@ -850,9 +846,9 @@ public class AuthServiceTests
             Login = "test@example.com"
         };
 
-        var loginData = new LoginData
+        var loginData = new LoginDataQuery
         {
-            Usuario = new UsuarioEntity
+            Usuario = new UsuarioQuery
             {
                 Id = 123,
                 Login = "test@example.com",
@@ -874,7 +870,7 @@ public class AuthServiceTests
         Assert.True(result.EmailEnviado);
         
         await _authRepository.Received(1).InserirRecuperacaoSenhaAsync(
-            Arg.Is<RecuperacaoSenhaEntity>(e =>
+            Arg.Is<RecuperacaoSenhaCommand>(e =>
                 e.UsuarioId == 123 &&
                 !string.IsNullOrEmpty(e.Token) &&
                 e.Usado == false &&

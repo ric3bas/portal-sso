@@ -1,11 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
-using Portal.Dominio.Entities;
-using Portal.Features.Auth.Controller;
-using Portal.Features.Auth.Domain.Interfaces;
 using Portal.Features.Auth.Domain.Requests;
-using Portal.Features.Auth.Domain.Responses;
+using Portal.Features.Usuario.Controller;
 using Portal.Features.Usuario.Domain;
+using Portal.Features.Usuario.Domain.Interfaces;
+using Portal.Features.Usuario.Domain.Responses;
 
 namespace sso.controllers;
 public class AuthControllerTests

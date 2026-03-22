@@ -1,15 +1,17 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Portal.Dominio.Validations;
+using Portal.Domain.Exceptions;
 using Portal.Features.Parceiro.Domain;
 using Portal.Features.Parceiro.Domain.Interfaces;
 using Portal.Features.Parceiro.Domain.Validations;
 using Portal.Features.Parceiro.Service;
 using System.Security.Claims;
 using FluentValidation.Results;
+using Portal.Features.Parceiro.Infra;
 
-namespace sso_tests;
+namespace sso.services;
+
 
 public class ParceiroServiceTests
 {
@@ -54,7 +56,7 @@ public class ParceiroServiceTests
     {
         var service = CreateService();
         _repository.ObterTodosAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(Enumerable.Empty<ParceiroResponse>());
+            .Returns(Enumerable.Empty<ParceiroQuery>());
 
         await Assert.ThrowsAsync<NotFoundException>(() => 
             service.ListarParceirosAsync(null, CancellationToken.None));
@@ -65,7 +67,7 @@ public class ParceiroServiceTests
     {
         var service = CreateService();
         _repository.ObterTodosAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<IEnumerable<ParceiroResponse>>(null!));
+            .Returns(Task.FromResult<IEnumerable<ParceiroQuery>>(null!));
 
         await Assert.ThrowsAsync<NotFoundException>(() => 
             service.ListarParceirosAsync("test", CancellationToken.None));
@@ -75,7 +77,7 @@ public class ParceiroServiceTests
     public async Task ListarParceirosAsync_WithResults_ReturnsAllParceiros()
     {
         var service = CreateService();
-        var parceiros = new List<ParceiroResponse>
+        var parceiros = new List<ParceiroQuery>
         {
             new() { Id = Guid.NewGuid(), Nome = "Parceiro 1", Ativo = true },
             new() { Id = Guid.NewGuid(), Nome = "Parceiro 2", Ativo = true }
@@ -92,7 +94,7 @@ public class ParceiroServiceTests
     public async Task ListarParceirosAsync_WithNameFilter_PassesFilterToRepository()
     {
         var service = CreateService();
-        var parceiros = new List<ParceiroResponse>
+        var parceiros = new List<ParceiroQuery>
         {
             new() { Id = Guid.NewGuid(), Nome = "Filtered", Ativo = true }
         };
@@ -147,7 +149,7 @@ public class ParceiroServiceTests
         var service = CreateService();
         var id = Guid.NewGuid();
         _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>())
-            .Returns((ParceiroResponse?)null);
+            .Returns((ParceiroQuery?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => 
             service.ObterParceiroAsync(id.ToString(), CancellationToken.None));
@@ -158,7 +160,7 @@ public class ParceiroServiceTests
     {
         var service = CreateService();
         var id = Guid.NewGuid();
-        var parceiro = new ParceiroResponse
+        var parceiro = new ParceiroQuery
         {
             Id = id,
             Nome = "Test Parceiro",
@@ -190,7 +192,7 @@ public class ParceiroServiceTests
     {
         var service = CreateService();
         var request = new ParceiroRequest { Nome = "Existing Parceiro", Descricao = "Test" };
-        var existingParceiro = new ParceiroResponse { Id = Guid.NewGuid(), Nome = "Existing Parceiro" };
+        var existingParceiro = new ParceiroQuery { Id = Guid.NewGuid(), Nome = "Existing Parceiro" };
         _repository.ObterPorNomeAsync("Existing Parceiro", Arg.Any<CancellationToken>())
             .Returns(existingParceiro);
 
@@ -207,15 +209,15 @@ public class ParceiroServiceTests
         var newId = Guid.NewGuid();
         var request = new ParceiroRequest { Nome = "New Parceiro", Descricao = "Description" };
         _repository.ObterPorNomeAsync(request.Nome, Arg.Any<CancellationToken>())
-            .Returns((ParceiroResponse?)null);
-        _repository.InserirAsync(Arg.Any<Portal.Domain.Entities.ParceiroEntity>(), Arg.Any<CancellationToken>())
+            .Returns((ParceiroQuery?)null);
+        _repository.InserirAsync(Arg.Any<ParceiroCommand>(), Arg.Any<CancellationToken>())
             .Returns(newId);
 
         var result = await service.CriarParceiroAsync(request, CancellationToken.None);
 
         Assert.Equal(newId, result);
         await _repository.Received(1).InserirAsync(
-            Arg.Is<Portal.Domain.Entities.ParceiroEntity>(e => e.Nome == request.Nome),
+            Arg.Is<ParceiroCommand>(e => e.Nome == request.Nome),
             Arg.Any<CancellationToken>());
     }
 
@@ -291,7 +293,7 @@ public class ParceiroServiceTests
         await service.AtualizarParceiroAsync(request, CancellationToken.None);
 
         await _repository.Received(1).AtualizarAsync(
-            Arg.Is<Portal.Domain.Entities.ParceiroEntity>(e => 
+            Arg.Is<ParceiroCommand>(e => 
                 e.Id == id && 
                 e.Nome == request.Nome && 
                 e.Descricao == request.Descricao &&

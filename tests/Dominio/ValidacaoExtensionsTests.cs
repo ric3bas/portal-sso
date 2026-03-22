@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 using FluentValidation.TestHelper;
-using Portal.Dominio;
+using Portal.Domain.Base;
 
 namespace sso.global;
 

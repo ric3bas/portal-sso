@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using NSubstitute;
-using Portal.Dominio;
+using Portal.Domain.Base;
 using System.Security.Claims;
 
 namespace sso.global;

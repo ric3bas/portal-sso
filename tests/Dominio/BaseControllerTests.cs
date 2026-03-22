@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Portal.Dominio;
+using Portal.Domain.Base;
 
 namespace sso.global;
 

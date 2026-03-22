@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
 using NSubstitute;
-using Portal.Dominio;
+using Portal.Domain.Base;
 
 namespace sso.global;
 

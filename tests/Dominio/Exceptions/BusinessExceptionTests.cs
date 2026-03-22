@@ -1,4 +1,4 @@
-﻿using Portal.Dominio.Validations;
+﻿using Portal.Domain.Exceptions;
 
 namespace sso.global;
 
