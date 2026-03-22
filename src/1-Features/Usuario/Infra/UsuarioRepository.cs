@@ -103,7 +103,7 @@ namespace Portal.Features.Usuario.Infra
         public async Task BloquearUsuarioAsync(int usuarioId, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            const string sql = "UPDATE sso.usuario SET tentativas_login = 5 WHERE id = @usuarioId";
+            const string sql = "UPDATE sso.usuario SET bloqueado = true WHERE id = @usuarioId";
             await ExecuteAsync(sql, new { usuarioId });
         }
 

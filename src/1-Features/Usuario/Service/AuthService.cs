@@ -5,6 +5,7 @@ using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Features.Usuario.Domain.Responses;
 using Portal.Features.Usuario.Infra;
+using Portal.Infra;
 
 namespace Portal.Features.Usuario.Service
 {
@@ -13,19 +14,21 @@ namespace Portal.Features.Usuario.Service
     {
         private readonly IAuthRepository _authRepository;
         private readonly IUsuarioRepository _usuarioRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
         private readonly ITokenAtualizacaoRepository _tokenRepo;
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
 
         public AuthService(IAuthRepository authRepo, ITokenAtualizacaoRepository tokenRepo, IConfiguration config,
-             IHttpContextAccessor httpContextAccessor, IEmailService emailService, IUsuarioRepository usuarioRepository) : base(httpContextAccessor)
+             IHttpContextAccessor httpContextAccessor, IEmailService emailService, IUsuarioRepository usuarioRepository, IUnitOfWork unitOfWork) : base(httpContextAccessor)
         {
             _authRepository = authRepo;
             _config = config;
             _tokenRepo = tokenRepo;
             _emailService = emailService;
             _usuarioRepository = usuarioRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<TrocarSenhaResponse> TrocarSenhaAsync(TrocarSenhaRequest request, CancellationToken cancellationToken)
@@ -86,14 +89,23 @@ namespace Portal.Features.Usuario.Service
             if (dados.Usuario is null)
                 throw new BusinessException("Usuário ou senha inválidos");
 
+            var tentativas = 5 - (dados.Usuario.TentativasLogin);
+
             // Controle de tentativas de login
-            if (dados.Usuario.TentativasLogin >= 5)
-                throw new BusinessException("Usuário bloqueado por excesso de tentativas. Aguarde ou redefina sua senha.");
+            if (dados.Usuario.Bloqueado)
+                throw new BusinessException("Usuário bloqueado por excesso de tentativas");
 
             if (!BCrypt.Net.BCrypt.Verify(request.Senha, dados.Usuario.Senha))
             {
+
+                if (tentativas == 0)
+                {
+                    await _usuarioRepository.BloquearUsuarioAsync(dados.Usuario.Id, cancellationToken);
+                    throw new BusinessException("Usuário bloqueado por excesso de tentativas");
+                }
                 await _usuarioRepository.IncrementarTentativaLoginAsync(dados.Usuario.Id, cancellationToken);
-                throw new BusinessException("Usuário ou senha inválidos");
+
+                throw new BusinessException($"Usuário ou senha inválidos, voce tem mais {tentativas} tentativas");
             }
 
             // Login bem-sucedido: zera tentativas

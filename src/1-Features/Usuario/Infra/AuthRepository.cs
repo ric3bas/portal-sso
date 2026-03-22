@@ -59,22 +59,22 @@ namespace Portal.Features.Usuario.Infra
             cancellationToken.ThrowIfCancellationRequested();
 
             const string sql = @"
-                SELECT u.id, u.nome, u.login, u.senha, u.email, u.parceiro_id AS ParceiroId
+                SELECT u.id, u.nome, u.login, u.senha, u.email, u.parceiro_id AS ParceiroId, u.tentativas_login TentativasLogin, u.bloqueado Bloqueado
                 FROM sso.usuario u
-                WHERE u.login = @login
+                WHERE u.login = @login or u.email = @login
                 LIMIT 1;
 
                 SELECT p.id, p.nome
                 FROM sso.usuario u
                 INNER JOIN sso.perfil p ON p.id = u.perfil_id
-                WHERE u.login = @login
+                WHERE u.login = @login or u.email = @login
                 LIMIT 1;
 
                 SELECT DISTINCT e.nome
                 FROM sso.usuario u
                 INNER JOIN sso.perfil_escopo pe ON pe.perfil_id = u.perfil_id
                 INNER JOIN sso.escopo e ON e.id = pe.escopo_id
-                WHERE u.login = @login
+                WHERE u.login = @login or u.email = @login
                 ORDER BY e.nome;";
 
             using var multi = await QueryMultipleAsync(sql, new { login });
