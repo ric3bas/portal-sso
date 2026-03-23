@@ -6,6 +6,7 @@ using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Features.Usuario.Domain.Responses;
 using Portal.Features.Usuario.Infra;
 using Portal.Infra;
+using static Portal.Domain.Base.Result;
 
 namespace Portal.Features.Usuario.Service
 {
@@ -31,23 +32,21 @@ namespace Portal.Features.Usuario.Service
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<TrocarSenhaResponse> TrocarSenhaAsync(TrocarSenhaRequest request, CancellationToken cancellationToken)
+        public async Task<Result<TrocarSenhaResponse>> TrocarSenhaAsync(TrocarSenhaRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
-                throw new ValidationException(request.ObterErros());
+                return ValidationResult<TrocarSenhaResponse>(request.ObterErros());
 
             var entity = await _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, cancellationToken);
 
-            #region ValidaRetorno
             if (entity == null)
-                throw new BusinessException("Token inválido");
+                return BusinessResult<TrocarSenhaResponse>("Token inválido");
 
             if (entity.Usado)
-                throw new BusinessException("Token já utilizado");
+                return BusinessResult<TrocarSenhaResponse>("Token já utilizado");
 
             if (entity.ExpiraEm < DateTime.UtcNow)
-                throw new BusinessException("Token expirado");
-            #endregion
+                return BusinessResult<TrocarSenhaResponse>("Token expirado");
 
             var novaSenhaHash = BCrypt.Net.BCrypt.HashPassword(request.NovaSenha);
 
@@ -55,45 +54,43 @@ namespace Portal.Features.Usuario.Service
 
             await _authRepository.MarcarRecuperacaoSenhaComoUsadoAsync(entity.Id, cancellationToken);
 
-            return new TrocarSenhaResponse { Mensagem = "Senha alterada com sucesso" };
+            return OkResult(new TrocarSenhaResponse { Mensagem = "Senha alterada com sucesso" });
         }
 
-        public async Task<ValidarTokenRecuperacaoResponse> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request, CancellationToken cancellationToken)
+        public async Task<Result<ValidarTokenRecuperacaoResponse>> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
-                throw new ValidationException(request.ObterErros());
+                return ValidationResult<ValidarTokenRecuperacaoResponse>(request.ObterErros());
 
             var entity = await _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, cancellationToken);
 
-            #region ValidaRetorno
             if (entity == null)
-                throw new BusinessException("Token inválido");
+                return BusinessResult<ValidarTokenRecuperacaoResponse>("Token inválido");
 
             if (entity.Usado)
-                throw new BusinessException("Token já utilizado");
+                return BusinessResult<ValidarTokenRecuperacaoResponse>("Token já utilizado");
 
             if (entity.ExpiraEm < DateTime.UtcNow)
-                throw new BusinessException("Token expirado");
-            #endregion
+                return BusinessResult<ValidarTokenRecuperacaoResponse>("Token expirado");
 
-            return new ValidarTokenRecuperacaoResponse { Mensagem = "Token válido, pode prosseguir com alteração de senha"};
+            return OkResult(new ValidarTokenRecuperacaoResponse { Mensagem = "Token válido, pode prosseguir com alteração de senha"});
         }
 
-        public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+        public async Task<Result<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
-                throw new ValidationException(request.ObterErros());
+                return ValidationResult<LoginResponse>(request.ObterErros());
 
             var dados = await _authRepository.ObterDadosLoginAsync(request.Login, cancellationToken);
 
             if (dados.Usuario is null)
-                throw new BusinessException("Usuário ou senha inválidos");
+                return BusinessResult<LoginResponse>("Usuário ou senha inválidos");
 
             var tentativas = 5 - (dados.Usuario.TentativasLogin);
 
             // Controle de tentativas de login
             if (dados.Usuario.Bloqueado)
-                throw new BusinessException("Usuário bloqueado por excesso de tentativas");
+                return BusinessResult<LoginResponse>("Usuário bloqueado por excesso de tentativas");
 
             if (!BCrypt.Net.BCrypt.Verify(request.Senha, dados.Usuario.Senha))
             {
@@ -101,11 +98,11 @@ namespace Portal.Features.Usuario.Service
                 if (tentativas == 0)
                 {
                     await _usuarioRepository.BloquearUsuarioAsync(dados.Usuario.Id, cancellationToken);
-                    throw new BusinessException("Usuário bloqueado por excesso de tentativas");
+                    return BusinessResult<LoginResponse>("Usuário bloqueado por excesso de tentativas");
                 }
                 await _usuarioRepository.IncrementarTentativaLoginAsync(dados.Usuario.Id, cancellationToken);
 
-                throw new BusinessException($"Usuário ou senha inválidos, voce tem mais {tentativas} tentativas");
+                return BusinessResult<LoginResponse>($"Usuário ou senha inválidos, voce tem mais {tentativas} tentativas");
             }
 
             // Login bem-sucedido: zera tentativas
@@ -136,28 +133,28 @@ namespace Portal.Features.Usuario.Service
                 UsuarioId = dados.Usuario.Id
             });
 
-            return new LoginResponse
+            return OkResult(new LoginResponse
             {
                 AccessToken     = accessToken,
                 RefreshToken    = refreshToken,
                 ExpireInMinutes = jwtSection["AccessTokenExpireMinutes"] ?? "0"
-            };
+            });
         }
 
-        public async Task<LoginResponse> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
+        public async Task<Result<LoginResponse>> RefreshAsync(RefreshTokenRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
-                throw new ValidationException(request.ObterErros());
+                return ValidationResult<LoginResponse>(request.ObterErros());
 
             var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken, cancellationToken);
 
             if (token is null || token.Revogado || token.ExpiraEm < DateTime.UtcNow)
-                throw new BusinessException("Refresh token inválido ou expirado");
+                return BusinessResult<LoginResponse>("Refresh token inválido ou expirado");
 
             var dados = await _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId, cancellationToken);
 
             if (dados.Usuario is null)
-                throw new BusinessException("Usuário não encontrado");
+                return BusinessResult<LoginResponse>("Usuário não encontrado");
 
             var jwtSection             = _config.GetSection("Jwt");
             var accessTokenMinutes     = int.Parse(jwtSection["AccessTokenExpireMinutes"] ?? "0");
@@ -186,33 +183,34 @@ namespace Portal.Features.Usuario.Service
                 UsuarioId = token.UsuarioId
             });
 
-            return new LoginResponse
+            return OkResult(new LoginResponse
             {
                 AccessToken     = accessToken,
                 RefreshToken    = novoRefreshToken,
                 ExpireInMinutes = jwtSection["AccessTokenExpireMinutes"] ?? "0"
-            };
+            });
         }
 
-        public async Task LogoutAsync(LogoutRequest request, CancellationToken cancellationToken)
+        public async Task<Result<bool>> LogoutAsync(LogoutRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
-                throw new ValidationException(request.ObterErros());
+                return ValidationResult<bool>(request.ObterErros());
 
             var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken, cancellationToken);
 
             if (token is null || token.Revogado)
-                throw new BusinessException("Refresh token inválido ou já revogado");
+                return BusinessResult<bool>("Refresh token inválido ou já revogado");
 
             await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);
+            return OkResult(true);
         }
 
-        public async Task<RecuperarSenhaResponse> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request, CancellationToken cancellationToken)
+        public async Task<Result<RecuperarSenhaResponse>> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request, CancellationToken cancellationToken)
         {
             var loginData = await _authRepository.ObterDadosLoginAsync(request.Login);
             var usuario = loginData.Usuario;
             if (usuario == null || string.IsNullOrEmpty(usuario.Email))
-                return new RecuperarSenhaResponse { EmailEnviado = false };
+                return OkResult(new RecuperarSenhaResponse { EmailEnviado = false });
 
             var token = TokenBase.GerarToken();
             var entity = new RecuperacaoSenhaCommand
@@ -234,7 +232,7 @@ namespace Portal.Features.Usuario.Service
                               </body>
                             </html>";
             await _emailService.EnviarEmailAsync(usuario.Email, assunto, corpo);
-            return new RecuperarSenhaResponse { EmailEnviado = true };
+            return OkResult(new RecuperarSenhaResponse { EmailEnviado = true });
         }
 
 

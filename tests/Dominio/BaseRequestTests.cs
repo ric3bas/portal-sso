@@ -1,4 +1,4 @@
-Ôªøusing FluentValidation;
+using FluentValidation;
 using FluentValidation.Results;
 using NSubstitute;
 using Portal.Domain.Base;
@@ -23,13 +23,13 @@ public class BaseRequestTests
         var request = "test data";
         var validator = Substitute.For<IValidator<string>>();
         var validationResult = new ValidationResult();
-        validator.Validate(request).Returns(validationResult);
+        validator.Validate(request).Returns(validationresult.Data);
 
         // Act
         var result = testRequest.Validate(request, validator);
 
         // Assert
-        Assert.True(result);
+        Assert.True(result.Data);
         validator.Received(1).Validate(request);
     }
 
@@ -44,13 +44,13 @@ public class BaseRequestTests
         {
             new ValidationFailure("Property", "Error message")
         });
-        validator.Validate(request).Returns(validationResult);
+        validator.Validate(request).Returns(validationresult.Data);
 
         // Act
         var result = testRequest.Validate(request, validator);
 
         // Assert
-        Assert.False(result);
+        Assert.False(result.Data);
         validator.Received(1).Validate(request);
     }
 
@@ -64,9 +64,9 @@ public class BaseRequestTests
         var result = testRequest.ObterErros();
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Single(result);
-        Assert.Equal("Requisi√ß√£o n√£o validada.", result[0]);
+        Assert.NotNull(result.Data);
+        Assert.Single(result.Data);
+        Assert.Equal("RequisiÁ„o n„o validada.", result[0]);
     }
 
     [Fact]
@@ -81,17 +81,17 @@ public class BaseRequestTests
             new ValidationFailure("Property1", "Error message 1"),
             new ValidationFailure("Property2", "Error message 2")
         });
-        validator.Validate(request).Returns(validationResult);
+        validator.Validate(request).Returns(validationresult.Data);
         testRequest.Validate(request, validator);
 
         // Act
         var result = testRequest.ObterErros();
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
         Assert.Equal(2, result.Count);
-        Assert.Contains("Error message 1", result);
-        Assert.Contains("Error message 2", result);
+        Assert.Contains("Error message 1", result.Data);
+        Assert.Contains("Error message 2", result.Data);
     }
 
     [Fact]
@@ -102,14 +102,14 @@ public class BaseRequestTests
         var request = "test data";
         var validator = Substitute.For<IValidator<string>>();
         var validationResult = new ValidationResult();
-        validator.Validate(request).Returns(validationResult);
+        validator.Validate(request).Returns(validationresult.Data);
         testRequest.Validate(request, validator);
 
         // Act
         var result = testRequest.ObterErros();
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        Assert.NotNull(result.Data);
+        Assert.Empty(result.Data);
     }
 }

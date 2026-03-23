@@ -34,8 +34,8 @@ public class ParceirosControllerTests
 
         var result = await controller.GetAllAsync(null, CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Single(result);
+        Assert.NotNull(result.Data);
+        Assert.Single(result.Data);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class ParceirosControllerTests
 
         var result = await controller.GetByIdAsync(parceiro.Id.ToString(), CancellationToken.None);
 
-        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
         Assert.Equal(parceiro.Id, result!.Id);
     }
 
@@ -66,7 +66,7 @@ public class ParceirosControllerTests
 
         var result = await controller.CreateAsync(new ParceiroRequest { Nome = "Novo" }, CancellationToken.None);
 
-        Assert.Equal(createdId, result);
+        Assert.Equal(createdId, result.Data);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class ParceirosControllerTests
 
         var result = await controller.UpdateAsync("123", new AtualizarParceiroRequest { Nome = "Atualizado", Ativo = true }, CancellationToken.None);
 
-        var noContent = Assert.IsType<NoContentResult>(result);
+        var noContent = Assert.IsType<NoContentResult>(result.Data);
         Assert.Equal(204, noContent.StatusCode);
     }
 }

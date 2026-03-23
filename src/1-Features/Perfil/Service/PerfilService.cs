@@ -1,9 +1,12 @@
+using Portal.Domain.Base;
 using Portal.Domain.Exceptions;
 
 using Portal.Features.Escopo.Domain.Interfaces;
 using Portal.Features.Perfil.Domain;
 using Portal.Features.Perfil.Domain.Interfaces;
 using Portal.Features.Perfil.Infra;
+using static Portal.Domain.Base.Result;
+
 
 namespace Portal.Features.Perfil.Service
 {
@@ -20,77 +23,83 @@ namespace Portal.Features.Perfil.Service
             _logger          = logger;
         }
 
-        public async Task<IEnumerable<PerfilComEscopoResponse>> ListarComEscoposAsync(CancellationToken cancellationToken = default)
+        public async Task<Result<IEnumerable<PerfilComEscopoResponse>>> ListarComEscoposAsync(CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Listando perfis com escopos");
+            _logger.LogInformation("Listando perfis com escopos");  
             var result = await _repository.ListarComEscoposAsync(cancellationToken);
-            if (!result.Any())
-                throw new NotFoundException("Nenhum perfil encontrado");
-            return result.Select(c=>c.ToResponse());
+            if (!result.Any())  
+                return NotFoundResult<IEnumerable<PerfilComEscopoResponse>>("Nenhum perfil encontrado");
+
+            return OkResult(result.Select(c => c.ToResponse()));
         }
 
-        public async Task<int> CriarAsync(string nome, CancellationToken cancellationToken = default)
+        public async Task<Result<string>> CriarAsync(string nome, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Criando perfil '{Nome}'", nome);
 
             if (string.IsNullOrWhiteSpace(nome))
-                throw new ValidationException("Nome do perfil é obrigatório");
+                return ValidationResult<string>("Nome do perfil é obrigatório");
 
-            if (nome.Trim().Length < 3)
-                throw new ValidationException("Nome do perfil deve ter no mínimo 3 caracteres");
+            var nomeNormalizado = nome.Trim();
 
-            if (nome.Trim().Length > 100)
-                throw new ValidationException("Nome do perfil deve ter no máximo 100 caracteres");
+            if (nomeNormalizado.Length < 3)
+                return ValidationResult<string>("Nome do perfil deve ter no mínimo 3 caracteres");
 
-            var nomeExiste = await _repository.ExisteNomeAsync(nome.Trim(), cancellationToken);
+            if (nomeNormalizado.Length > 100)
+                return ValidationResult<string>("Nome do perfil deve ter no máximo 100 caracteres");
+
+            var nomeExiste = await _repository.ExisteNomeAsync(nomeNormalizado, cancellationToken);
             if (nomeExiste)
-                throw new BusinessException($"Já existe um perfil com o nome '{nome}'");
+                return BusinessResult<string>($"Já existe um perfil com o nome '{nome}'");
 
-            var perfil = new PerfilCommand { Nome = nome.Trim() };
+            var perfil = new PerfilCommand { Nome = nomeNormalizado };
 
-            return await _repository.InserirAsync(perfil, cancellationToken);
+            var id = await _repository.InserirAsync(perfil, cancellationToken);
+            return OkResult("Criado com sucesso");
         }
 
-        public async Task<PerfilResponse?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<Result<PerfilResponse>> ObterPorIdAsync(int id, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Obtendo perfil {Id}", id);
 
             if (id <= 0)
-                throw new ValidationException("Id do perfil inválido");
+                return ValidationResult<PerfilResponse>("Id do perfil inválido");
 
             var perfil = await _repository.ObterPorIdAsync(id, cancellationToken);
             if (perfil is null)
-                throw new NotFoundException($"Perfil {id} não encontrado");
+                return NotFoundResult<PerfilResponse>($"Perfil {id} não encontrado");
 
-            return perfil.ToResponse();
+            return OkResult(perfil.ToResponse());
         }
 
-        public async Task VincularEscoposAsync(int perfilId, IEnumerable<int> escopoIds, CancellationToken cancellationToken = default)
+        public async Task<Result<string>> VincularEscoposAsync(int perfilId, IEnumerable<int> escopoIds, CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Vinculando escopos ao perfil {PerfilId}", perfilId);
 
             if (perfilId <= 0)
-                throw new ValidationException("PerfilId inválido");
+                return ValidationResult<string>("PerfilId inválido");
 
             var ids = escopoIds?.Distinct().ToList();
 
             if (ids is null || ids.Count == 0)
-                throw new ValidationException("Informe ao menos um EscopoId");
+                return ValidationResult<string>("Informe ao menos um EscopoId");
 
             if (ids.Any(id => id <= 0))
-                throw new ValidationException("Todos os EscopoIds devem ser maiores que zero");
+                return ValidationResult<string>("Todos os EscopoIds devem ser maiores que zero");
 
             var perfilExiste = await _repository.ExistePerfilAsync(perfilId, cancellationToken);
             if (!perfilExiste)
-                throw new NotFoundException($"Perfil {perfilId} não encontrado");
+                return NotFoundResult<string>($"Perfil {perfilId} não encontrado");
 
             var idsExistentes = (await _escopoRepository.ObterIdsExistentesAsync(ids, cancellationToken)).ToHashSet();
             var idsInvalidos  = ids.Where(id => !idsExistentes.Contains(id)).ToList();
 
             if (idsInvalidos.Count > 0)
-                throw new ValidationException($"Os seguintes EscopoIds não existem: {string.Join(", ", idsInvalidos)}");
+                return ValidationResult<string>($"Os seguintes EscopoIds não existem: {string.Join(", ", idsInvalidos)}");
 
             await _repository.VincularEscoposAsync(perfilId, ids, cancellationToken);
+
+            return OkResult("Vinculado com sucesso");
         }
     }
 }

@@ -1,7 +1,8 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Portal.Domain.Base;
-using Portal.Domain.Exceptions;
 using Portal.Features.Parceiro.Domain;
 using Portal.Features.Parceiro.Domain.Interfaces;
+using static Portal.Domain.Base.Result;
 
 namespace Portal.Features.Parceiro.Service {
     public class ParceiroService : BaseService, IParceiroService {
@@ -22,66 +23,65 @@ namespace Portal.Features.Parceiro.Service {
             _validatorId = validatorId;
             _logger      = logger;
         }
-        public async Task<IEnumerable<ParceiroResponse>> ListarParceirosAsync(string? nome, CancellationToken cancellationToken){
+        public async Task<Result<IEnumerable<ParceiroResponse>>> ListarParceirosAsync(string? nome, CancellationToken cancellationToken){
             _logger.LogInformation("Listando parceiros com filtro de nome: {Nome}", nome);
             var result = await _repository.ObterTodosAsync(nome, cancellationToken);
             if (result == null || !result.Any())
-                throw new NotFoundException("Nenhum parceiro encontrado");
-            return result.Select(c=>c.ToResponse());
+                return NotFoundResult<IEnumerable<ParceiroResponse>>("Nenhum parceiro encontrado");
+                return OkResult(result.Select(c=>c.ToResponse()));
         }
 
-        public async Task<ParceiroResponse?> ObterParceiroAsync(string? id, CancellationToken cancellationToken)
+        public async Task<Result<ParceiroResponse>> ObterParceiroAsync(string? id, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Obtendo parceiro com ID: {Id}", id);
             var validationResult = _validatorId.Validate(id ?? string.Empty);
 
             if (!validationResult.IsValid)
-                throw new ValidationException(
-                    validationResult.Errors.Select(e => e.ErrorMessage).ToList()
-                );
+                return ValidationResult<ParceiroResponse>(validationResult.Errors.Select(e => e.ErrorMessage));
             var result = await _repository.ObterPorIdAsync(Guid.Parse(id ?? string.Empty), cancellationToken);
 
             if (result == null)
-                throw new NotFoundException("Parceiro não encontrado");
+                return NotFoundResult<ParceiroResponse>("Parceiro não encontrado");
 
-            return result.ToResponse();
+            return OkResult(result.ToResponse());
         }
 
-        public async Task<Guid> CriarParceiroAsync(ParceiroRequest parceiro, CancellationToken cancellationToken)
+        public async Task<Result<string>> CriarParceiroAsync(ParceiroRequest parceiro, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Criando novo parceiro com nome: {Nome}", parceiro.Nome);
 
             if (!parceiro.IsValid())
-                throw new ValidationException(parceiro.ObterErros());
+                return ValidationResult<string>(parceiro.ObterErros());
 
             var existente = await _repository.ObterPorNomeAsync(parceiro.Nome!, cancellationToken);
             if (existente != null)
-                throw new ValidationException(new List<string> { "Já existe um parceiro com este nome." });
+                return ValidationResult<string>("Já existe um parceiro com este nome");
 
             var entity = parceiro.ToCommand(ObterTenantId());
 
             var id = await _repository.InserirAsync(entity, cancellationToken);
-            return id;
+            return OkResult("Criado com sucesso");
         }
 
-        public async Task AtualizarParceiroAsync(AtualizarParceiroRequest request, CancellationToken cancellationToken)
+        public async Task<Result<string>> AtualizarParceiroAsync(AtualizarParceiroRequest request, CancellationToken cancellationToken)
         {
             _logger.LogInformation("Atualizando parceiro {Id}", request.Id);
 
             if (!request.IsValid())
-                throw new ValidationException(request.ObterErros());
+                return ValidationResult<string>(request.ObterErros());
 
             var idParceiro = Guid.Parse(request.Id ?? string.Empty);
 
             var (existe, nomeConflito) = await _repository.ValidarAtualizacaoAsync(idParceiro, request.Nome, cancellationToken);
 
             if (!existe)
-                throw new NotFoundException("Parceiro não encontrado");
+                return NotFoundResult<string>("Parceiro não encontrado");
 
             if (nomeConflito)
-                throw new ValidationException(new List<string> { "Já existe outro parceiro com este nome." });
+                return ValidationResult<string>("Já existe outro parceiro com este nome");
 
             await _repository.AtualizarAsync(request.ToCommand(idParceiro), cancellationToken);
+            return OkResult("Atualizado com sucesso");
         }
     }
 }

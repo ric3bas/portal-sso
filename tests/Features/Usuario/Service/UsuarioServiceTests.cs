@@ -1,4 +1,4 @@
-Ôªøusing Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Portal.Domain.Exceptions;
 using Portal.Features.Perfil.Domain.Interfaces;
@@ -76,8 +76,8 @@ public class UsuarioServiceTests
         var result = await _service.ListarAsync(CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(2, result.Count());
+        Assert.NotNull(result.Data);
+        Assert.Equal(2, result.Data.Count());
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class UsuarioServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _service.ListarAsync(CancellationToken.None));
-        Assert.Equal("Nenhum usu√°rio encontrado", exception.Message);
+        Assert.Equal("Nenhum usu·rio encontrado", exception.Message);
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class UsuarioServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _service.RegisterAsync(request, CancellationToken.None));
-        Assert.Equal($"Parceiro '{_testTenantId}' n√£o encontrado", exception.Message);
+        Assert.Equal($"Parceiro '{_testTenantId}' n„o encontrado", exception.Message);
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public class UsuarioServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.RegisterAsync(request, CancellationToken.None));
-        Assert.Contains($"Login '{request.Login}' j√° existe", exception.Errors);
+        Assert.Contains($"Login '{request.Login}' j· existe", exception.Errors);
     }
 
     [Fact]
@@ -395,7 +395,7 @@ public class UsuarioServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _service.BloquearUsuarioAsync(usuarioId, CancellationToken.None));
-        Assert.Equal("Usu√°rio n√£o encontrado", exception.Message);
+        Assert.Equal("Usu·rio n„o encontrado", exception.Message);
     }
 
     [Fact]

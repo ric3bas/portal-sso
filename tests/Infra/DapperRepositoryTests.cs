@@ -22,8 +22,8 @@ public class DapperRepositoryTests
         //var result = repo.Query("SELECT * FROM sso.parceiro", null);
 
         //// Assert
-        //Assert.NotNull(result);
-        //Assert.Single(result);
+        //Assert.NotNull(result.Data);
+        //Assert.Single(result.Data);
         //Assert.Equal("Parceiro", result.First().Nome);
     }
 }

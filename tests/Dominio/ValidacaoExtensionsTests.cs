@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using FluentValidation.TestHelper;
 using Portal.Domain.Base;
 
@@ -18,7 +18,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.Value)
-            .WithErrorMessage("Limite máximo de caracteres excedido do Campo Value. Qtd enviada: 11, Máximo: 10");
+            .WithErrorMessage("Limite m�ximo de caracteres excedido do Campo Value. Qtd enviada: 11, M�ximo: 10");
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.Value)
-            .WithErrorMessage("Limite minímo de caracteres não atingido do Campo Value. Qtd enviada: 4, Minímo: 5");
+            .WithErrorMessage("Limite min�mo de caracteres n�o atingido do Campo Value. Qtd enviada: 4, Min�mo: 5");
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.Value)
-            .WithErrorMessage("Limite minímo de caracteres não atingido do Campo Value. Qtd enviada: 0, Minímo: 5");
+            .WithErrorMessage("Limite min�mo de caracteres n�o atingido do Campo Value. Qtd enviada: 0, Min�mo: 5");
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.Value)
-            .WithErrorMessage("Campo Value obrigatório")
+            .WithErrorMessage("Campo Value obrigat�rio")
             .WithErrorCode("0001");
     }
 
@@ -149,7 +149,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.Value)
-            .WithErrorMessage("Campo Value obrigatório")
+            .WithErrorMessage("Campo Value obrigat�rio")
             .WithErrorCode("0001");
     }
 
@@ -179,7 +179,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.Value)
-            .WithErrorMessage("Campo Value obrigatório")
+            .WithErrorMessage("Campo Value obrigat�rio")
             .WithErrorCode("0001");
     }
 
@@ -209,7 +209,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.Value)
-            .WithErrorMessage("Campo Value obrigatório")
+            .WithErrorMessage("Campo Value obrigat�rio")
             .WithErrorCode("0001");
     }
 
@@ -225,7 +225,7 @@ public class ValidacaoExtensionsTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(m => m.IntValue)
-            .WithErrorMessage("Campo Int Value obrigatório")
+            .WithErrorMessage("Campo Int Value obrigat�rio")
             .WithErrorCode("0001");
     }
 

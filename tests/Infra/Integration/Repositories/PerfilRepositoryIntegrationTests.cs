@@ -25,7 +25,7 @@ public sealed class PerfilRepositoryIntegrationTests
 
         var result = await repository.ListarComEscoposAsync();
 
-        Assert.Contains(result, perfil => perfil.Id == perfilId && perfil.Escopos.Count == 2);
+        Assert.Contains(result.Data, perfil => perfil.Id == perfilId && perfil.Escopos.Count == 2);
     }
 
     [Fact]

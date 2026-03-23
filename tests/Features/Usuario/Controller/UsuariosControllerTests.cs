@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -58,8 +58,8 @@ public class UsuariosControllerTests
 
         var result = await controller.ListarAsync(CancellationToken.None);
 
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Same(payload, okResult.Value);
     }
 
@@ -97,9 +97,9 @@ public class UsuariosControllerTests
 
         var result = await controller.RegisterAsync(new RegisterRequest(), CancellationToken.None);
 
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, okResult.StatusCode);
-        Assert.Equal("Usuário criado com sucesso", okResult.Value);
+        var okResult = Assert.IsType<OkObjectResult>(result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
+        Assert.Equal("Usu�rio criado com sucesso", okResult.Value);
     }
 
     [Fact]

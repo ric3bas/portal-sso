@@ -141,7 +141,7 @@ public sealed class UsuarioRepositoryIntegrationTests
 
         var result = await repo.ValidarRegistroAsync("naoexiste", Guid.NewGuid(), 9999);
         Assert.False(result.ParceiroExiste);
-        Assert.False(result.LoginExiste);
+        Assert.False(result.Data.LoginExiste);
         Assert.False(result.PerfilExiste);
     }
 }

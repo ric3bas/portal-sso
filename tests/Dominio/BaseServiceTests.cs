@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Portal.Domain.Base;
 using System.Security.Claims;
@@ -29,7 +29,7 @@ public class BaseServiceTests
 
         var exception = Assert.Throws<UnauthorizedAccessException>(() => service.ObterTenantId());
 
-        Assert.Equal("TenantId inválido ou ausente no token", exception.Message);
+        Assert.Equal("TenantId inv�lido ou ausente no token", exception.Message);
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class BaseServiceTests
 
         var exception = Assert.Throws<UnauthorizedAccessException>(() => service.ObterTenantId());
 
-        Assert.Equal("TenantId inválido ou ausente no token", exception.Message);
+        Assert.Equal("TenantId inv�lido ou ausente no token", exception.Message);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class BaseServiceTests
 
         var exception = Assert.Throws<UnauthorizedAccessException>(() => service.ObterTenantId());
 
-        Assert.Equal("TenantId inválido ou ausente no token", exception.Message);
+        Assert.Equal("TenantId inv�lido ou ausente no token", exception.Message);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class BaseServiceTests
 
         var exception = Assert.Throws<UnauthorizedAccessException>(() => service.ObterTenantId());
 
-        Assert.Equal("TenantId inválido ou ausente no token", exception.Message);
+        Assert.Equal("TenantId inv�lido ou ausente no token", exception.Message);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class BaseServiceTests
 
         var exception = Assert.Throws<UnauthorizedAccessException>(() => service.ObterTenantId());
 
-        Assert.Equal("TenantId inválido ou ausente no token", exception.Message);
+        Assert.Equal("TenantId inv�lido ou ausente no token", exception.Message);
     }
 
     [Fact]
@@ -101,6 +101,6 @@ public class BaseServiceTests
 
         var result = service.ObterTenantId();
 
-        Assert.Equal(expectedTenantId, result);
+        Assert.Equal(expectedTenantId, result.Data);
     }
 }

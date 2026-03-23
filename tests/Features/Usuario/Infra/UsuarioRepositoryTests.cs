@@ -1,4 +1,4 @@
-﻿using NSubstitute;
+using NSubstitute;
 using Portal.Features.Usuario.Infra;
 using Portal.Infra;
 using System.Data;
@@ -202,9 +202,9 @@ public class UsuarioRepositoryTests
         var result = await _repository.ObterPorIdAsync(usuarioId);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
         Assert.Equal(expectedUsuario.Id, result!.Id);
-        Assert.Equal(expectedUsuario.Nome, result.Nome);
+        Assert.Equal(expectedUsuario.Nome, result.Data.Nome);
         Assert.Single(_repository.QuerySingleAsyncCalls);
         var call = _repository.QuerySingleAsyncCalls[0];
         Assert.Equal(expectedSql, call.sql);
@@ -225,7 +225,7 @@ public class UsuarioRepositoryTests
         var result = await _repository.ObterPorIdAsync(usuarioId);
 
         // Assert
-        Assert.Null(result);
+        Assert.Null(result.Data);
     }
 
     [Fact]

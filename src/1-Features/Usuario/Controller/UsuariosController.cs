@@ -4,6 +4,7 @@ using Portal.Domain.Base;
 using Portal.Features.Usuario.Domain;
 using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Features.Usuario.Infra;
+using Portal.Features.Usuario.Service;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Portal.Features.Usuario.Controller
@@ -26,20 +27,14 @@ namespace Portal.Features.Usuario.Controller
         [ProducesResponseType(typeof(IEnumerable<UsuarioComPerfilQuery>), 200)]
         [ProducesNotFoundProblem]
         public async Task<IActionResult> ListarAsync(CancellationToken cancellationToken)
-        {
-            var result = await _usuarioService.ListarAsync(cancellationToken);
-            return Ok(result);
-        }
+            => HandleResult(await _usuarioService.ListarAsync(cancellationToken));
 
         [HttpPost]
         [SwaggerOperation(Summary = "Registra um novo usuário")]
         [ProducesResponseType(200)]
         [ProducesBadRequestProblem]
         public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request, CancellationToken cancellationToken)
-        {
-            await _usuarioService.RegisterAsync(request, cancellationToken);
-            return Ok("Usuário criado com sucesso");
-        }
+            => HandleResult(await _usuarioService.RegisterAsync(request, cancellationToken));
 
     }
 }

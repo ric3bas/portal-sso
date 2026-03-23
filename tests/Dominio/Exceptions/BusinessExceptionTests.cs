@@ -1,4 +1,4 @@
-锘縰sing Portal.Domain.Exceptions;
+using Portal.Domain.Exceptions;
 
 namespace sso.global;
 
@@ -15,7 +15,7 @@ public class BusinessExceptionTests
 
         // Assert
         Assert.NotNull(exception);
-        Assert.Equal("Erro de neg贸cio", exception.Message);
+        Assert.Equal("Erro de neg骳io", exception.Message);
         Assert.Same(errors, exception.Errors);
     }
 
@@ -30,7 +30,7 @@ public class BusinessExceptionTests
 
         // Assert
         Assert.NotNull(exception);
-        Assert.Equal("Erro de neg贸cio", exception.Message);
+        Assert.Equal("Erro de neg骳io", exception.Message);
         Assert.Same(errors, exception.Errors);
         Assert.Empty(exception.Errors);
     }
@@ -46,7 +46,7 @@ public class BusinessExceptionTests
 
         // Assert
         Assert.NotNull(exception);
-        Assert.Equal("Erro de neg贸cio", exception.Message);
+        Assert.Equal("Erro de neg骳io", exception.Message);
         Assert.Same(errors, exception.Errors);
         Assert.Single(exception.Errors);
         Assert.Equal("Single error", exception.Errors[0]);
@@ -74,7 +74,7 @@ public class BusinessExceptionTests
 
         // Act & Assert
         var exception = Assert.Throws<BusinessException>(act);
-        Assert.Equal("Erro de neg贸cio", exception.Message);
+        Assert.Equal("Erro de neg骳io", exception.Message);
         Assert.Same(errors, exception.Errors);
     }
 }

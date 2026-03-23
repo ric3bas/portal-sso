@@ -1,4 +1,4 @@
-ï»¿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Portal.Domain.Base;
 
@@ -8,7 +8,7 @@ public class BaseControllerTests
 {
     private sealed class TestableBaseController : BaseController
     {
-        public new ObjectResult BadRequestProblem(string detail, string title = "Erro de validaÃ§Ã£o")
+        public new ObjectResult BadRequestProblem(string detail, string title = "Erro de validação")
             => base.BadRequestProblem(detail, title);
 
         public new ObjectResult NotFoundProblem(string detail, string title = "Nenhum registro encontrado")
@@ -17,7 +17,7 @@ public class BaseControllerTests
         public new ObjectResult InternalServerErrorProblem(string detail, string title = "Erro interno do servidor")
             => base.InternalServerErrorProblem(detail, title);
 
-        public new ObjectResult BusinessErrorProblem(string detail, string title = "Erro de negÃ³cio")
+        public new ObjectResult BusinessErrorProblem(string detail, string title = "Erro de negócio")
             => base.BusinessErrorProblem(detail, title);
     }
 
@@ -34,8 +34,8 @@ public class BaseControllerTests
 
         var result = controller.BadRequestProblem("Test detail", "Test title");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status400BadRequest, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Test detail", problemDetails.Detail);
         Assert.Equal("Test title", problemDetails.Title);
@@ -56,11 +56,11 @@ public class BaseControllerTests
 
         var result = controller.BadRequestProblem("Validation error");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status400BadRequest, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Validation error", problemDetails.Detail);
-        Assert.Equal("Erro de validaÃ§Ã£o", problemDetails.Title);
+        Assert.Equal("Erro de validação", problemDetails.Title);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class BaseControllerTests
 
         var result = controller.BadRequestProblem("Error detail", "Error title");
 
-        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Null(problemDetails.Instance);
     }
@@ -88,8 +88,8 @@ public class BaseControllerTests
 
         var result = controller.NotFoundProblem("Resource not found", "Custom not found");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status404NotFound, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Resource not found", problemDetails.Detail);
         Assert.Equal("Custom not found", problemDetails.Title);
@@ -110,8 +110,8 @@ public class BaseControllerTests
 
         var result = controller.NotFoundProblem("Item not found");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status404NotFound, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Item not found", problemDetails.Detail);
         Assert.Equal("Nenhum registro encontrado", problemDetails.Title);
@@ -124,7 +124,7 @@ public class BaseControllerTests
 
         var result = controller.NotFoundProblem("Not found");
 
-        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Null(problemDetails.Instance);
     }
@@ -142,8 +142,8 @@ public class BaseControllerTests
 
         var result = controller.InternalServerErrorProblem("Server error", "Custom error");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status500InternalServerError, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Server error", problemDetails.Detail);
         Assert.Equal("Custom error", problemDetails.Title);
@@ -164,8 +164,8 @@ public class BaseControllerTests
 
         var result = controller.InternalServerErrorProblem("Something went wrong");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status500InternalServerError, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Something went wrong", problemDetails.Detail);
         Assert.Equal("Erro interno do servidor", problemDetails.Title);
@@ -178,7 +178,7 @@ public class BaseControllerTests
 
         var result = controller.InternalServerErrorProblem("Error");
 
-        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Null(problemDetails.Instance);
     }
@@ -196,8 +196,8 @@ public class BaseControllerTests
 
         var result = controller.BusinessErrorProblem("Business rule violation", "Custom business error");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Business rule violation", problemDetails.Detail);
         Assert.Equal("Custom business error", problemDetails.Title);
@@ -218,11 +218,11 @@ public class BaseControllerTests
 
         var result = controller.BusinessErrorProblem("Rule failed");
 
-        Assert.NotNull(result);
-        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.StatusCode);
+        Assert.NotNull(result.Data);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Rule failed", problemDetails.Detail);
-        Assert.Equal("Erro de negÃ³cio", problemDetails.Title);
+        Assert.Equal("Erro de negócio", problemDetails.Title);
     }
 
     [Fact]
@@ -232,7 +232,7 @@ public class BaseControllerTests
 
         var result = controller.BusinessErrorProblem("Business error");
 
-        Assert.NotNull(result);
+        Assert.NotNull(result.Data);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Null(problemDetails.Instance);
     }

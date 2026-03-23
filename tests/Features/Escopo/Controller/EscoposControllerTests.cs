@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Portal.Features.Escopo.Controller;
 using Portal.Features.Escopo.Domain;
@@ -49,8 +49,8 @@ public class EscoposControllerTests
 
         var result = await controller.GetAllAsync(CancellationToken.None);
 
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Equal(escopos, okResult.Value);
     }
 
@@ -81,8 +81,8 @@ public class EscoposControllerTests
 
         var result = await controller.GetByIdAsync(1, CancellationToken.None);
 
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Equal(escopo, okResult.Value);
     }
 
@@ -115,8 +115,8 @@ public class EscoposControllerTests
 
         var result = await controller.CreateAsync(request, CancellationToken.None);
 
-        var objectResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(201, objectResult.StatusCode);
+        var objectResult = Assert.IsType<ObjectResult>(result.Data);
+        Assert.Equal(201, objectresult.Data.StatusCode);
         
         var value = objectResult.Value;
         Assert.NotNull(value);

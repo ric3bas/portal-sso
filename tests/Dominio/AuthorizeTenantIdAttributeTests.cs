@@ -1,4 +1,4 @@
-﻿using Portal.Domain.Base;
+using Portal.Domain.Base;
 
 namespace sso.global;
 

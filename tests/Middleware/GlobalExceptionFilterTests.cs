@@ -35,8 +35,8 @@ public class GlobalExceptionFilterTests
         filter.OnException(context);
 
         Assert.True(context.ExceptionHandled);
-        var result = Assert.IsType<JsonResult>(context.Result);
-        Assert.Equal(StatusCodes.Status400BadRequest, result.StatusCode);
+        var result = Assert.IsType<JsonResult>(context.result.Data);
+        Assert.Equal(StatusCodes.Status400BadRequest, result.Data.StatusCode);
 
         var problem = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Erro de validação", problem.Title);
@@ -53,8 +53,8 @@ public class GlobalExceptionFilterTests
         filter.OnException(context);
 
         Assert.True(context.ExceptionHandled);
-        var result = Assert.IsType<JsonResult>(context.Result);
-        Assert.Equal(StatusCodes.Status404NotFound, result.StatusCode);
+        var result = Assert.IsType<JsonResult>(context.result.Data);
+        Assert.Equal(StatusCodes.Status404NotFound, result.Data.StatusCode);
 
         var problem = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Nenhum registro encontrado", problem.Title);
@@ -71,8 +71,8 @@ public class GlobalExceptionFilterTests
         filter.OnException(context);
 
         Assert.True(context.ExceptionHandled);
-        var result = Assert.IsType<JsonResult>(context.Result);
-        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.StatusCode);
+        var result = Assert.IsType<JsonResult>(context.result.Data);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.Data.StatusCode);
 
         var problem = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal(StatusCodes.Status422UnprocessableEntity, problem.Status);
@@ -88,8 +88,8 @@ public class GlobalExceptionFilterTests
         filter.OnException(context);
 
         Assert.True(context.ExceptionHandled);
-        var result = Assert.IsType<JsonResult>(context.Result);
-        Assert.Equal(StatusCodes.Status500InternalServerError, result.StatusCode);
+        var result = Assert.IsType<JsonResult>(context.result.Data);
+        Assert.Equal(StatusCodes.Status500InternalServerError, result.Data.StatusCode);
         Assert.NotNull(result.Value);
     }
 }

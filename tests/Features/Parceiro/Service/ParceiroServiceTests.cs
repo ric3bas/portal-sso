@@ -1,4 +1,4 @@
-ï»¿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Portal.Domain.Exceptions;
@@ -87,7 +87,7 @@ public class ParceiroServiceTests
 
         var result = await service.ListarParceirosAsync(null, CancellationToken.None);
 
-        Assert.Equal(2, result.Count());
+        Assert.Equal(2, result.Data.Count());
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class ParceiroServiceTests
         var result = await service.ListarParceirosAsync("Filtered", CancellationToken.None);
 
         await _repository.Received(1).ObterTodosAsync("Filtered", Arg.Any<CancellationToken>());
-        Assert.Single(result);
+        Assert.Single(result.Data);
     }
 
     [Fact]
@@ -172,9 +172,9 @@ public class ParceiroServiceTests
 
         var result = await service.ObterParceiroAsync(id.ToString(), CancellationToken.None);
 
-        Assert.NotNull(result);
-        Assert.Equal(id, result.Id);
-        Assert.Equal("Test Parceiro", result.Nome);
+        Assert.NotNull(result.Data);
+        Assert.Equal(id, result.Data.Id);
+        Assert.Equal("Test Parceiro", result.Data.Nome);
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public class ParceiroServiceTests
         var ex = await Assert.ThrowsAsync<ValidationException>(() => 
             service.CriarParceiroAsync(request, CancellationToken.None));
 
-        Assert.Contains("JÃ¡ existe um parceiro com este nome.", ex.Errors);
+        Assert.Contains("Já existe um parceiro com este nome.", ex.Errors);
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public class ParceiroServiceTests
 
         var result = await service.CriarParceiroAsync(request, CancellationToken.None);
 
-        Assert.Equal(newId, result);
+        Assert.Equal(newId, result.Data);
         await _repository.Received(1).InserirAsync(
             Arg.Is<ParceiroCommand>(e => e.Nome == request.Nome),
             Arg.Any<CancellationToken>());
@@ -272,7 +272,7 @@ public class ParceiroServiceTests
         var ex = await Assert.ThrowsAsync<ValidationException>(() => 
             service.AtualizarParceiroAsync(request, CancellationToken.None));
 
-        Assert.Contains("JÃ¡ existe outro parceiro com este nome.", ex.Errors);
+        Assert.Contains("Já existe outro parceiro com este nome.", ex.Errors);
     }
 
     [Fact]

@@ -21,23 +21,23 @@ namespace Portal.Features.Parceiro.Controller {
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ParceiroResponse>), 200)]
         [ProducesNotFoundProblem]
-        public async Task<IEnumerable<ParceiroResponse>> GetAllAsync([FromQuery] string? nome, CancellationToken cancellationToken)
-            => await _service.ListarParceirosAsync(nome, cancellationToken);
+        public async Task<IActionResult> GetAllAsync([FromQuery] string? nome, CancellationToken cancellationToken)
+            => HandleResult(await _service.ListarParceirosAsync(nome, cancellationToken));
 
         [HttpGet("id")]
         [SwaggerOperation(Summary = "Retorna um parceiro pelo Id")]
         [ProducesResponseType(typeof(ParceiroResponse), 200)]
         [ProducesBadRequestProblem]
         [ProducesNotFoundProblem]
-        public async Task<ParceiroResponse?> GetByIdAsync([FromQuery] string? id, CancellationToken cancellationToken)
-            => await _service.ObterParceiroAsync(id, cancellationToken);
+        public async Task<IActionResult> GetByIdAsync([FromQuery] string? id, CancellationToken cancellationToken)
+            => HandleResult(await _service.ObterParceiroAsync(id, cancellationToken));
 
         [HttpPost]
         [SwaggerOperation(Summary = "Cria um novo parceiro")]
         [ProducesResponseType(typeof(Guid), 201)]
         [ProducesBadRequestProblem]
-        public async Task<Guid> CreateAsync([FromBody] ParceiroRequest parceiro, CancellationToken cancellationToken)
-            => await _service.CriarParceiroAsync(parceiro, cancellationToken);
+        public async Task<IActionResult> CreateAsync([FromBody] ParceiroRequest parceiro, CancellationToken cancellationToken)
+            => HandleResult(await _service.CriarParceiroAsync(parceiro, cancellationToken));
 
 
         [HttpPut("id")]
@@ -48,8 +48,8 @@ namespace Portal.Features.Parceiro.Controller {
         public async Task<IActionResult> UpdateAsync([FromQuery] string? id, [FromBody] AtualizarParceiroRequest request, CancellationToken cancellationToken)
         {
             request.Id = id;
-            await _service.AtualizarParceiroAsync(request, cancellationToken);
-            return NoContent();
+            var result = await _service.AtualizarParceiroAsync(request, cancellationToken);
+            return HandleResult(result);
         }
     }
 }

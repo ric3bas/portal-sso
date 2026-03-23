@@ -43,7 +43,7 @@ public class EscopoServiceTests
 
         var result = await service.ListarAsync();
 
-        Assert.Equal(2, result.Count());
+        Assert.Equal(2, result.Data.Count());
     }
 
     [Fact]
@@ -129,8 +129,8 @@ public class EscopoServiceTests
 
         var result = await service.ObterPorIdAsync(10);
 
-        Assert.NotNull(result);
-        Assert.Equal(10, result.Id);
-        Assert.Equal("manage", result.Nome);
+        Assert.NotNull(result.Data);
+        Assert.Equal(10, result.Data.Id);
+        Assert.Equal("manage", result.Data.Nome);
     }
 }

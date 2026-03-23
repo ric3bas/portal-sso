@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Portal.Features.Perfil.Controller;
 using Portal.Features.Perfil.Domain;
@@ -28,14 +28,14 @@ public class PerfisControllerTests
             new() { Id = 2, Nome = "User", Escopos = [] }
         };
         service.ListarComEscoposAsync(Arg.Any<CancellationToken>())
-               .Returns(Task.FromResult<IEnumerable<PerfilComEscopoResponse>>(expectedResult));
+               .Returns(Task.FromResult<IEnumerable<PerfilComEscopoResponse>>(expectedresult.Data));
 
         var controller = new PerfisController(service);
         var cancellationToken = CancellationToken.None;
 
         var result = await controller.GetAllComEscoposAsync(cancellationToken);
 
-        Assert.Same(expectedResult, result);
+        Assert.Same(expectedresult.Data, result.Data);
     }
 
     [Fact]
@@ -64,8 +64,8 @@ public class PerfisControllerTests
 
         var result = await controller.GetByIdAsync(id, cancellationToken);
 
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Same(expectedPerfil, okResult.Value);
     }
 
@@ -96,8 +96,8 @@ public class PerfisControllerTests
 
         var result = await controller.CreateAsync(request, cancellationToken);
 
-        var statusCodeResult = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(201, statusCodeResult.StatusCode);
+        var statusCodeResult = Assert.IsType<ObjectResult>(result.Data);
+        Assert.Equal(201, statusCoderesult.Data.StatusCode);
         
         var value = statusCodeResult.Value;
         Assert.NotNull(value);
@@ -133,8 +133,8 @@ public class PerfisControllerTests
 
         var result = await controller.VincularEscoposAsync(id, request, cancellationToken);
 
-        var noContentResult = Assert.IsType<NoContentResult>(result);
-        Assert.Equal(204, noContentResult.StatusCode);
+        var noContentResult = Assert.IsType<NoContentResult>(result.Data);
+        Assert.Equal(204, noContentresult.Data.StatusCode);
     }
 
     [Fact]

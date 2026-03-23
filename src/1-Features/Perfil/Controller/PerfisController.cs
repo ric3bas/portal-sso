@@ -24,8 +24,8 @@ namespace Portal.Features.Perfil.Controller
         [SwaggerOperation(Summary = "Lista todos os perfis com seus escopos")]
         [ProducesResponseType(typeof(IEnumerable<PerfilComEscopoResponse>), 200)]
         [ProducesNotFoundProblem]
-        public async Task<IEnumerable<PerfilComEscopoResponse>> GetAllComEscoposAsync(CancellationToken cancellationToken)
-            => await _service.ListarComEscoposAsync(cancellationToken);
+        public async Task<IActionResult> GetAllComEscoposAsync(CancellationToken cancellationToken)
+            => HandleResult(await _service.ListarComEscoposAsync(cancellationToken));
 
         [HttpGet("{id:int}")]
         [SwaggerOperation(Summary = "Retorna um perfil pelo Id")]
@@ -33,10 +33,8 @@ namespace Portal.Features.Perfil.Controller
         [ProducesBadRequestProblem]
         [ProducesNotFoundProblem]
         public async Task<IActionResult> GetByIdAsync([FromRoute] int id, CancellationToken cancellationToken)
-        {
-            var perfil = await _service.ObterPorIdAsync(id, cancellationToken);
-            return Ok(perfil);
-        }
+            => HandleResult(await _service.ObterPorIdAsync(id, cancellationToken));
+
 
         [HttpPost]
         [SwaggerOperation(Summary = "Cria um novo perfil")]
@@ -44,10 +42,8 @@ namespace Portal.Features.Perfil.Controller
         [ProducesBadRequestProblem]
         [ProducesBusinessProblem]
         public async Task<IActionResult> CreateAsync([FromBody] PerfilRequest request, CancellationToken cancellationToken)
-        {
-            var id = await _service.CriarAsync(request.Nome, cancellationToken);
-            return StatusCode(201, new { id });
-        }
+            => HandleResult(await _service.CriarAsync(request.Nome, cancellationToken));
+
 
         [HttpPost("{id:int}/escopos")]
         [SwaggerOperation(Summary = "Vincula uma lista de escopos a um perfil")]
@@ -56,9 +52,7 @@ namespace Portal.Features.Perfil.Controller
         [ProducesNotFoundProblem]
         [ProducesBusinessProblem]
         public async Task<IActionResult> VincularEscoposAsync([FromRoute] int id, [FromBody] VincularEscopoRequest request, CancellationToken cancellationToken)
-        {
-            await _service.VincularEscoposAsync(id, request.EscopoIds, cancellationToken);
-            return NoContent();
-        }
+            => HandleResult(await _service.VincularEscoposAsync(id, request.EscopoIds, cancellationToken));
+
     }
 }

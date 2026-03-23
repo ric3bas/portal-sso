@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Portal.Domain.Base;
 using Portal.Features.Escopo.Domain;
@@ -13,15 +14,8 @@ namespace Portal.Features.Escopo.Controller
     [ApiVersion("1.0")]
     [Route("api/v{version:apiVersion}/escopos")]
     [Authorize]
-    public class EscoposController : BaseController
+    public class EscoposController(IEscopoService _service) : BaseController
     {
-        private readonly IEscopoService _service;
-
-        public EscoposController(IEscopoService service)
-        {
-            _service = service;
-        }
-
         [HttpGet]
         [SwaggerOperation(Summary = "Lista todos os escopos")]
         [ProducesResponseType(typeof(IEnumerable<EscopoResponse>), 200)]
@@ -29,7 +23,8 @@ namespace Portal.Features.Escopo.Controller
         public async Task<IActionResult> GetAllAsync(CancellationToken cancellationToken)
         {
             var result = await _service.ListarAsync(cancellationToken);
-            return Ok(result);
+            return HandleResult(result);
+
         }
 
         [HttpGet("{id:int}")]
@@ -39,8 +34,9 @@ namespace Portal.Features.Escopo.Controller
         [ProducesNotFoundProblem]
         public async Task<IActionResult> GetByIdAsync([FromRoute] int id, CancellationToken cancellationToken)
         {
-            var escopo = await _service.ObterPorIdAsync(id, cancellationToken);
-            return Ok(escopo);
+            var result = await _service.ObterPorIdAsync(id, cancellationToken);
+            return HandleResult(result);
+
         }
 
         [HttpPost]
@@ -50,8 +46,9 @@ namespace Portal.Features.Escopo.Controller
         [ProducesBusinessProblem]
         public async Task<IActionResult> CreateAsync([FromBody] EscopoRequest request, CancellationToken cancellationToken)
         {
-            var id = await _service.CriarAsync(request.Nome, cancellationToken);
-            return StatusCode(201, new { id });
+            var result = await _service.CriarAsync(request.Nome, cancellationToken);
+            return HandleResult(result);
+
         }
     }
 }

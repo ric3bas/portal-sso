@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Usuario.Controller;
@@ -48,8 +48,8 @@ public class AuthControllerTests
             RefreshToken = "old_refresh_token"
         };
         var result = await controller.RefreshTokenAsync(request, CancellationToken.None);
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
     }
 
@@ -77,8 +77,8 @@ public class AuthControllerTests
             RefreshToken = "test_refresh_token"
         };
         var result = await controller.LogoutAsync(request, CancellationToken.None);
-        var noContentResult = Assert.IsType<NoContentResult>(result);
-        Assert.Equal(204, noContentResult.StatusCode);
+        var noContentResult = Assert.IsType<NoContentResult>(result.Data);
+        Assert.Equal(204, noContentresult.Data.StatusCode);
     }
 
     [Fact]
@@ -112,8 +112,8 @@ public class AuthControllerTests
             Senha = "password123"
         };
         var result = await controller.LoginAsync(request, CancellationToken.None);
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
     }
 
@@ -146,8 +146,8 @@ public class AuthControllerTests
             Login = "testuser"
         };
         var result = await controller.SolicitarAsync(request, CancellationToken.None);
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
     }
 
@@ -170,14 +170,14 @@ public class AuthControllerTests
         var authService = Substitute.For<IAuthService>();
         var expectedResponse = new ValidarTokenRecuperacaoResponse
         {
-            Mensagem = "Token válido"
+            Mensagem = "Token v�lido"
         };
         authService.ValidarTokenAsync(Arg.Any<ValidarTokenRecuperacaoRequest>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(expectedResponse));
         var controller = new AuthController(authService);
         var token = "test_token_123";
         var result = await controller.ValidarTokenAsync(token, CancellationToken.None);
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
     }
 
@@ -207,8 +207,8 @@ public class AuthControllerTests
             NovaSenha = "newpassword123"
         };
         var result = await controller.TrocarSenhaAsync(request, CancellationToken.None);
-        var okResult = Assert.IsType<OkObjectResult>(result.Result);
-        Assert.Equal(200, okResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result.result.Data);
+        Assert.Equal(200, okresult.Data.StatusCode);
         Assert.Same(expectedResponse, okResult.Value);
     }
 

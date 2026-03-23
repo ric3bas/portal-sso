@@ -5,6 +5,7 @@ using Portal.Features.Usuario.Domain;
 using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Features.Usuario.Infra;
 using Portal.Infra;
+using static Portal.Domain.Base.Result;
 
 namespace Portal.Features.Usuario.Service
 {
@@ -18,16 +19,16 @@ namespace Portal.Features.Usuario.Service
             _usuarioRepository = usuarioRepository;
         }
 
-        public async Task<IEnumerable<UsuarioComPerfilQuery>> ListarAsync(CancellationToken cancellationToken = default)
+        public async Task<Result<IEnumerable<UsuarioComPerfilQuery>>> ListarAsync(CancellationToken cancellationToken = default)
         {
             var parceiroId = ObterTenantId();
             var result = await _usuarioRepository.ListarAsync(parceiroId, cancellationToken);
             if (!result.Any())
-                throw new NotFoundException("Nenhum usuário encontrado");
-            return result;
+               return ValidationResult<IEnumerable<UsuarioComPerfilQuery>>("Nenhum usuário encontrado");
+            return OkResult(result);
         }
 
-        public async Task RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
+        public async Task<Result<string>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
         {
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
@@ -36,10 +37,10 @@ namespace Portal.Features.Usuario.Service
             var validacao  = await _usuarioRepository.ValidarRegistroAsync(request.Login, parceiroId, request.PerfilId, cancellationToken);
 
             if (!validacao.ParceiroExiste)
-                throw new NotFoundException($"Parceiro '{parceiroId}' não encontrado");
+                return NotFoundResult<string>($"Parceiro '{parceiroId}' não encontrado");
 
             if (validacao.LoginExiste)
-                throw new ValidationException($"Login '{request.Login}' já existe");
+                return ValidationResult<string>($"Login '{request.Login}' já existe");
 
             var usuario = new UsuarioCommand
             {
@@ -55,6 +56,8 @@ namespace Portal.Features.Usuario.Service
             };
 
             _ = await _usuarioRepository.InserirAsync(usuario, cancellationToken);
+
+            return OkResult("Cadastrado com sucesso");
         }
 
         public async Task IncrementarTentativaLogin(int usuarioId, CancellationToken cancellationToken)

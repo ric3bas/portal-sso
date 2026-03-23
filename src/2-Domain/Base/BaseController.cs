@@ -1,51 +1,43 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Portal.Domain.Exceptions;
 
 namespace Portal.Domain.Base
 {
-	[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+	[ProducesResponseType(typeof(CustomProblemDetails), StatusCodes.Status500InternalServerError)]
 	public abstract class BaseController : ControllerBase
 	{
-		protected ObjectResult BadRequestProblem(string detail, string title = "Erro de validação")
-			=> Problem(
-				statusCode: StatusCodes.Status400BadRequest,
-				title: title,
-				detail: detail,
-				instance: HttpContext?.Request.Path);
 
-		protected ObjectResult NotFoundProblem(string detail, string title = "Nenhum registro encontrado")
-			=> Problem(
-				statusCode: StatusCodes.Status404NotFound,
-				title: title,
-				detail: detail,
-				instance: HttpContext?.Request.Path);
+		protected IActionResult HandleResult<T>(Result<T> result)
+		{
+			if (result.Success)
+				return Ok(result.Data);
 
-		protected ObjectResult InternalServerErrorProblem(string detail, string title = "Erro interno do servidor")
-			=> Problem(
-				statusCode: StatusCodes.Status500InternalServerError,
-				title: title,
-				detail: detail,
-				instance: HttpContext?.Request.Path);
+			if (result.Problem != null)
+				result.Problem.TraceId = HttpContext.TraceIdentifier;
 
-        protected ObjectResult BusinessErrorProblem(string detail, string title = "Erro de negócio")
-			=> Problem(
-				statusCode: StatusCodes.Status422UnprocessableEntity,
-				title: title,
-				detail: detail,
-				instance: HttpContext?.Request.Path);
+			return result.Type switch
+			{
+				ResultType.Validation => BadRequest(result.Problem),
+				ResultType.Business => UnprocessableEntity(result.Problem),
+				ResultType.NotFound => NotFound(result.Problem),
+				_ => StatusCode(500, result.Problem)
+			};
+		}
     }
 
-	public sealed class ProducesBadRequestProblemAttribute : ProducesResponseTypeAttribute
-	{
-		public ProducesBadRequestProblemAttribute()
-			: base(typeof(ProblemDetails), StatusCodes.Status400BadRequest)
-		{
-		}
-	}
+    public sealed class ProducesBadRequestProblemAttribute : ProducesResponseTypeAttribute
+    {
+        public ProducesBadRequestProblemAttribute()
+            : base(typeof(CustomProblemDetails), StatusCodes.Status400BadRequest)
+        {
+        }
+    }
 
-	public sealed class ProducesNotFoundProblemAttribute : ProducesResponseTypeAttribute
+    public sealed class ProducesNotFoundProblemAttribute : ProducesResponseTypeAttribute
 	{
 		public ProducesNotFoundProblemAttribute()
-			: base(typeof(ProblemDetails), StatusCodes.Status404NotFound)
+			: base(typeof(CustomProblemDetails), StatusCodes.Status404NotFound)
 		{
 		}
 	}
@@ -53,7 +45,7 @@ namespace Portal.Domain.Base
     public sealed class ProducesBusinessProblemAttribute : ProducesResponseTypeAttribute
     {
         public ProducesBusinessProblemAttribute()
-            : base(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)
+            : base(typeof(CustomProblemDetails), StatusCodes.Status422UnprocessableEntity)
         {
         }
     }
