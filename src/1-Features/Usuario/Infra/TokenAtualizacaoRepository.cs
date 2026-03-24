@@ -17,7 +17,8 @@ namespace Portal.Features.Usuario.Infra
                                         token,
                                         expira_em AS ExpiraEm,
                                         revogado,
-                                        usuario_id AS UsuarioId
+                                        usuario_id AS UsuarioId,
+                                        ip_usuario as IpUsuario
                                  FROM sso.token_atualizacao
                                  WHERE token = @token
                                  ORDER BY id DESC
@@ -29,8 +30,8 @@ namespace Portal.Features.Usuario.Infra
         {
             cancellationToken.ThrowIfCancellationRequested();
             
-            const string sql = @"INSERT INTO sso.token_atualizacao (token, expira_em, revogado, usuario_id)
-                                 VALUES (@Token, @ExpiraEm, @Revogado, @UsuarioId)";
+            const string sql = @"INSERT INTO sso.token_atualizacao (token, expira_em, revogado, usuario_id, ip_usuario, logado_em)
+                                 VALUES (@Token, @ExpiraEm, @Revogado, @UsuarioId, @IpUsuario, @LogadoEm )";
             await Task.Run(() => Execute(sql, token));
         }
 

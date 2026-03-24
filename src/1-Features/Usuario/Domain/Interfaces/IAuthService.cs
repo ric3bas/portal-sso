@@ -1,6 +1,7 @@
 using Portal.Domain.Base;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Usuario.Domain.Responses;
+using Portal.Features.Usuario.Infra;
 
 namespace Portal.Features.Usuario.Domain.Interfaces
 {
@@ -12,5 +13,6 @@ namespace Portal.Features.Usuario.Domain.Interfaces
         Task<Result<RecuperarSenhaResponse>> SolicitarRecuperacaoAsync(RecuperarSenhaRequest request, CancellationToken cancellationToken);
         Task<Result<ValidarTokenRecuperacaoResponse>> ValidarTokenAsync(ValidarTokenRecuperacaoRequest request, CancellationToken cancellationToken);
         Task<Result<TrocarSenhaResponse>> TrocarSenhaAsync(TrocarSenhaRequest request, CancellationToken cancellationToken);
+        Task<TokenAtualizacaoQuery?> ObterTokenSessaoAsync(string token);
      }
 }

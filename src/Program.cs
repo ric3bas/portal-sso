@@ -261,9 +261,9 @@ builder.Services.AddAuthentication(options => {
 });
 builder.Services.AddAuthorization();
 
-    builder.Services.AddSingleton<DapperDatabaseProvider>();
+builder.Services.AddSingleton<DapperDatabaseProvider>();
 
-    builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroRepository, Portal.Features.Parceiro.Infra.ParceiroRepository>();
+builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroRepository, Portal.Features.Parceiro.Infra.ParceiroRepository>();
 builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroService, Portal.Features.Parceiro.Service.ParceiroService>();
 
 
@@ -288,6 +288,8 @@ app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<JwtRevocationMiddleware>();
+
 app.MapControllers(); // Mantém para compatibilidade
 app.Run();
 }

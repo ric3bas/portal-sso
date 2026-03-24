@@ -86,7 +86,7 @@ namespace Portal.Features.Usuario.Service
             if (dados.Usuario is null)
                 return BusinessResult<LoginResponse>("Usuário ou senha inválidos");
 
-            var tentativas = 5 - (dados.Usuario.TentativasLogin);
+            var tentativaAtual = dados.Usuario.TentativasLogin + 1;
 
             // Controle de tentativas de login
             if (dados.Usuario.Bloqueado)
@@ -94,15 +94,15 @@ namespace Portal.Features.Usuario.Service
 
             if (!BCrypt.Net.BCrypt.Verify(request.Senha, dados.Usuario.Senha))
             {
+                await _usuarioRepository.IncrementarTentativaLoginAsync(dados.Usuario.Id, cancellationToken);
 
-                if (tentativas == 0)
+                if (tentativaAtual == 5)
                 {
                     await _usuarioRepository.BloquearUsuarioAsync(dados.Usuario.Id, cancellationToken);
                     return BusinessResult<LoginResponse>("Usuário bloqueado por excesso de tentativas");
                 }
-                await _usuarioRepository.IncrementarTentativaLoginAsync(dados.Usuario.Id, cancellationToken);
 
-                return BusinessResult<LoginResponse>($"Usuário ou senha inválidos, voce tem mais {tentativas} tentativas");
+                return BusinessResult<LoginResponse>($"Usuário ou senha inválidos, voce tem mais {5 - tentativaAtual} tentativas");
             }
 
             // Login bem-sucedido: zera tentativas
@@ -110,8 +110,10 @@ namespace Portal.Features.Usuario.Service
 
             var jwtSection = _config.GetSection("Jwt");
             var accessTokenExpireMinutes = int.Parse(jwtSection["AccessTokenExpireMinutes"] ?? "0");
+            var refreshToken = TokenBase.GenerateRefreshToken();
 
             var accessToken = JwtBase.GenerateToken(
+                refreshToken,
                 dados.Usuario.Login   ?? string.Empty,
                 dados.Usuario.Nome    ?? string.Empty,
                 dados.Usuario.Email   ?? string.Empty,
@@ -123,14 +125,15 @@ namespace Portal.Features.Usuario.Service
                 dados.Perfil?.Nome ?? string.Empty,
                 dados.Escopos.ToArray());
 
-            var refreshToken = TokenBase.GenerateRefreshToken();
 
             await _tokenRepo.InserirAsync(new TokenAtualizacaoCommand
             {
                 Token = refreshToken,
                 ExpiraEm = DateTime.UtcNow.AddMinutes(int.Parse(jwtSection["RefreshTokenExpireDays"] ?? "0")),
                 Revogado = false,
-                UsuarioId = dados.Usuario.Id
+                UsuarioId = dados.Usuario.Id,
+                IpUsuario = request.IpUsuario,
+                LogadoEm = DateTime.UtcNow
             });
 
             return OkResult(new LoginResponse
@@ -159,8 +162,11 @@ namespace Portal.Features.Usuario.Service
             var jwtSection             = _config.GetSection("Jwt");
             var accessTokenMinutes     = int.Parse(jwtSection["AccessTokenExpireMinutes"] ?? "0");
             var refreshTokenExpireDays = int.Parse(jwtSection["RefreshTokenExpireDays"] ?? "0");
+            var novoRefreshToken = TokenBase.GenerateRefreshToken();
+
 
             var accessToken = JwtBase.GenerateToken(
+                novoRefreshToken,
                 dados.Usuario.Login   ?? string.Empty,
                 dados.Usuario.Nome    ?? string.Empty,
                 dados.Usuario.Email   ?? string.Empty,
@@ -172,7 +178,6 @@ namespace Portal.Features.Usuario.Service
                 dados.Perfil?.Nome ?? string.Empty,
                 dados.Escopos.ToArray());
 
-            var novoRefreshToken = TokenBase.GenerateRefreshToken();
 
             await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);
             await _tokenRepo.InserirAsync(new TokenAtualizacaoCommand
@@ -180,7 +185,9 @@ namespace Portal.Features.Usuario.Service
                 Token = novoRefreshToken,
                 ExpiraEm = DateTime.UtcNow.AddDays(refreshTokenExpireDays),
                 Revogado = false,
-                UsuarioId = token.UsuarioId
+                UsuarioId = token.UsuarioId,
+                IpUsuario = token?.IpUsuario ?? string.Empty,
+                LogadoEm = DateTime.UtcNow
             });
 
             return OkResult(new LoginResponse
@@ -233,6 +240,12 @@ namespace Portal.Features.Usuario.Service
                             </html>";
             await _emailService.EnviarEmailAsync(usuario.Email, assunto, corpo);
             return OkResult(new RecuperarSenhaResponse { EmailEnviado = true });
+        }
+
+
+        public async Task<TokenAtualizacaoQuery?> ObterTokenSessaoAsync(string token)
+        {
+            return await _tokenRepo.ObterPorTokenAsync(token);
         }
 
 

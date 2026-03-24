@@ -8,6 +8,7 @@ namespace Portal.Features.Usuario.Infra
         public DateTime ExpiraEm { get; set; }
         public bool Revogado { get; set; }
         public int UsuarioId { get; set; }
-        public UsuarioCommand? Usuario { get; set; }
+        public string IpUsuario { get; set; }
+        public DateTime LogadoEm { get; set; }
     }
 }

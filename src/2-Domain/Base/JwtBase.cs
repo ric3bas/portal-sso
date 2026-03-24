@@ -9,6 +9,7 @@ namespace Portal.Domain.Base
     public static class JwtBase
     {
         public static string GenerateToken(
+            string refreshToken,
             string login,
             string nome,
             string email,
@@ -22,6 +23,7 @@ namespace Portal.Domain.Base
         {
             var claims = new[]
             {
+                new Claim("refresh-token", refreshToken),
                 new Claim("nome", nome),
                 new Claim("usuario", login),
                 new Claim("email", email),

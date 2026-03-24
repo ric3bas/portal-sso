@@ -11,6 +11,9 @@ namespace Portal.Features.Auth.Domain.Requests
         [JsonPropertyName("senha")]
         public string Senha { get; set; } = string.Empty;
 
+        [JsonIgnore]
+        public string IpUsuario { get; set; } = string.Empty;
+
 
         public override bool IsValid() {
         var validator = new Usuario.Domain.Validations.LoginRequestValidator();

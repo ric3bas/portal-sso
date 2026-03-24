@@ -21,13 +21,16 @@ namespace Portal.Features.Usuario.Controller
             _authService = authService;
         }
 
-        [SwaggerOperation(Summary = "Realiza o login de um usuário")]
+        [SwaggerOperation(Summary = "Realiza o login de um usuário, login ou email")]
         [HttpPost("login")]
         [AllowAnonymous]
         [ProducesResponseType(typeof(LoginResponse), 200)]
         [ProducesBadRequestProblem]
         public async Task<IActionResult> LoginAsync([FromBody] LoginRequest request, CancellationToken cancellationToken)
-            => HandleResult(await _authService.LoginAsync(request, cancellationToken));
+        {
+            request.IpUsuario = HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? string.Empty;
+            return HandleResult(await _authService.LoginAsync(request, cancellationToken));
+        }
 
 
         [SwaggerOperation(Summary = "Renova o access token a partir de um refresh token válido")]
