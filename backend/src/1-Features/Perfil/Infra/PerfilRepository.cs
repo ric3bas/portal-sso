@@ -15,30 +15,52 @@ namespace Portal.Features.Perfil.Infra
             const string sql = @"SELECT p.id   AS PerfilId,
                                         p.nome AS PerfilNome,
                                         e.id   AS EscopoId,
-                                        e.nome AS EscopoNome
+                                        e.nome AS EscopoNome,
+                                        p.is_master AS Master,
+                                        e.is_master AS EscopoMaster
                                  FROM sso.perfil p
                                  LEFT JOIN sso.perfil_escopo pe ON pe.perfil_id = p.id
-                                 LEFT JOIN sso.escopo e ON e.id = pe.escopo_id
+                                 LEFT JOIN sso.escopo e ON e.id = pe.escopo_id AND p.is_master = true 
                                  ORDER BY p.id, e.id";
 
             var rows = await QueryAsync<PerfilEscopoRowResponse>(sql);
+            return MapToPerfisComEscopo(rows);
+        }
 
+        public async Task<IEnumerable<PerfilQuery>> ObterPerfilParaComboAsync(bool isMaster, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var sql = "SELECT p.id ,p.nome  FROM sso.perfil p";
+
+            if (!isMaster) sql += " WHERE p.is_master = False";
+
+            return await QueryAsync<PerfilQuery>(sql);
+           
+        }
+
+        private static List<PerfilComEscopoQuery> MapToPerfisComEscopo(IEnumerable<PerfilEscopoRowResponse> rows)
+        {
             return rows
                 .GroupBy(r => new { r.PerfilId, r.PerfilNome })
                 .Select(group => new PerfilComEscopoQuery
                 {
-                    Id   = group.Key.PerfilId,
+                    Id = group.Key.PerfilId,
                     Nome = group.Key.PerfilNome,
-                    Escopos = group
-                        .Where(x => x.EscopoId.HasValue)
-                        .Select(x => new PerfilEscopoItemQuery
-                        {
-                            Id   = x.EscopoId!.Value,
-                            Nome = x.EscopoNome ?? string.Empty
-                        })
-                        .DistinctBy(x => x.Id)
-                        .ToList()
+                    Escopos = MapEscopos(group)
                 })
+                .ToList();
+        }
+
+        private static List<PerfilEscopoItemQuery> MapEscopos(IEnumerable<PerfilEscopoRowResponse> rows)
+        {
+            return rows
+                .Where(x => x.EscopoId.HasValue && x.EscopoMaster == true)
+                .Select(x => new PerfilEscopoItemQuery
+                {
+                    Id = x.EscopoId!.Value,
+                    Nome = x.EscopoNome ?? string.Empty
+                })
+                .DistinctBy(x => x.Id)
                 .ToList();
         }
 
@@ -75,6 +97,18 @@ namespace Portal.Features.Perfil.Infra
                     })
                     .ToList()
             };
+        }
+
+        public async Task<List<int>?> ObterEscoposPorPerfilAsync(int perfilId, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            const string sql = @"SELECT pe.escopo_id
+                         FROM sso.perfil p
+                         INNER JOIN sso.perfil_escopo pe ON pe.perfil_id = p.id
+                         WHERE p.id = @perfilId";
+
+            var result = await QueryAsync<int>(sql, new { perfilId });
+            return result.Any() ? result.ToList() : null;
         }
 
         public async Task<int> InserirAsync(PerfilCommand perfil, CancellationToken cancellationToken = default)

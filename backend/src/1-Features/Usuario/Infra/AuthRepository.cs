@@ -65,7 +65,7 @@ namespace Portal.Features.Usuario.Infra
                 WHERE u.login = @login or u.email = @login
                 LIMIT 1;
 
-                SELECT p.id, p.nome
+                SELECT p.id, p.nome, p.is_master As IsMaster
                 FROM sso.usuario u
                 INNER JOIN sso.perfil p ON p.id = u.perfil_id
                 WHERE u.login = @login or u.email = @login

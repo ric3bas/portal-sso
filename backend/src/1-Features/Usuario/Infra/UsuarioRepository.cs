@@ -62,7 +62,7 @@ namespace Portal.Features.Usuario.Infra
             };
         }
 
-        public async Task<IEnumerable<UsuarioComPerfilQuery>> ListarPorParceiroAsync(Guid parceiroId, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<UsuarioComPerfilQuery>> ListarPorParceiroAsync(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = @"SELECT u.id,
@@ -76,9 +76,8 @@ namespace Portal.Features.Usuario.Infra
                                  FROM sso.usuario u
                                  INNER JOIN sso.perfil p ON p.id = u.perfil_id
                                  INNER JOIN sso.parceiro pp ON pp.id = u.parceiro_id
-                                 WHERE u.parceiro_id = @parceiroId
                                  ORDER BY u.nome";
-            return await QueryAsync<UsuarioComPerfilQuery>(sql, new { parceiroId });
+            return await QueryAsync<UsuarioComPerfilQuery>(sql);
         }
 
 

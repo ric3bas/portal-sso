@@ -13,11 +13,18 @@ namespace Portal.Features.Usuario.Service
     public class UsuarioService : BaseService, IUsuarioService
     {
         private readonly IUsuarioRepository _usuarioRepository;
+        private readonly IPerfilRepository _perfiRepository;
+        private readonly IUnitOfWork _unitOfWork;
+
         public UsuarioService(
             IUsuarioRepository usuarioRepository,
-            IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            IPerfilRepository perfiRepository,
+            IUnitOfWork unitOfWork) : base(httpContextAccessor)
         {
             _usuarioRepository = usuarioRepository;
+            _perfiRepository = perfiRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<Result<IEnumerable<UsuarioComPerfilResponse>>> ListarPorParceiroAsync(string? parceiroId, CancellationToken cancellationToken = default)
@@ -27,12 +34,12 @@ namespace Portal.Features.Usuario.Service
             var usuario = ObterUsuario();
             var parceiroNull= string.IsNullOrEmpty(parceiroId);
 
-            var perfilMaster = await _usuarioRepository.VerificarUsuarioMasterAsyunc(usuario);
-            if(!perfilMaster && !parceiroNull)
-                return ValidationResult<IEnumerable<UsuarioComPerfilResponse>>("Usuário não tem permissão");
+            //var perfilMaster = await _usuarioRepository.VerificarUsuarioMasterAsyunc(usuario);
+            //if(!perfilMaster && !parceiroNull)
+            //    return ValidationResult<IEnumerable<UsuarioComPerfilResponse>>("Usuário não tem permissão");
 
-            var parceiro = parceiroNull ? ObterTenantId() : Guid.Parse(parceiroId ?? string.Empty);
-            var result = await _usuarioRepository.ListarPorParceiroAsync(parceiro, cancellationToken);
+            //var parceiro = parceiroNull ? ObterTenantId() : Guid.Parse(parceiroId ?? string.Empty);
+            var result = await _usuarioRepository.ListarPorParceiroAsync(cancellationToken);
 
             if (!result.Any())
                return NotFoundResult<IEnumerable<UsuarioComPerfilResponse>>("Nenhum usuário encontrado");
@@ -45,7 +52,7 @@ namespace Portal.Features.Usuario.Service
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
 
-            var parceiroId = ObterTenantId();
+            var parceiroId = ObterUsuario().ParceiroId;
             var validacao  = await _usuarioRepository.ValidarRegistroAsync(request.Login, parceiroId, request.PerfilId, cancellationToken);
 
             if (!validacao.ParceiroExiste)
@@ -66,7 +73,22 @@ namespace Portal.Features.Usuario.Service
                 Bloqueado = false
             };
 
-            _ = await _usuarioRepository.InserirAsync(usuario, cancellationToken);
+            _unitOfWork.Begin();
+            try
+            {
+                _ = await _usuarioRepository.InserirAsync(usuario, cancellationToken);
+                var escoposIds = await _perfiRepository.ObterEscoposPorPerfilAsync(request.PerfilId, cancellationToken);
+                if(escoposIds is not null)
+                    await _perfiRepository.VincularEscoposAsync(request.PerfilId, escoposIds, cancellationToken);
+
+
+                _unitOfWork.Commit();
+            }
+            catch
+            {
+                _unitOfWork.Rollback();
+                return ValidationResult<string>($"Erro ao criar usuário");
+            }
 
             return OkResult("Cadastrado com sucesso");
         }

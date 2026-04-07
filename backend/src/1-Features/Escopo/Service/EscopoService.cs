@@ -6,12 +6,12 @@ using static Portal.Domain.Base.Result;
 
 namespace Portal.Features.Escopo.Service
 {
-    public class EscopoService : IEscopoService
+    public class EscopoService : BaseService, IEscopoService
     {
         private readonly IEscopoRepository _repository;
         private readonly ILogger<EscopoService> _logger;
 
-        public EscopoService(IEscopoRepository repository, ILogger<EscopoService> logger)
+        public EscopoService(IEscopoRepository repository, ILogger<EscopoService> logger, IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
         {
             _repository = repository;
             _logger     = logger;
@@ -20,7 +20,8 @@ namespace Portal.Features.Escopo.Service
         public async Task<Result<IEnumerable<EscopoResponse>>> ObterTodosAsync(CancellationToken cancellationToken = default)
         {
             _logger.LogInformation("Listando escopos");
-            var result = await _repository.ListarAsync(cancellationToken);
+            var isMaster = ObterUsuario().IsMaster;
+            var result = await _repository.ListarAsync(isMaster, cancellationToken);
             if (!result.Any())
                 return ValidationResult<IEnumerable<EscopoResponse>>("Nenhum escopo encontrado");
 

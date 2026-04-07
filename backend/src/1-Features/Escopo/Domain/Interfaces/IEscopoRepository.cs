@@ -3,7 +3,7 @@ namespace Portal.Features.Escopo.Domain.Interfaces
 {
     public interface IEscopoRepository
     {
-        Task<IEnumerable<EscopoQuery>> ListarAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<EscopoQuery>> ListarAsync(bool isMaster, CancellationToken cancellationToken = default);
         Task<int> InserirAsync(EscopoCommand escopo, CancellationToken cancellationToken = default);
         Task<EscopoQuery?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<int>> ObterIdsExistentesAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);

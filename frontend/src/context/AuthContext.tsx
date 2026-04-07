@@ -1,12 +1,14 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { clearSession, getSession, saveSession, subscribeSessionChange } from '../lib/storage'
+import { getIsMasterFromAccessToken } from '../lib/jwt'
 import { authApi } from '../services/sso'
 import type { LoginRequest, LoginResponse, SessionData } from '../types/api'
 
 interface AuthContextValue {
   session: SessionData | null
   isAuthenticated: boolean
+  isMaster: boolean
   login: (payload: LoginRequest) => Promise<void>
   refreshSession: (refreshToken?: string) => Promise<void>
   clearAuth: () => void
@@ -15,11 +17,14 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 function mapLoginResponse(response: LoginResponse, login?: string): SessionData {
+  const accessToken = response.access_token ?? ''
+
   return {
-    accessToken: response.access_token ?? '',
+    accessToken,
     refreshToken: response.refresh_token ?? '',
     expiresInMinutes: response.expire_in_minutes,
     login,
+    isMaster: getIsMasterFromAccessToken(accessToken),
   }
 }
 
@@ -42,7 +47,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           current?.accessToken === nextSession?.accessToken &&
           current?.refreshToken === nextSession?.refreshToken &&
           current?.expiresInMinutes === nextSession?.expiresInMinutes &&
-          current?.login === nextSession?.login
+          current?.login === nextSession?.login &&
+          current?.isMaster === nextSession?.isMaster
         ) {
           return current
         }
@@ -77,6 +83,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       value={{
         session,
         isAuthenticated: Boolean(session?.accessToken),
+        isMaster: Boolean(session?.isMaster),
         login,
         refreshSession,
         clearAuth,
@@ -97,12 +104,16 @@ export function useAuth() {
   return context
 }
 
-export function ProtectedRoute({ children }: PropsWithChildren) {
-  const { isAuthenticated } = useAuth()
+export function ProtectedRoute({ children, requireMaster = false }: PropsWithChildren<{ requireMaster?: boolean }>) {
+  const { isAuthenticated, isMaster } = useAuth()
   const location = useLocation()
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  if (requireMaster && !isMaster) {
+    return <Navigate to="/app" replace />
   }
 
   return children

@@ -176,7 +176,7 @@ export function UsuariosPage() {
   )
 
   async function loadReferenceData() {
-    const [loadedPartners, loadedProfiles] = await Promise.all([parceirosApi.list(), perfisApi.list()])
+    const [loadedPartners, loadedProfiles] = await Promise.all([parceirosApi.list(), perfisApi.listCombo()])
     setParceiros(loadedPartners)
     setPerfis(loadedProfiles)
   }
@@ -258,13 +258,15 @@ export function UsuariosPage() {
     setIsSaving(true)
 
     try {
+      const selectedProfileId = Number.parseInt(form.perfil, 10)
+
       if (editingItem) {
         await UsuariosApi.update(editingItem.id, {
           nome: form.nome.trim(),
           email: form.email.trim(),
           login: form.login.trim(),
           parceiro: form.parceiro,
-          perfil: Number(form.perfil),
+          perfil: selectedProfileId,
           ativo: form.ativo,
           bloqueado: form.bloqueado,
         })
@@ -276,7 +278,7 @@ export function UsuariosPage() {
           login: form.login.trim(),
           senha: form.senha,
           parceiro: form.parceiro,
-          perfil: Number(form.perfil),
+          perfilId: selectedProfileId,
         })
         setFeedback({ tone: 'success', message: 'Usuario registrado com sucesso.' })
       }

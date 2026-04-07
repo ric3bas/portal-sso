@@ -12,5 +12,7 @@ namespace Portal.Features.Perfil.Domain.Interfaces
         Task VincularEscoposAsync(int perfilId, IEnumerable<int> escopoIds, CancellationToken cancellationToken = default);
         Task DeletarAsync(int id, CancellationToken cancellationToken = default);
         Task AtualizarNomeAsync(int id, string novoNome, CancellationToken cancellationToken = default);
+        Task<List<int>?> ObterEscoposPorPerfilAsync(int perfilId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<PerfilQuery>> ObterPerfilParaComboAsync(bool isMaster, CancellationToken cancellationToken = default);
     }
 }

@@ -125,7 +125,7 @@ namespace Portal.Features.Usuario.Service
                 jwtSection["Key"]      ?? string.Empty,
                 jwtSection["Issuer"]   ?? string.Empty,
                 jwtSection["Audience"] ?? string.Empty,
-                dados.Perfil?.Nome ?? string.Empty,
+                dados.Perfil?.isMaster,
                 dados.Escopos.ToArray());
 
 
@@ -178,7 +178,7 @@ namespace Portal.Features.Usuario.Service
                 jwtSection["Key"]      ?? string.Empty,
                 jwtSection["Issuer"]   ?? string.Empty,
                 jwtSection["Audience"] ?? string.Empty,
-                dados.Perfil?.Nome ?? string.Empty,
+                dados.Perfil?.isMaster,
                 dados.Escopos.ToArray());
 
 

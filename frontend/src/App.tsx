@@ -36,9 +36,30 @@ function App() {
               }
             >
               <Route index element={<DashboardPage />} />
-              <Route path="escopos" element={<EscoposPage />} />
-              <Route path="parceiros" element={<ParceirosPage />} />
-              <Route path="perfis" element={<PerfisPage />} />
+              <Route
+                path="escopos"
+                element={
+                  <ProtectedRoute requireMaster>
+                    <EscoposPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="parceiros"
+                element={
+                  <ProtectedRoute requireMaster>
+                    <ParceirosPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="perfis"
+                element={
+                  <ProtectedRoute requireMaster>
+                    <PerfisPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="usuarios" element={<UsuariosPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

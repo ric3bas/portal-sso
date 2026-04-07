@@ -8,13 +8,13 @@ namespace Portal.Features.Parceiro.Infra {
     public class ParceiroRepository : DapperRepository, IDapperRepository, IParceiroRepository {
         public ParceiroRepository(IUnitOfWork unitOfWork) : base(unitOfWork) {}
 
-        public async Task<IEnumerable<ParceiroQuery>> ObterTodosAsync(string? nome, CancellationToken cancellationToken = default) {
+        public async Task<IEnumerable<ParceiroQuery>> ObterTodosAsync(Guid? id, CancellationToken cancellationToken = default) {
             cancellationToken.ThrowIfCancellationRequested();
             var sql   = "SELECT id, nome, descricao, ativo FROM sso.parceiro";
             object? param = null;
-            if (!string.IsNullOrWhiteSpace(nome)) {
-                sql  += " WHERE nome ILIKE @Nome";
-                param = new { Nome = $"%{nome}%" };
+            if (id != Guid.Empty) {
+                sql  += " WHERE id = @id";
+                param = new { id };
             }
             return await QueryAsync<ParceiroQuery>(sql, param);
         }

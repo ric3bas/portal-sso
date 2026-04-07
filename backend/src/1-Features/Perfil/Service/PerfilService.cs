@@ -10,13 +10,14 @@ using static Portal.Domain.Base.Result;
 
 namespace Portal.Features.Perfil.Service
 {
-    public class PerfilService : IPerfilService
+    public class PerfilService : BaseService, IPerfilService
     {
         private readonly IPerfilRepository _repository;
         private readonly IEscopoRepository _escopoRepository;
         private readonly ILogger<PerfilService> _logger;
 
-        public PerfilService(IPerfilRepository repository, IEscopoRepository escopoRepository, ILogger<PerfilService> logger)
+        public PerfilService(IPerfilRepository repository, IEscopoRepository escopoRepository, ILogger<PerfilService> logger,
+             IHttpContextAccessor httpContextAccessor) : base(httpContextAccessor)
         {
             _repository = repository;
             _escopoRepository = escopoRepository;
@@ -51,14 +52,24 @@ namespace Portal.Features.Perfil.Service
             return OkResult("Clonado com sucesso");
         }
     
-       
-
         public async Task<Result<IEnumerable<PerfilComEscopoResponse>>> ListarComEscoposAsync(CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Listando perfis com escopos");  
+            _logger.LogInformation("Listando perfis com escopos");
+
             var result = await _repository.ListarComEscoposAsync(cancellationToken);
             if (!result.Any())  
                 return NotFoundResult<IEnumerable<PerfilComEscopoResponse>>("Nenhum perfil encontrado");
+
+            return OkResult(result.Select(c => c.ToResponse()));
+        }
+
+        public async Task<Result<IEnumerable<PerfilResponse>>> ObterPerfilParaComboAsync(CancellationToken cancellationToken = default)
+        {
+            _logger.LogInformation("Listando perfis com escopos");
+
+            var result = await _repository.ObterPerfilParaComboAsync(ObterUsuario().IsMaster, cancellationToken);
+            if (!result.Any())
+                return NotFoundResult<IEnumerable<PerfilResponse>>("Nenhum perfil encontrado");
 
             return OkResult(result.Select(c => c.ToResponse()));
         }
@@ -127,5 +138,6 @@ namespace Portal.Features.Perfil.Service
             await _repository.AtualizarNomeAsync(id, novoNome, cancellationToken);
             return OkResult("Alterado com sucesso");
         }
+      
     }
 }

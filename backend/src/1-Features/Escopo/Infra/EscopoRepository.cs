@@ -8,11 +8,11 @@ namespace Portal.Features.Escopo.Infra
     {
         public EscopoRepository(IUnitOfWork unitOfWork) : base(unitOfWork) { }
 
-        public async Task<IEnumerable<EscopoQuery>> ListarAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<EscopoQuery>> ListarAsync(bool isMaster, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = "SELECT id, nome FROM sso.escopo ORDER BY id";
-            return await QueryAsync<EscopoQuery>(sql);
+            return await QueryAsync<EscopoQuery>(sql, new {isMaster});
         }
 
         public async Task<int> InserirAsync(EscopoCommand escopo, CancellationToken cancellationToken = default)

@@ -23,16 +23,20 @@ import { authApi } from '../services/sso'
 
 const navigationItems = [
   { to: '/app', label: 'Visao geral', icon: LayoutDashboard, end: true },
-  { to: '/app/parceiros', label: 'Parceiros', icon: Building2 },
-  { to: '/app/escopos', label: 'Escopos', icon: ShieldCheck },
-  { to: '/app/perfis', label: 'Perfis', icon: BadgeCheck },
+  { to: '/app/parceiros', label: 'Parceiros', icon: Building2, requiresMaster: true },
+  { to: '/app/escopos', label: 'Escopos', icon: ShieldCheck, requiresMaster: true },
+  { to: '/app/perfis', label: 'Perfis', icon: BadgeCheck, requiresMaster: true },
   { to: '/app/usuarios', label: 'Usuarios', icon: Users2 },
 ]
 
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {
+  const { isMaster } = useAuth()
+
   return (
     <nav className="space-y-1">
-      {navigationItems.map((item) => {
+      {navigationItems
+        .filter((item) => !item.requiresMaster || isMaster)
+        .map((item) => {
         const Icon = item.icon
 
         return (
@@ -54,7 +58,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
             {item.label}
           </NavLink>
         )
-      })}
+        })}
     </nav>
   )
 }

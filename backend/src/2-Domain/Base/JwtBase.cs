@@ -18,7 +18,7 @@ namespace Portal.Domain.Base
             string key,
             string issuer,
             string audience,
-            string perfil,
+            bool? isMaster,
             string[] escopos)
         {
             var claims = new[]
@@ -28,7 +28,7 @@ namespace Portal.Domain.Base
                 new Claim("usuario", login),
                 new Claim("email", email),
                 new Claim("tenantId", parceiroId),
-                new Claim("perfil", perfil),
+                new Claim("isMaster", (isMaster ?? false).ToString()),
                 new Claim("escopos", JsonSerializer.Serialize(escopos), JsonClaimValueTypes.JsonArray)
             };
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));

@@ -82,6 +82,11 @@ export interface PerfilComEscopoResponse {
   escopos?: PerfilEscopoItemResponse[] | null
 }
 
+export interface PerfilResponse {
+  id: number
+  nome?: string | null
+}
+
 export interface VincularEscopoRequest {
   escopoIds: number[]
 }
@@ -127,6 +132,7 @@ export interface SessionData {
   refreshToken: string
   expiresInMinutes?: string | null
   login?: string
+  isMaster: boolean
 }
 
 export interface SelectOption {

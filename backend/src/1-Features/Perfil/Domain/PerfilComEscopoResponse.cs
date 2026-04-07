@@ -6,4 +6,5 @@
         public string Nome { get; set; } = string.Empty;
         public List<PerfilEscopoItemResponse> Escopos { get; set; } = new List<PerfilEscopoItemResponse>();
     }
+
 }

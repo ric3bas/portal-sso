@@ -11,5 +11,6 @@ namespace Portal.Features.Perfil.Domain.Interfaces
         Task<Result<string>> ApagarAsync(int id, CancellationToken cancellationToken = default);
         Task<Result<string>> ClonarAsync(int id, CancellationToken cancellationToken = default);
         Task<Result<string>> AtualizarNomeAsync(int id, string novoNome, CancellationToken cancellationToken = default);
+        Task<Result<IEnumerable<PerfilResponse>>> ObterPerfilParaComboAsync(CancellationToken cancellationToken = default);
     }
 }

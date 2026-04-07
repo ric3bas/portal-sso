@@ -11,6 +11,7 @@ import type {
   ParceiroRequest,
   ParceiroResponse,
   PerfilComEscopoResponse,
+  PerfilResponse,
   PerfilRequest,
   RecuperarSenhaRequest,
   RefreshTokenRequest,
@@ -90,7 +91,7 @@ export const parceirosApi = {
     return response.data
   },
   async update(id: string, payload: AtualizarParceiroRequest) {
-    const response = await http.put<string>('/api/v1/parceiros/id', payload, {
+    const response = await http.patch<string>('/api/v1/parceiros/id', payload, {
       params: { id },
     })
     return response.data
@@ -100,6 +101,10 @@ export const parceirosApi = {
 export const perfisApi = {
   async list() {
     const response = await http.get<PerfilComEscopoResponse[]>('/api/v1/perfis')
+    return response.data
+  },
+  async listCombo() {
+    const response = await http.get<PerfilResponse[]>('/api/v1/perfis/combo')
     return response.data
   },
   async getById(id: number) {

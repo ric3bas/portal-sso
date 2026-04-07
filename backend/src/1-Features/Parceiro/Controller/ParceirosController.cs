@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using Portal.Features.Parceiro.Domain.Interfaces;
-using Portal.Features.Parceiro.Domain;
-using Swashbuckle.AspNetCore.Annotations;
+using Portal.Domain;
 using Portal.Domain.Base;
+using Portal.Features.Parceiro.Domain;
+using Portal.Features.Parceiro.Domain.Interfaces;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Portal.Features.Parceiro.Controller {
     [ApiController]
@@ -17,6 +18,7 @@ namespace Portal.Features.Parceiro.Controller {
             _service = service;
         }
 
+        [ScopesAuthorize("parceiro.ler")]
         [SwaggerOperation(Summary = "Lista todos os parceiros ou filtra por nome")]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ParceiroResponse>), StatusCodes.Status200OK)]
@@ -24,6 +26,7 @@ namespace Portal.Features.Parceiro.Controller {
         public async Task<IActionResult> ObterTodosAsync([FromQuery] string? nome, CancellationToken cancellationToken)
             => HandleResult(await _service.ObterTodosParceirosAsync(nome, cancellationToken));
 
+        [ScopesAuthorize("parceiro.ler")]
         [HttpGet("id")]
         [SwaggerOperation(Summary = "Retorna um parceiro pelo Id")]
         [ProducesResponseType(typeof(ParceiroResponse), StatusCodes.Status200OK)]
@@ -32,6 +35,7 @@ namespace Portal.Features.Parceiro.Controller {
         public async Task<IActionResult> ObterPorIdAsync([FromQuery] string? id, CancellationToken cancellationToken)
             => HandleResult(await _service.ObterParceiroAsync(id, cancellationToken));
 
+        [ScopesAuthorize("parceiro.criar")]
         [HttpPost]
         [SwaggerOperation(Summary = "Cria um novo parceiro")]
         [ProducesResponseType(typeof(string), StatusCodes.Status201Created)]
@@ -39,8 +43,8 @@ namespace Portal.Features.Parceiro.Controller {
         public async Task<IActionResult> CreateAsync([FromBody] ParceiroRequest parceiro, CancellationToken cancellationToken)
             => HandleResult(await _service.CriarParceiroAsync(parceiro, cancellationToken));
 
-
-        [HttpPut("id")]
+        [ScopesAuthorize("parceiro.atualizar")]
+        [HttpPatch("id")]
         [SwaggerOperation(Summary = "Atualiza um parceiro existente")]
         [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
         [ProducesBadRequestProblem]

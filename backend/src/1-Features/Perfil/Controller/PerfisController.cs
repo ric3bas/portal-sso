@@ -5,6 +5,7 @@ using Portal.Domain.Base;
 using Portal.Features.Perfil.Domain;
 using Portal.Features.Perfil.Domain.Interfaces;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Runtime.InteropServices;
 
 namespace Portal.Features.Perfil.Controller
 {
@@ -44,6 +45,15 @@ namespace Portal.Features.Perfil.Controller
         [ProducesNotFoundProblem]
         public async Task<IActionResult> ObterPerfilComEscoposAsync(CancellationToken cancellationToken)
             => HandleResult(await _service.ListarComEscoposAsync(cancellationToken));
+
+        [ScopesAuthorize("perfil.ler")]
+        [HttpGet("combo")]
+        [SwaggerOperation(Summary = "Obter todos os perfis para combo")]
+        [ProducesResponseType(typeof(IEnumerable<PerfilComEscopoResponse>), 200)]
+        [ProducesNotFoundProblem]
+        public async Task<IActionResult> ObterPerfilParaComboAsync(CancellationToken cancellationToken)
+          => HandleResult(await _service.ObterPerfilParaComboAsync(cancellationToken));
+
 
         [ScopesAuthorize("perfil.ler")]
         [HttpGet("{id:int}")]
