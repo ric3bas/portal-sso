@@ -20,7 +20,7 @@ namespace Portal.Features.Perfil.Infra
                                         e.is_master AS EscopoMaster
                                  FROM sso.perfil p
                                  LEFT JOIN sso.perfil_escopo pe ON pe.perfil_id = p.id
-                                 LEFT JOIN sso.escopo e ON e.id = pe.escopo_id AND p.is_master = true 
+                                 LEFT JOIN sso.escopo e ON e.id = pe.escopo_id
                                  ORDER BY p.id, e.id";
 
             var rows = await QueryAsync<PerfilEscopoRowResponse>(sql);
@@ -54,7 +54,7 @@ namespace Portal.Features.Perfil.Infra
         private static List<PerfilEscopoItemQuery> MapEscopos(IEnumerable<PerfilEscopoRowResponse> rows)
         {
             return rows
-                .Where(x => x.EscopoId.HasValue && x.EscopoMaster == true)
+                .Where(x => x.EscopoId.HasValue)
                 .Select(x => new PerfilEscopoItemQuery
                 {
                     Id = x.EscopoId!.Value,

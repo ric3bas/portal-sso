@@ -204,6 +204,7 @@ function ScopeTreeBranch({
 }
 
 export function PerfisPage() {
+  const didLoadInitiallyRef = useRef(false)
   const [items, setItems] = useState<PerfilComEscopoResponse[]>([])
   const [escopos, setEscopos] = useState<EscopoResponse[]>([])
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
@@ -253,6 +254,11 @@ export function PerfisPage() {
   }
 
   useEffect(() => {
+    if (didLoadInitiallyRef.current) {
+      return
+    }
+
+    didLoadInitiallyRef.current = true
     void loadData()
   }, [])
 

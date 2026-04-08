@@ -98,20 +98,17 @@ export interface RegisterRequest {
   senha: string
   perfilId?: number
   perfil?: number
-  parceiro?: string
+  parceiroId?: string
   ativo?: boolean
   bloqueado?: boolean
 }
 
 export interface AtualizarUsuarioRequest {
-  nome: string
-  email: string
-  login: string
-  perfil?: number
-  parceiro?: string
-  ativo: boolean
-  bloqueado: boolean
-  senha?: string
+  Nome: string
+  Login: string
+  Email: string
+  Ativo: boolean
+  Bloqueado: boolean
 }
 
 export interface UsuarioComPerfilResponse {

@@ -124,11 +124,11 @@ function validateForm(form: UserFormState, isEditing: boolean) {
     nextErrors.senha = validatePassword(form.senha)
   }
 
-  if (!form.parceiro) {
+  if (!isEditing && !form.parceiro) {
     nextErrors.parceiro = 'O campo parceiro é obrigatório.'
   }
 
-  if (!form.perfil) {
+  if (!isEditing && !form.perfil) {
     nextErrors.perfil = 'O campo perfil é obrigatório.'
   }
 
@@ -139,9 +139,12 @@ function hasErrors(errors: UserFormErrors) {
   return Object.values(errors).some(Boolean)
 }
 
-function fieldClass(error: string) {
+function fieldClass(error: string, isReadonly = false) {
   return [
-    'w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400',
+    'w-full rounded-md border px-3 py-2 text-sm outline-none transition-colors placeholder:text-slate-400',
+    isReadonly
+      ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
+      : 'bg-white text-slate-900',
     error
       ? 'border-red-500 focus:border-red-600 focus:ring-2 focus:ring-red-100 dark:border-red-400 dark:focus:border-red-300 dark:focus:ring-red-950'
       : 'border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:focus:border-slate-900 dark:focus:ring-slate-200',
@@ -174,6 +177,11 @@ export function UsuariosPage() {
   const perfilOptions: SelectOption[] = [{ label: 'Selecione um perfil', value: '' }].concat(
     perfis.map((item) => ({ label: item.nome ?? `Perfil ${item.id}`, value: String(item.id) })),
   )
+
+  const singlePartnerOption = parceiros.length === 1 ? parceiros[0] : null
+  const singleProfileOption = perfis.length === 1 ? perfis[0] : null
+  const isSinglePartnerLocked = !editingItem && Boolean(singlePartnerOption && form.parceiro)
+  const isSingleProfileLocked = !editingItem && Boolean(singleProfileOption && form.perfil)
 
   async function loadReferenceData() {
     const [loadedPartners, loadedProfiles] = await Promise.all([parceirosApi.list(), perfisApi.listCombo()])
@@ -223,7 +231,11 @@ export function UsuariosPage() {
 
   function openCreateModal() {
     setEditingItem(null)
-    setForm(initialFormState)
+    setForm({
+      ...initialFormState,
+      parceiro: singlePartnerOption?.id ?? '',
+      perfil: singleProfileOption ? String(singleProfileOption.id) : '',
+    })
     setFormErrors(initialFormErrors)
     setIsModalOpen(true)
   }
@@ -244,6 +256,27 @@ export function UsuariosPage() {
     setIsModalOpen(true)
   }
 
+  useEffect(() => {
+    if (!isModalOpen || Boolean(editingItem)) {
+      return
+    }
+
+    setForm((current) => {
+      const nextPartnerValue = singlePartnerOption?.id ?? current.parceiro
+      const nextProfileValue = singleProfileOption ? String(singleProfileOption.id) : current.perfil
+
+      if (current.parceiro === nextPartnerValue && current.perfil === nextProfileValue) {
+        return current
+      }
+
+      return {
+        ...current,
+        parceiro: nextPartnerValue,
+        perfil: nextProfileValue,
+      }
+    })
+  }, [editingItem, isModalOpen, singlePartnerOption, singleProfileOption])
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFeedback(null)
@@ -258,26 +291,44 @@ export function UsuariosPage() {
     setIsSaving(true)
 
     try {
-      const selectedProfileId = Number.parseInt(form.perfil, 10)
-
       if (editingItem) {
+        const updatePayload = {
+          Nome: form.nome.trim(),
+          Email: form.email.trim(),
+          Login: form.login.trim(),
+          Ativo: form.ativo,
+          Bloqueado: form.bloqueado,
+        }
+
         await UsuariosApi.update(editingItem.id, {
-          nome: form.nome.trim(),
-          email: form.email.trim(),
-          login: form.login.trim(),
-          parceiro: form.parceiro,
-          perfil: selectedProfileId,
-          ativo: form.ativo,
-          bloqueado: form.bloqueado,
+          ...updatePayload,
         })
+
+        setItems((current) =>
+          current.map((item) =>
+            item.id === editingItem.id
+              ? {
+                  ...item,
+                  nome: updatePayload.Nome,
+                  email: updatePayload.Email,
+                  login: updatePayload.Login,
+                  ativo: updatePayload.Ativo,
+                  bloqueado: updatePayload.Bloqueado,
+                }
+              : item,
+          ),
+        )
+
         setFeedback({ tone: 'success', message: 'Usuario atualizado com sucesso.' })
       } else {
+        const selectedProfileId = Number.parseInt(form.perfil, 10)
+
         await UsuariosApi.create({
           nome: form.nome.trim(),
           email: form.email.trim(),
           login: form.login.trim(),
           senha: form.senha,
-          parceiro: form.parceiro,
+          parceiroId: form.parceiro,
           perfilId: selectedProfileId,
         })
         setFeedback({ tone: 'success', message: 'Usuario registrado com sucesso.' })
@@ -287,7 +338,10 @@ export function UsuariosPage() {
       setFormErrors(initialFormErrors)
       setEditingItem(null)
       setIsModalOpen(false)
-      await loadUsers(selectedPartnerFilter || undefined)
+
+      if (!editingItem) {
+        await loadUsers(selectedPartnerFilter || undefined)
+      }
     } catch (error) {
       setFeedback({ tone: 'danger', message: getErrorMessage(error, editingItem ? 'Falha ao atualizar usuario.' : 'Falha ao registrar usuario.') })
     } finally {
@@ -355,10 +409,10 @@ export function UsuariosPage() {
                         <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.parceiro ?? item.parceiroId ?? '-'}</td>
                         <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{String(item.perfil ?? item.perfilId ?? '-')}</td>
                         <td className="px-4 py-3">
-                          <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Sim' : 'Nao'}</Badge>
+                          <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Sim' : 'Não'}</Badge>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge tone={item.bloqueado ? 'danger' : 'success'}>{item.bloqueado ? 'Sim' : 'Nao'}</Badge>
+                          <Badge tone={item.bloqueado ? 'danger' : 'success'}>{item.bloqueado ? 'Sim' : 'Não'}</Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <Button
@@ -455,49 +509,55 @@ export function UsuariosPage() {
               </label>
             ) : null}
 
-            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <span>
-                Parceiro <span className="text-red-600 dark:text-red-400">*</span>
-              </span>
-              <select
-                className={fieldClass(formErrors.parceiro)}
-                onChange={(event) => {
-                  setForm((current) => ({ ...current, parceiro: event.target.value }))
-                  clearFieldError('parceiro')
-                }}
-                onFocus={() => clearFieldError('parceiro')}
-                value={form.parceiro}
-              >
-                {partnerFormOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {formErrors.parceiro ? <span className="text-xs text-red-600 dark:text-red-400">{formErrors.parceiro}</span> : null}
-            </label>
+            {!editingItem ? (
+              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <span>
+                  Parceiro <span className="text-red-600 dark:text-red-400">*</span>
+                </span>
+                <select
+                  className={fieldClass(formErrors.parceiro, isSinglePartnerLocked)}
+                  disabled={isSinglePartnerLocked}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, parceiro: event.target.value }))
+                    clearFieldError('parceiro')
+                  }}
+                  onFocus={() => clearFieldError('parceiro')}
+                  value={form.parceiro}
+                >
+                  {partnerFormOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.parceiro ? <span className="text-xs text-red-600 dark:text-red-400">{formErrors.parceiro}</span> : null}
+              </label>
+            ) : null}
 
-            <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <span>
-                Perfil <span className="text-red-600 dark:text-red-400">*</span>
-              </span>
-              <select
-                className={fieldClass(formErrors.perfil)}
-                onChange={(event) => {
-                  setForm((current) => ({ ...current, perfil: event.target.value }))
-                  clearFieldError('perfil')
-                }}
-                onFocus={() => clearFieldError('perfil')}
-                value={form.perfil}
-              >
-                {perfilOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {formErrors.perfil ? <span className="text-xs text-red-600 dark:text-red-400">{formErrors.perfil}</span> : null}
-            </label>
+            {!editingItem ? (
+              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                <span>
+                  Perfil <span className="text-red-600 dark:text-red-400">*</span>
+                </span>
+                <select
+                  className={fieldClass(formErrors.perfil, isSingleProfileLocked)}
+                  disabled={isSingleProfileLocked}
+                  onChange={(event) => {
+                    setForm((current) => ({ ...current, perfil: event.target.value }))
+                    clearFieldError('perfil')
+                  }}
+                  onFocus={() => clearFieldError('perfil')}
+                  value={form.perfil}
+                >
+                  {perfilOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.perfil ? <span className="text-xs text-red-600 dark:text-red-400">{formErrors.perfil}</span> : null}
+              </label>
+            ) : null}
 
             {editingItem ? (
               <div className="grid gap-4 md:col-span-2 md:grid-cols-2">

@@ -141,6 +141,6 @@ export const UsuariosApi = {
     await http.post('/api/v1/usuarios', payload)
   },
   async update(id: number, payload: AtualizarUsuarioRequest) {
-    await http.put(`/api/v1/usuarios/${id}`, payload)
+    await http.patch(`/api/v1/usuarios/${id}`, payload)
   },
 }

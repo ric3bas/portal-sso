@@ -32,14 +32,18 @@ namespace Portal.Features.Usuario.Service
             //check perfil
 
             var usuario = ObterUsuario();
-            var parceiroNull= string.IsNullOrEmpty(parceiroId);
+            Guid.TryParse(parceiroId, out var parceiroParsed);
+            Guid IdParceiroQuery = usuario.IsMaster && string.IsNullOrEmpty(parceiroId) 
+                ? Guid.Empty 
+                : !usuario.IsMaster && string.IsNullOrEmpty(parceiroId) ? usuario.ParceiroId : parceiroParsed;
+
 
             //var perfilMaster = await _usuarioRepository.VerificarUsuarioMasterAsyunc(usuario);
             //if(!perfilMaster && !parceiroNull)
             //    return ValidationResult<IEnumerable<UsuarioComPerfilResponse>>("Usuário não tem permissão");
 
             //var parceiro = parceiroNull ? ObterTenantId() : Guid.Parse(parceiroId ?? string.Empty);
-            var result = await _usuarioRepository.ListarPorParceiroAsync(cancellationToken);
+            var result = await _usuarioRepository.ListarPorParceiroAsync(IdParceiroQuery, cancellationToken);
 
             if (!result.Any())
                return NotFoundResult<IEnumerable<UsuarioComPerfilResponse>>("Nenhum usuário encontrado");
@@ -51,12 +55,12 @@ namespace Portal.Features.Usuario.Service
         {
             if (!request.IsValid())
                 throw new ValidationException(request.ObterErros());
+            Guid.TryParse(request.ParceiroId, out var parceiroParsed);
 
-            var parceiroId = ObterUsuario().ParceiroId;
-            var validacao  = await _usuarioRepository.ValidarRegistroAsync(request.Login, parceiroId, request.PerfilId, cancellationToken);
+            var validacao  = await _usuarioRepository.ValidarRegistroAsync(request.Login, parceiroParsed, request.PerfilId, cancellationToken);
 
             if (!validacao.ParceiroExiste)
-                return NotFoundResult<string>($"Parceiro '{parceiroId}' não encontrado");
+                return NotFoundResult<string>($"Parceiro '{parceiroParsed}' não encontrado");
 
             if (validacao.LoginExiste)
                 return ValidationResult<string>($"Login '{request.Login}' já existe");
@@ -67,7 +71,7 @@ namespace Portal.Features.Usuario.Service
                 Email      = request.Email,
                 Login      = request.Login,
                 Senha      = BCrypt.Net.BCrypt.HashPassword(request.Senha),
-                ParceiroId = parceiroId,
+                ParceiroId = parceiroParsed,
                 PerfilId   = request.PerfilId,
                 TentativasLogin = 0,
                 Bloqueado = false
@@ -114,5 +118,14 @@ namespace Portal.Features.Usuario.Service
             await _usuarioRepository.AtualizarAsync(usuario.ToMapper(), cancellationToken);
         }
 
+        public async Task<Result<string>> AtualizarAsync(int id, UsuarioUpdateRequest request, CancellationToken cancellationToken = default)
+        {
+            var usuario = await _usuarioRepository.ObterPorIdAsync(id, cancellationToken);
+            if (usuario == null)
+                return NotFoundResult<string>("Usuário não encontrado");
+
+            await _usuarioRepository.AtualizarAsync(id, request, cancellationToken);
+            return OkResult("Alterado com sucesso");
+        }
     }
 }

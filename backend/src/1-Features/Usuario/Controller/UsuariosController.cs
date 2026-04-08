@@ -32,10 +32,17 @@ namespace Portal.Features.Usuario.Controller
 
         [HttpPost]
         [SwaggerOperation(Summary = "Registra um novo usuário")]
-        [ProducesResponseType(200)]
+        [ProducesResponseType(201)]
         [ProducesBadRequestProblem]
         public async Task<IActionResult> RegisterAsync([FromBody] RegisterRequest request, CancellationToken cancellationToken)
             => HandleResult(await _usuarioService.RegisterAsync(request, cancellationToken));
+
+        [HttpPatch("{id:int}")]
+        [SwaggerOperation(Summary = "Atualiza dados do usuário")]
+        [ProducesResponseType(typeof(string), 200)]
+        [ProducesNotFoundProblem]
+        public async Task<IActionResult> AtualizarAsync([FromRoute] int id, [FromBody] UsuarioUpdateRequest request, CancellationToken cancellationToken)
+            => HandleResult(await _usuarioService.AtualizarAsync(id, request, cancellationToken));
 
     }
 }

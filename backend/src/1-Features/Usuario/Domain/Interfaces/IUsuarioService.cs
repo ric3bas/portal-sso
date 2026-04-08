@@ -10,5 +10,6 @@ namespace Portal.Features.Usuario.Domain.Interfaces
         Task<Result<IEnumerable<UsuarioComPerfilResponse>>> ListarPorParceiroAsync(string? parceiroId, CancellationToken cancellationToken = default);
         Task IncrementarTentativaLogin(int UsuarioId, CancellationToken cancellationToken);
         Task ResetarTentativasLogin(int UsuarioId, CancellationToken cancellationToken);
+        Task<Result<string>> AtualizarAsync(int id, UsuarioUpdateRequest request, CancellationToken cancellationToken = default);
     }
 }

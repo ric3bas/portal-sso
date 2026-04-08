@@ -1,3 +1,4 @@
+using Portal.Features.Usuario.Domain;
 using Portal.Features.Usuario.Domain.Interfaces;
 using Portal.Infra;
 
@@ -62,22 +63,28 @@ namespace Portal.Features.Usuario.Infra
             };
         }
 
-        public async Task<IEnumerable<UsuarioComPerfilQuery>> ListarPorParceiroAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<UsuarioComPerfilQuery>> ListarPorParceiroAsync(Guid? parceiroId, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = @"SELECT u.id,
-                                        u.nome,
-                                        u.login,
-                                        u.email,
-                                        p.nome AS Perfil,
-                                        pp.nome AS Parceiro,
-                                        u.ativo AS Ativo,
-                                        u.bloqueado AS Bloqueado
-                                 FROM sso.usuario u
-                                 INNER JOIN sso.perfil p ON p.id = u.perfil_id
-                                 INNER JOIN sso.parceiro pp ON pp.id = u.parceiro_id
-                                 ORDER BY u.nome";
-            return await QueryAsync<UsuarioComPerfilQuery>(sql);
+                                u.nome,
+                                u.login,
+                                u.email,
+                                p.nome AS Perfil,
+                                pp.nome AS Parceiro,
+                                u.ativo AS Ativo,
+                                u.bloqueado AS Bloqueado
+                         FROM sso.usuario u
+                         INNER JOIN sso.perfil p ON p.id = u.perfil_id
+                         INNER JOIN sso.parceiro pp ON pp.id = u.parceiro_id
+                         {WHERE}
+                         ORDER BY u.nome";
+
+            var temFiltro = parceiroId.HasValue && parceiroId != Guid.Empty;
+
+            var query = sql.Replace("{WHERE}", temFiltro ? "WHERE u.parceiro_id = @parceiroId" : string.Empty);
+
+            return await QueryAsync<UsuarioComPerfilQuery>(query, new { parceiroId });
         }
 
 
@@ -149,6 +156,14 @@ namespace Portal.Features.Usuario.Infra
             await ExecuteAsync(sql, usuario);
         }
 
+        public async Task AtualizarAsync(int id, UsuarioUpdateRequest request, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            const string sql = @"UPDATE sso.usuario
+                                SET nome = @Nome, login = @Login, email = @Email, ativo = @Ativo, bloqueado = @Bloqueado
+                                WHERE id = @Id";
+            await ExecuteAsync(sql, new { Id = id, request.Nome, request.Login, request.Email, request.Ativo, request.Bloqueado });
+        }
     }
 }
 

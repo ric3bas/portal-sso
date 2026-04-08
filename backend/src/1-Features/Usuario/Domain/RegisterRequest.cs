@@ -9,6 +9,7 @@ namespace Portal.Features.Usuario.Domain
         public string Login { get; set; } = string.Empty;
         public string Senha { get; set; } = string.Empty;
         public int PerfilId { get; set; }
+        public string? ParceiroId { get; set; }
 
         public override bool IsValid()
         {
