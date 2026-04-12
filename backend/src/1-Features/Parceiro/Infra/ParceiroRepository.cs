@@ -19,6 +19,14 @@ namespace Portal.Features.Parceiro.Infra {
             return await QueryAsync<ParceiroQuery>(sql, param);
         }
 
+        public async Task<IEnumerable<ParceiroQuery>> ObterTodosPorFiltroAsync(string nome, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            const string sql = "SELECT id, nome, descricao, ativo FROM sso.parceiro WHERE LOWER(nome) LIKE LOWER(@Nome)";
+            var result = await QueryAsync<ParceiroQuery>(sql, new { Nome = $"%{nome}%" });
+            return result;
+        }
+
         public async Task<ParceiroQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken = default) {
             cancellationToken.ThrowIfCancellationRequested();
             const string sql = "SELECT id, nome, descricao, ativo FROM sso.parceiro WHERE id = @Id";

@@ -1,11 +1,12 @@
 import { Pencil } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Badge, Button, Feedback, Modal, PageIntro, Panel, CheckboxField, TextareaField } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { parceirosApi } from '../services/sso'
 import type { ParceiroResponse } from '../types/api'
 
 export function ParceirosPage() {
+  const didLoadInitiallyRef = useRef(false)
   const [items, setItems] = useState<ParceiroResponse[]>([])
   const [filterNome, setFilterNome] = useState('')
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
@@ -21,7 +22,7 @@ export function ParceirosPage() {
     setIsLoading(true)
 
     try {
-      const response = await parceirosApi.list(nome)
+      const response = await parceirosApi.listFilter(nome)
       setItems(response)
       setTableMessage(response.length === 0 ? 'Nenhum parceiro encontrado' : null)
     } catch (error) {
@@ -33,6 +34,11 @@ export function ParceirosPage() {
   }
 
   useEffect(() => {
+    if (didLoadInitiallyRef.current) {
+      return
+    }
+
+    didLoadInitiallyRef.current = true
     void loadData()
   }, [])
 

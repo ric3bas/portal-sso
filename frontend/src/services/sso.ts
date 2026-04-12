@@ -74,10 +74,14 @@ export const escoposApi = {
 }
 
 export const parceirosApi = {
-  async list(nome?: string) {
-    const response = await http.get<ParceiroResponse[]>('/api/v1/parceiros', {
+  async listFilter(nome?: string) {
+    const response = await http.get<ParceiroResponse[]>('/api/v1/parceiros/filtro', {
       params: nome ? { nome } : undefined,
     })
+    return response.data
+  },
+  async list() {
+    const response = await http.get<ParceiroResponse[]>('/api/v1/parceiros')
     return response.data
   },
   async getById(id: string) {

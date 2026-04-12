@@ -18,8 +18,8 @@ namespace Portal.Features.Parceiro.Service {
             _repository  = repository;
             _logger      = logger;
         }
-        public async Task<Result<IEnumerable<ParceiroResponse>>> ObterTodosParceirosAsync(string? nome, CancellationToken cancellationToken){
-            _logger.LogInformation($"Listando parceiros com filtro de nome: {nome}");
+        public async Task<Result<IEnumerable<ParceiroResponse>>> ObterTodosParceirosAsync(CancellationToken cancellationToken){
+            _logger.LogInformation($"Listando parceiros com filtro de nome");
 
             var usuario = ObterUsuario();
             var parceiroId = usuario.IsMaster ? Guid.Empty : ObterUsuario().ParceiroId;
@@ -29,6 +29,17 @@ namespace Portal.Features.Parceiro.Service {
                 return NotFoundResult<IEnumerable<ParceiroResponse>>("Nenhum parceiro encontrado");
                 
             return OkResult(result.Select(c=>c.ToResponse()));
+        }
+
+        public async Task<Result<IEnumerable<ParceiroResponse>>> ObterTodosPorFiltroAsync(string? nome, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation($"Listando parceiros com filtro de nome: {nome}");
+
+            var result = await _repository.ObterTodosPorFiltroAsync(nome ?? string.Empty, cancellationToken);
+            if (result == null || !result.Any())
+                return NotFoundResult<IEnumerable<ParceiroResponse>>("Nenhum parceiro encontrado");
+
+            return OkResult(result.Select(c => c.ToResponse()));
         }
 
         public async Task<Result<ParceiroResponse>> ObterParceiroAsync(string? id, CancellationToken cancellationToken)

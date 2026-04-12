@@ -19,12 +19,20 @@ namespace Portal.Features.Parceiro.Controller {
         }
 
         [ScopesAuthorize("parceiro.ler")]
-        [SwaggerOperation(Summary = "Lista todos os parceiros ou filtra por nome")]
+        [SwaggerOperation(Summary = "Lista todos os parceiros")]
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ParceiroResponse>), StatusCodes.Status200OK)]
         [ProducesNotFoundProblem]
-        public async Task<IActionResult> ObterTodosAsync([FromQuery] string? nome, CancellationToken cancellationToken)
-            => HandleResult(await _service.ObterTodosParceirosAsync(nome, cancellationToken));
+        public async Task<IActionResult> ObterTodosAsync(CancellationToken cancellationToken)
+            => HandleResult(await _service.ObterTodosParceirosAsync(cancellationToken));
+
+        [ScopesAuthorize("parceiro.ler")]
+        [SwaggerOperation(Summary = "Lista todos os parceiros por filtro")]
+        [HttpGet("filtro")]
+        [ProducesResponseType(typeof(IEnumerable<ParceiroResponse>), StatusCodes.Status200OK)]
+        [ProducesNotFoundProblem]
+        public async Task<IActionResult> ObterTodosPorFiltroAsync([FromQuery] string? nome, CancellationToken cancellationToken)
+          => HandleResult(await _service.ObterTodosPorFiltroAsync(nome, cancellationToken));
 
         [ScopesAuthorize("parceiro.ler")]
         [HttpGet("id")]
