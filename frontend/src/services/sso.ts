@@ -1,12 +1,30 @@
 import { http } from '../lib/api'
 import type {
+  AtualizarCategoriaRequest,
+  AtualizarClienteRequest,
+  AtualizarEquipamentoRequest,
+  AtualizarLocacaoRequest,
   AtualizarUsuarioRequest,
   AtualizarEscopoRequest,
   AtualizarParceiroRequest,
+  CategoriaRequest,
+  CategoriaResponse,
+  ClienteRequest,
+  ClienteResponse,
+  ClientesFilterParams,
+  DevolverLocacaoRequest,
   EscopoRequest,
   EscopoResponse,
+  EquipamentoRequest,
+  EquipamentoResponse,
+  EquipamentosFilterParams,
+  FinanceiroPeriodoParams,
+  FinanceiroResponse,
   LoginRequest,
   LoginResponse,
+  LocacaoRequest,
+  LocacaoResponse,
+  LocacoesFilterParams,
   LogoutRequest,
   ParceiroRequest,
   ParceiroResponse,
@@ -21,6 +39,12 @@ import type {
   UsuarioComPerfilResponse,
   VincularEscopoRequest,
 } from '../types/api'
+
+function buildQueryParams(params: object) {
+  const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined
+}
 
 export const authApi = {
   async login(payload: LoginRequest) {
@@ -73,6 +97,39 @@ export const escoposApi = {
   },
 }
 
+export const categoriasApi = {
+  async list() {
+    const response = await http.get<CategoriaResponse[]>('/api/v1/categorias')
+    return response.data
+  },
+  async listFilter(nome?: string) {
+    const response = await http.get<CategoriaResponse[]>('/api/v1/categorias/filtro', {
+      params: buildQueryParams({ nome }),
+    })
+    return response.data
+  },
+  async getById(id: string) {
+    const response = await http.get<CategoriaResponse>('/api/v1/categorias/id', {
+      params: { id },
+    })
+    return response.data
+  },
+  async create(payload: CategoriaRequest) {
+    const response = await http.post<string>('/api/v1/categorias', payload)
+    return response.data
+  },
+  async update(id: string, payload: AtualizarCategoriaRequest) {
+    const response = await http.patch<string>('/api/v1/categorias/id', payload, {
+      params: { id },
+    })
+    return response.data
+  },
+  async inactivate(id: string) {
+    const response = await http.patch<string>(`/api/v1/categorias/${id}/inativar`)
+    return response.data
+  },
+}
+
 export const parceirosApi = {
   async listFilter(nome?: string) {
     const response = await http.get<ParceiroResponse[]>('/api/v1/parceiros/filtro', {
@@ -98,6 +155,134 @@ export const parceirosApi = {
     const response = await http.patch<string>('/api/v1/parceiros/id', payload, {
       params: { id },
     })
+    return response.data
+  },
+}
+
+export const clientesApi = {
+  async list() {
+    const response = await http.get<ClienteResponse[]>('/api/v1/clientes')
+    return response.data
+  },
+  async listFilter(filters: ClientesFilterParams) {
+    const response = await http.get<ClienteResponse[]>('/api/v1/clientes/filtro', {
+      params: buildQueryParams(filters),
+    })
+    return response.data
+  },
+  async getById(id: string) {
+    const response = await http.get<ClienteResponse>('/api/v1/clientes/id', {
+      params: { id },
+    })
+    return response.data
+  },
+  async create(payload: ClienteRequest) {
+    const response = await http.post<string>('/api/v1/clientes', payload)
+    return response.data
+  },
+  async update(id: string, payload: AtualizarClienteRequest) {
+    const response = await http.patch<string>('/api/v1/clientes/id', payload, {
+      params: { id },
+    })
+    return response.data
+  },
+  async block(id: string) {
+    const response = await http.patch<string>(`/api/v1/clientes/${id}/bloquear`)
+    return response.data
+  },
+  async unblock(id: string) {
+    const response = await http.patch<string>(`/api/v1/clientes/${id}/desbloquear`)
+    return response.data
+  },
+  async inactivate(id: string) {
+    const response = await http.patch<string>(`/api/v1/clientes/${id}/inativar`)
+    return response.data
+  },
+}
+
+export const equipamentosApi = {
+  async list() {
+    const response = await http.get<EquipamentoResponse[]>('/api/v1/equipamentos')
+    return response.data
+  },
+  async listFilter(filters: EquipamentosFilterParams) {
+    const response = await http.get<EquipamentoResponse[]>('/api/v1/equipamentos/filtro', {
+      params: buildQueryParams(filters),
+    })
+    return response.data
+  },
+  async getById(id: string) {
+    const response = await http.get<EquipamentoResponse>('/api/v1/equipamentos/id', {
+      params: { id },
+    })
+    return response.data
+  },
+  async create(payload: EquipamentoRequest) {
+    const response = await http.post<string>('/api/v1/equipamentos', payload)
+    return response.data
+  },
+  async update(id: string, payload: AtualizarEquipamentoRequest) {
+    const response = await http.patch<string>('/api/v1/equipamentos/id', payload, {
+      params: { id },
+    })
+    return response.data
+  },
+  async inactivate(id: string) {
+    const response = await http.patch<string>(`/api/v1/equipamentos/${id}/inativar`)
+    return response.data
+  },
+}
+
+export const financeiroApi = {
+  async list() {
+    const response = await http.get<FinanceiroResponse[]>('/api/v1/financeiro')
+    return response.data
+  },
+  async listByPeriod(filters: FinanceiroPeriodoParams) {
+    const response = await http.get<FinanceiroResponse[]>('/api/v1/financeiro/periodo', {
+      params: buildQueryParams(filters),
+    })
+    return response.data
+  },
+}
+
+export const locacoesApi = {
+  async list() {
+    const response = await http.get<LocacaoResponse[]>('/api/v1/locacoes')
+    return response.data
+  },
+  async listFilter(filters: LocacoesFilterParams) {
+    const response = await http.get<LocacaoResponse[]>('/api/v1/locacoes/filtro', {
+      params: buildQueryParams(filters),
+    })
+    return response.data
+  },
+  async listLate() {
+    const response = await http.get<LocacaoResponse[]>('/api/v1/locacoes/atrasadas')
+    return response.data
+  },
+  async getById(id: string) {
+    const response = await http.get<LocacaoResponse>('/api/v1/locacoes/id', {
+      params: { id },
+    })
+    return response.data
+  },
+  async create(payload: LocacaoRequest) {
+    const response = await http.post<string>('/api/v1/locacoes', payload)
+    return response.data
+  },
+  async update(id: string, payload: AtualizarLocacaoRequest) {
+    const response = await http.patch<string>('/api/v1/locacoes/id', payload, {
+      params: { id },
+    })
+    return response.data
+  },
+  async returnRental(id: string, payload: DevolverLocacaoRequest) {
+    const response = await http.patch<string>(`/api/v1/locacoes/${id}/devolver`, payload)
+    return response.data
+  },
+  async cancel(id: string) {
+    const response = await http.patch<string>(`/api/v1/locacoes/${id}/cancelar`)
     return response.data
   },
 }

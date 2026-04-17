@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { clearSession, getSession, saveSession, subscribeSessionChange } from '../lib/storage'
-import { getIsMasterFromAccessToken } from '../lib/jwt'
+import { tryGetIsMasterFromAccessToken } from '../lib/jwt'
 import { authApi } from '../services/sso'
 import type { LoginRequest, LoginResponse, SessionData } from '../types/api'
 
@@ -18,13 +18,14 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 function mapLoginResponse(response: LoginResponse, login?: string): SessionData {
   const accessToken = response.access_token ?? ''
+  const resolvedIsMaster = tryGetIsMasterFromAccessToken(accessToken)
 
   return {
     accessToken,
     refreshToken: response.refresh_token ?? '',
     expiresInMinutes: response.expire_in_minutes,
     login,
-    isMaster: getIsMasterFromAccessToken(accessToken),
+    isMaster: resolvedIsMaster ?? false,
   }
 }
 

@@ -1,7 +1,9 @@
 import {
   BadgeCheck,
   Building2,
+  ClipboardList,
   ChevronDown,
+  Package,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -9,8 +11,10 @@ import {
   Moon,
   ShieldCheck,
   Sun,
+  Tags,
   UserCircle2,
   Users2,
+  Wallet,
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -27,6 +31,11 @@ const navigationItems = [
   { to: '/app/escopos', label: 'Escopos', icon: ShieldCheck, requiresMaster: true },
   { to: '/app/perfis', label: 'Perfis', icon: BadgeCheck, requiresMaster: true },
   { to: '/app/usuarios', label: 'Usuarios', icon: Users2 },
+  { to: '/app/categorias', label: 'Categorias', icon: Tags },
+  { to: '/app/clientes', label: 'Clientes', icon: UserCircle2 },
+  { to: '/app/equipamentos', label: 'Equipamentos', icon: Package },
+  { to: '/app/financeiro', label: 'Financeiro', icon: Wallet },
+  { to: '/app/locacoes', label: 'Locacoes', icon: ClipboardList },
 ]
 
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {

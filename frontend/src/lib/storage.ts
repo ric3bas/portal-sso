@@ -1,4 +1,5 @@
 import type { SessionData } from '../types/api'
+import { getIsMasterFromAccessToken } from './jwt'
 
 const SESSION_KEY = 'portal-sso.session'
 const SESSION_CHANGED_EVENT = 'portal-sso.session-changed'
@@ -15,7 +16,23 @@ export function getSession(): SessionData | null {
   }
 
   try {
-    return JSON.parse(rawValue) as SessionData
+    const parsedSession = JSON.parse(rawValue) as Partial<SessionData>
+
+    if (!parsedSession.accessToken || !parsedSession.refreshToken) {
+      window.localStorage.removeItem(SESSION_KEY)
+      return null
+    }
+
+    return {
+      accessToken: parsedSession.accessToken,
+      refreshToken: parsedSession.refreshToken,
+      expiresInMinutes: parsedSession.expiresInMinutes ?? null,
+      login: parsedSession.login,
+      isMaster:
+        typeof parsedSession.isMaster === 'boolean'
+          ? parsedSession.isMaster
+          : getIsMasterFromAccessToken(parsedSession.accessToken),
+    }
   } catch {
     window.localStorage.removeItem(SESSION_KEY)
     return null

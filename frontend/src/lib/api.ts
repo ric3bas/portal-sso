@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import type { LoginResponse, SessionData } from '../types/api'
-import { getIsMasterFromAccessToken } from './jwt'
+import { tryGetIsMasterFromAccessToken } from './jwt'
 import { clearSession, getSession, saveSession } from './storage'
 
 const baseURL = import.meta.env.VITE_API_URL ?? 'https://localhost:44349'
@@ -11,13 +11,14 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
 
 function mapRefreshResponse(response: LoginResponse, currentSession: SessionData): SessionData {
   const accessToken = response.access_token ?? ''
+  const refreshedIsMaster = tryGetIsMasterFromAccessToken(accessToken)
 
   return {
     accessToken,
     refreshToken: response.refresh_token ?? currentSession.refreshToken,
     expiresInMinutes: response.expire_in_minutes ?? currentSession.expiresInMinutes ?? null,
     login: currentSession.login,
-    isMaster: getIsMasterFromAccessToken(accessToken),
+    isMaster: refreshedIsMaster ?? currentSession.isMaster,
   }
 }
 

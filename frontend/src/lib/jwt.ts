@@ -33,23 +33,49 @@ function parseBooleanClaim(value: unknown) {
   return false
 }
 
-export function getIsMasterFromAccessToken(accessToken?: string | null) {
+function getMasterClaimValue(payload: Record<string, unknown>) {
+  const directKeys = ['isMaster', 'IsMaster', 'ismaster']
+
+  for (const key of directKeys) {
+    if (key in payload) {
+      return payload[key]
+    }
+  }
+
+  const matchingEntry = Object.entries(payload).find(([key]) => {
+    const normalizedKey = key.trim().toLowerCase()
+    return normalizedKey.endsWith('/ismaster') || normalizedKey.endsWith(':ismaster') || normalizedKey === 'ismaster'
+  })
+
+  return matchingEntry?.[1]
+}
+
+export function tryGetIsMasterFromAccessToken(accessToken?: string | null) {
   if (!accessToken) {
-    return false
+    return undefined
   }
 
   const [, payload] = accessToken.split('.')
 
   if (!payload) {
-    return false
+    return undefined
   }
 
   try {
     const decodedPayload = decodeBase64Url(payload)
-    const parsedPayload = JSON.parse(decodedPayload) as { isMaster?: unknown }
+    const parsedPayload = JSON.parse(decodedPayload) as Record<string, unknown>
+    const claimValue = getMasterClaimValue(parsedPayload)
 
-    return parseBooleanClaim(parsedPayload.isMaster)
+    if (claimValue === undefined) {
+      return undefined
+    }
+
+    return parseBooleanClaim(claimValue)
   } catch {
-    return false
+    return undefined
   }
+}
+
+export function getIsMasterFromAccessToken(accessToken?: string | null) {
+  return tryGetIsMasterFromAccessToken(accessToken) ?? false
 }

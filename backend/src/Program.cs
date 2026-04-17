@@ -271,6 +271,22 @@ builder.Services.AddSingleton<DapperDatabaseProvider>();
 builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroRepository, Portal.Features.Parceiro.Infra.ParceiroRepository>();
 builder.Services.AddScoped<Portal.Features.Parceiro.Domain.Interfaces.IParceiroService, Portal.Features.Parceiro.Service.ParceiroService>();
 
+// Adicionando os novos serviços do sistema de locação
+builder.Services.AddScoped<Portal.Features.Categoria.Domain.Interfaces.ICategoriaRepository, Portal.Features.Categoria.Infra.CategoriaRepository>();
+builder.Services.AddScoped<Portal.Features.Categoria.Domain.Interfaces.ICategoriaService, Portal.Features.Categoria.Service.CategoriaService>();
+
+builder.Services.AddScoped<Portal.Features.Equipamento.Domain.Interfaces.IEquipamentoRepository, Portal.Features.Equipamento.Infra.EquipamentoRepository>();
+builder.Services.AddScoped<Portal.Features.Equipamento.Domain.Interfaces.IEquipamentoService, Portal.Features.Equipamento.Service.EquipamentoService>();
+
+builder.Services.AddScoped<Portal.Features.Cliente.Domain.Interfaces.IClienteRepository, Portal.Features.Cliente.Infra.ClienteRepository>();
+builder.Services.AddScoped<Portal.Features.Cliente.Domain.Interfaces.IClienteService, Portal.Features.Cliente.Service.ClienteService>();
+
+builder.Services.AddScoped<Portal.Features.Locacao.Domain.Interfaces.ILocacaoRepository, Portal.Features.Locacao.Infra.LocacaoRepository>();
+builder.Services.AddScoped<Portal.Features.Locacao.Domain.Interfaces.ILocacaoService, Portal.Features.Locacao.Service.LocacaoService>();
+
+builder.Services.AddScoped<Portal.Features.Financeiro.Domain.Interfaces.IFinanceiroRepository, Portal.Features.Financeiro.Infra.FinanceiroRepository>();
+builder.Services.AddScoped<Portal.Features.Financeiro.Domain.Interfaces.IFinanceiroService, Portal.Features.Financeiro.Service.FinanceiroService>();
+
 
 var app = builder.Build();
 
