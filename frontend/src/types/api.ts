@@ -10,8 +10,12 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   access_token?: string | null
+  accessToken?: string | null
   refresh_token?: string | null
+  refreshToken?: string | null
   expire_in_minutes?: string | null
+  expireInMinutes?: string | null
+  token?: string | null
 }
 
 export interface RefreshTokenRequest {
@@ -333,7 +337,7 @@ export interface LocacoesFilterParams {
 
 export interface SessionData {
   accessToken: string
-  refreshToken: string
+  refreshToken?: string
   expiresInMinutes?: string | null
   login?: string
   isMaster: boolean

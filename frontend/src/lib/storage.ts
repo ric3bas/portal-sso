@@ -18,7 +18,7 @@ export function getSession(): SessionData | null {
   try {
     const parsedSession = JSON.parse(rawValue) as Partial<SessionData>
 
-    if (!parsedSession.accessToken || !parsedSession.refreshToken) {
+    if (!parsedSession.accessToken) {
       window.localStorage.removeItem(SESSION_KEY)
       return null
     }

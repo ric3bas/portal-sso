@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { RouteErrorBoundary } from '../components/RouteErrorBoundary'
 import { Button, Feedback } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -221,7 +222,9 @@ export function AppShell() {
         </aside>
 
         <main className="min-h-0 min-w-0 overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
-          <Outlet />
+          <RouteErrorBoundary>
+            <Outlet />
+          </RouteErrorBoundary>
         </main>
       </div>
 

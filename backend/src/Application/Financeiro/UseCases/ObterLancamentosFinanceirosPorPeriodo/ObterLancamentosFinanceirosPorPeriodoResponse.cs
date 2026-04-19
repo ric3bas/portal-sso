@@ -1,0 +1,7 @@
+using Portal.Application.Financeiro.UseCases.ObterLancamentosFinanceiros;
+
+namespace Portal.Application.Financeiro.UseCases.ObterLancamentosFinanceirosPorPeriodo;
+
+public class ObterLancamentosFinanceirosPorPeriodoResponse : ObterLancamentosFinanceirosResponse
+{
+}

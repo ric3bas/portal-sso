@@ -1,22 +1,23 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import { getAccessTokenFromResponse, getExpiresInMinutesFromResponse, getRefreshTokenFromResponse } from './auth'
 import type { LoginResponse, SessionData } from '../types/api'
 import { tryGetIsMasterFromAccessToken } from './jwt'
 import { clearSession, getSession, saveSession } from './storage'
 
-const baseURL = import.meta.env.VITE_API_URL ?? 'https://localhost:44349'
+const baseURL = import.meta.env.VITE_API_URL ?? 'https://localhost:54443'
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
 }
 
 function mapRefreshResponse(response: LoginResponse, currentSession: SessionData): SessionData {
-  const accessToken = response.access_token ?? ''
+  const accessToken = getAccessTokenFromResponse(response)
   const refreshedIsMaster = tryGetIsMasterFromAccessToken(accessToken)
 
   return {
     accessToken,
-    refreshToken: response.refresh_token ?? currentSession.refreshToken,
-    expiresInMinutes: response.expire_in_minutes ?? currentSession.expiresInMinutes ?? null,
+    refreshToken: getRefreshTokenFromResponse(response) ?? currentSession.refreshToken,
+    expiresInMinutes: getExpiresInMinutesFromResponse(response) ?? currentSession.expiresInMinutes ?? null,
     login: currentSession.login,
     isMaster: refreshedIsMaster ?? currentSession.isMaster,
   }

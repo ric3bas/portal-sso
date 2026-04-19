@@ -46,6 +46,27 @@ function buildQueryParams(params: object) {
   return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }
 
+function extractArrayPayload<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) {
+    return payload as T[]
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    return []
+  }
+
+  const record = payload as Record<string, unknown>
+  const candidates = [record.data, record.items, record.value, record.values, record.result, record.results, record.content]
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate as T[]
+    }
+  }
+
+  return []
+}
+
 export const authApi = {
   async login(payload: LoginRequest) {
     const response = await http.post<LoginResponse>('/api/v1/auth/login', payload)
@@ -81,7 +102,7 @@ export const authApi = {
 export const escoposApi = {
   async list() {
     const response = await http.get<EscopoResponse[]>('/api/v1/escopos')
-    return response.data
+    return extractArrayPayload<EscopoResponse>(response.data)
   },
   async getById(id: number) {
     const response = await http.get<EscopoResponse>(`/api/v1/escopos/${id}`)
@@ -100,13 +121,13 @@ export const escoposApi = {
 export const categoriasApi = {
   async list() {
     const response = await http.get<CategoriaResponse[]>('/api/v1/categorias')
-    return response.data
+    return extractArrayPayload<CategoriaResponse>(response.data)
   },
   async listFilter(nome?: string) {
     const response = await http.get<CategoriaResponse[]>('/api/v1/categorias/filtro', {
       params: buildQueryParams({ nome }),
     })
-    return response.data
+    return extractArrayPayload<CategoriaResponse>(response.data)
   },
   async getById(id: string) {
     const response = await http.get<CategoriaResponse>('/api/v1/categorias/id', {
@@ -135,16 +156,14 @@ export const parceirosApi = {
     const response = await http.get<ParceiroResponse[]>('/api/v1/parceiros/filtro', {
       params: nome ? { nome } : undefined,
     })
-    return response.data
+    return extractArrayPayload<ParceiroResponse>(response.data)
   },
   async list() {
     const response = await http.get<ParceiroResponse[]>('/api/v1/parceiros')
-    return response.data
+    return extractArrayPayload<ParceiroResponse>(response.data)
   },
   async getById(id: string) {
-    const response = await http.get<ParceiroResponse>('/api/v1/parceiros/id', {
-      params: { id },
-    })
+    const response = await http.get<ParceiroResponse>(`/api/v1/parceiros/${id}`)
     return response.data
   },
   async create(payload: ParceiroRequest) {
@@ -152,9 +171,7 @@ export const parceirosApi = {
     return response.data
   },
   async update(id: string, payload: AtualizarParceiroRequest) {
-    const response = await http.patch<string>('/api/v1/parceiros/id', payload, {
-      params: { id },
-    })
+    const response = await http.patch<string>(`/api/v1/parceiros/${id}`, payload)
     return response.data
   },
 }
@@ -162,13 +179,13 @@ export const parceirosApi = {
 export const clientesApi = {
   async list() {
     const response = await http.get<ClienteResponse[]>('/api/v1/clientes')
-    return response.data
+    return extractArrayPayload<ClienteResponse>(response.data)
   },
   async listFilter(filters: ClientesFilterParams) {
     const response = await http.get<ClienteResponse[]>('/api/v1/clientes/filtro', {
       params: buildQueryParams(filters),
     })
-    return response.data
+    return extractArrayPayload<ClienteResponse>(response.data)
   },
   async getById(id: string) {
     const response = await http.get<ClienteResponse>('/api/v1/clientes/id', {
@@ -203,13 +220,13 @@ export const clientesApi = {
 export const equipamentosApi = {
   async list() {
     const response = await http.get<EquipamentoResponse[]>('/api/v1/equipamentos')
-    return response.data
+    return extractArrayPayload<EquipamentoResponse>(response.data)
   },
   async listFilter(filters: EquipamentosFilterParams) {
     const response = await http.get<EquipamentoResponse[]>('/api/v1/equipamentos/filtro', {
       params: buildQueryParams(filters),
     })
-    return response.data
+    return extractArrayPayload<EquipamentoResponse>(response.data)
   },
   async getById(id: string) {
     const response = await http.get<EquipamentoResponse>('/api/v1/equipamentos/id', {
@@ -236,30 +253,30 @@ export const equipamentosApi = {
 export const financeiroApi = {
   async list() {
     const response = await http.get<FinanceiroResponse[]>('/api/v1/financeiro')
-    return response.data
+    return extractArrayPayload<FinanceiroResponse>(response.data)
   },
   async listByPeriod(filters: FinanceiroPeriodoParams) {
     const response = await http.get<FinanceiroResponse[]>('/api/v1/financeiro/periodo', {
       params: buildQueryParams(filters),
     })
-    return response.data
+    return extractArrayPayload<FinanceiroResponse>(response.data)
   },
 }
 
 export const locacoesApi = {
   async list() {
     const response = await http.get<LocacaoResponse[]>('/api/v1/locacoes')
-    return response.data
+    return extractArrayPayload<LocacaoResponse>(response.data)
   },
   async listFilter(filters: LocacoesFilterParams) {
     const response = await http.get<LocacaoResponse[]>('/api/v1/locacoes/filtro', {
       params: buildQueryParams(filters),
     })
-    return response.data
+    return extractArrayPayload<LocacaoResponse>(response.data)
   },
   async listLate() {
     const response = await http.get<LocacaoResponse[]>('/api/v1/locacoes/atrasadas')
-    return response.data
+    return extractArrayPayload<LocacaoResponse>(response.data)
   },
   async getById(id: string) {
     const response = await http.get<LocacaoResponse>('/api/v1/locacoes/id', {
@@ -290,11 +307,11 @@ export const locacoesApi = {
 export const perfisApi = {
   async list() {
     const response = await http.get<PerfilComEscopoResponse[]>('/api/v1/perfis')
-    return response.data
+    return extractArrayPayload<PerfilComEscopoResponse>(response.data)
   },
   async listCombo() {
     const response = await http.get<PerfilResponse[]>('/api/v1/perfis/combo')
-    return response.data
+    return extractArrayPayload<PerfilResponse>(response.data)
   },
   async getById(id: number) {
     const response = await http.get<PerfilComEscopoResponse>(`/api/v1/perfis/${id}`)
@@ -324,7 +341,7 @@ export const UsuariosApi = {
     const response = await http.get<UsuarioComPerfilResponse[]>('/api/v1/usuarios', {
       params: parceiroId ? { parceiroId } : undefined,
     })
-    return response.data
+    return extractArrayPayload<UsuarioComPerfilResponse>(response.data)
   },
   async create(payload: RegisterRequest) {
     await http.post('/api/v1/usuarios', payload)

@@ -1,0 +1,17 @@
+using Portal.Domain.Cliente;
+
+namespace Portal.Domain.Cliente.Interfaces;
+
+public interface IClienteRepository
+{
+    Task<IEnumerable<ClienteQuery>> ObterTodosAsync(CancellationToken cancellationToken);
+    Task<IEnumerable<ClienteQuery>> ObterPorFiltroAsync(string? nome, string? cpf, CancellationToken cancellationToken);
+    Task<ClienteQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<Guid> CriarAsync(ClienteCommand cliente, CancellationToken cancellationToken);
+    Task<int> AtualizarAsync(ClienteCommand cliente, CancellationToken cancellationToken);
+    Task<int> DefinirBloqueadoAsync(Guid id, bool bloqueado, CancellationToken cancellationToken);
+    Task<int> InativarAsync(Guid id, CancellationToken cancellationToken);
+    Task<bool> ExisteAsync(Guid id, CancellationToken cancellationToken);
+    Task<bool> ExisteCpfAsync(string cpf, Guid? idIgnorar = null, CancellationToken cancellationToken = default);
+    Task<bool> ExisteEmailAsync(string email, Guid? idIgnorar = null, CancellationToken cancellationToken = default);
+}

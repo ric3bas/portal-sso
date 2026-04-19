@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import { getAccessTokenFromResponse, getExpiresInMinutesFromResponse, getRefreshTokenFromResponse } from '../lib/auth'
 import { clearSession, getSession, saveSession, subscribeSessionChange } from '../lib/storage'
 import { tryGetIsMasterFromAccessToken } from '../lib/jwt'
 import { authApi } from '../services/sso'
@@ -17,13 +18,13 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 function mapLoginResponse(response: LoginResponse, login?: string): SessionData {
-  const accessToken = response.access_token ?? ''
+  const accessToken = getAccessTokenFromResponse(response)
   const resolvedIsMaster = tryGetIsMasterFromAccessToken(accessToken)
 
   return {
     accessToken,
-    refreshToken: response.refresh_token ?? '',
-    expiresInMinutes: response.expire_in_minutes,
+    refreshToken: getRefreshTokenFromResponse(response),
+    expiresInMinutes: getExpiresInMinutesFromResponse(response),
     login,
     isMaster: resolvedIsMaster ?? false,
   }
@@ -66,6 +67,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   async function refreshSession(refreshToken?: string) {
     const token = refreshToken ?? session?.refreshToken ?? ''
+
+    if (!token) {
+      throw new Error('Refresh token nao encontrado.')
+    }
 
     const response = await authApi.refreshToken({ refreshToken: token })
 
