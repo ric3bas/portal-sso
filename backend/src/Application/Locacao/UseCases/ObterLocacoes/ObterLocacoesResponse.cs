@@ -1,4 +1,4 @@
-using Portal.Domain.Locacao;
+﻿using Portal.Domain.Locacao;
 
 namespace Portal.Application.Locacao.UseCases.ObterLocacoes;
 

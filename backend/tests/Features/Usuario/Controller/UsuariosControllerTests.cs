@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -99,7 +99,7 @@ public class UsuariosControllerTests
 
         var okResult = Assert.IsType<OkObjectResult>(result.Data);
         Assert.Equal(200, okresult.Data.StatusCode);
-        Assert.Equal("Usu�rio criado com sucesso", okResult.Value);
+        Assert.Equal("Usuário criado com sucesso", okResult.Value);
     }
 
     [Fact]

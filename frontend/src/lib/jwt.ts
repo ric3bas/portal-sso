@@ -33,24 +33,25 @@ function parseBooleanClaim(value: unknown) {
   return false
 }
 
-function getMasterClaimValue(payload: Record<string, unknown>) {
-  const directKeys = ['isMaster', 'IsMaster', 'ismaster']
-
-  for (const key of directKeys) {
-    if (key in payload) {
-      return payload[key]
-    }
+function normalizeHexColorClaim(value: unknown) {
+  if (typeof value !== 'string') {
+    return undefined
   }
 
-  const matchingEntry = Object.entries(payload).find(([key]) => {
-    const normalizedKey = key.trim().toLowerCase()
-    return normalizedKey.endsWith('/ismaster') || normalizedKey.endsWith(':ismaster') || normalizedKey === 'ismaster'
-  })
+  const normalizedValue = value.trim().toUpperCase()
 
-  return matchingEntry?.[1]
+  if (/^#[0-9A-F]{6}$/.test(normalizedValue)) {
+    return normalizedValue
+  }
+
+  if (/^[0-9A-F]{6}$/.test(normalizedValue)) {
+    return `#${normalizedValue}`
+  }
+
+  return undefined
 }
 
-export function tryGetIsMasterFromAccessToken(accessToken?: string | null) {
+function decodeAccessTokenPayload(accessToken?: string | null) {
   if (!accessToken) {
     return undefined
   }
@@ -63,19 +64,66 @@ export function tryGetIsMasterFromAccessToken(accessToken?: string | null) {
 
   try {
     const decodedPayload = decodeBase64Url(payload)
-    const parsedPayload = JSON.parse(decodedPayload) as Record<string, unknown>
-    const claimValue = getMasterClaimValue(parsedPayload)
-
-    if (claimValue === undefined) {
-      return undefined
-    }
-
-    return parseBooleanClaim(claimValue)
+    return JSON.parse(decodedPayload) as Record<string, unknown>
   } catch {
     return undefined
   }
 }
 
+function getClaimValue(payload: Record<string, unknown>, claimName: string) {
+  const directKeys = [claimName, claimName[0].toUpperCase() + claimName.slice(1), claimName.toLowerCase(), claimName.toUpperCase()]
+
+  for (const key of directKeys) {
+    if (key in payload) {
+      return payload[key]
+    }
+  }
+
+  const normalizedClaimName = claimName.trim().toLowerCase()
+  const matchingEntry = Object.entries(payload).find(([key]) => {
+    const normalizedKey = key.trim().toLowerCase()
+    return normalizedKey.endsWith(`/${normalizedClaimName}`) || normalizedKey.endsWith(`:${normalizedClaimName}`) || normalizedKey === normalizedClaimName
+  })
+
+  return matchingEntry?.[1]
+}
+
+function getMasterClaimValue(payload: Record<string, unknown>) {
+  return getClaimValue(payload, 'isMaster')
+}
+
+export function tryGetIsMasterFromAccessToken(accessToken?: string | null) {
+  const parsedPayload = decodeAccessTokenPayload(accessToken)
+
+  if (!parsedPayload) {
+    return undefined
+  }
+
+  const claimValue = getMasterClaimValue(parsedPayload)
+
+  if (claimValue === undefined) {
+    return undefined
+  }
+
+  return parseBooleanClaim(claimValue)
+}
+
 export function getIsMasterFromAccessToken(accessToken?: string | null) {
   return tryGetIsMasterFromAccessToken(accessToken) ?? false
+}
+
+export function getThemeColorsFromAccessToken(accessToken?: string | null) {
+  const parsedPayload = decodeAccessTokenPayload(accessToken)
+
+  if (!parsedPayload) {
+    return {
+      corPrimaria: undefined,
+      corSecundaria: undefined,
+    }
+  }
+
+  return {
+    corPrimaria: normalizeHexColorClaim(getClaimValue(parsedPayload, 'corPrimaria')),
+    corSecundaria: normalizeHexColorClaim(getClaimValue(parsedPayload, 'corSecundaria')),
+  }
 }

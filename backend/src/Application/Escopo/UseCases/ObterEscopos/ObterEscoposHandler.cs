@@ -1,6 +1,6 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
+using Portal.Domain.Common;
 using Portal.Domain.Escopo.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Escopo.UseCases.ObterEscopos;
 
@@ -13,14 +13,12 @@ public class ObterEscoposHandler
         _repository = repository;
     }
 
-    public async Task<Result<List<ObterEscoposResponse>>> Handle(ObterEscoposRequest request, CancellationToken cancellationToken)
+    public async Task<Result<TabelaPaginadaResponse<ObterEscoposResponse>>> Handle(ObterEscoposRequest request, CancellationToken cancellationToken)
     {
-        var escopos = await _repository.ObterTodosAsync(cancellationToken);
-        if (escopos == null || !escopos.Any())
-        {
-            return Result.NotFoundResult<List<ObterEscoposResponse>>("Nenhum escopo encontrado");
-        }
+        var resultado = await _repository.ObterTodosAsync(request.Nome, request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken);
+        var response = resultado.Itens.Select(x => x.ToResponse()).ToList();
+        var tabela = TabelaPaginadaResponse<ObterEscoposResponse>.Criar(response, resultado.TotalRegistros, resultado.TotalRegistros, resultado.NumeroPagina, resultado.TamanhoPagina);
 
-        return Result.OkResult(escopos.Select(x => x.ToResponse<ObterEscoposResponse>()).ToList());
+        return Result.OkResult(tabela);
     }
 }

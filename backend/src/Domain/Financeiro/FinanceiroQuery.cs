@@ -1,3 +1,5 @@
+﻿using Portal.Application.Financeiro.UseCases.ObterLancamentosFinanceiros;
+
 namespace Portal.Domain.Financeiro;
 
 public class FinanceiroQuery
@@ -15,4 +17,23 @@ public class FinanceiroQuery
     public decimal ValorTotal { get; set; }
     public DateTime DataLancamento { get; set; }
     public Guid ParceiroId { get; set; }
+
+    public TResponse ToResponse<TResponse>() where TResponse : ObterLancamentosFinanceirosResponse, new()
+    {
+        return new TResponse
+        {
+            Id = Id,
+            LocacaoId = LocacaoId,
+            ClienteId = ClienteId,
+            ClienteNome = ClienteNome,
+            EquipamentoId = EquipamentoId,
+            EquipamentoNome = EquipamentoNome,
+            DataRetirada = DataRetirada,
+            DataDevolucao = DataDevolucao,
+            DiasLocados = DiasLocados,
+            ValorDiaria = ValorDiaria,
+            ValorTotal = ValorTotal,
+            DataLancamento = DataLancamento
+        };
+    }
 }

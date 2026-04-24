@@ -1,5 +1,7 @@
+﻿using Dapper;
 using Portal.Domain.Locacao;
 using Portal.Domain.Locacao.Interfaces;
+using Portal.Domain.Common;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
 using DataUnitOfWork = Portal.Infrastructure.Data.IUnitOfWork;
 
@@ -11,9 +13,16 @@ public class LocacaoRepository : DataDapperRepository, ILocacaoRepository
     {
     }
 
-    public async Task<IEnumerable<LocacaoQuery>> ObterTodasAsync(CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<LocacaoQuery>> ObterTodasAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Locacao l
+            INNER JOIN l6a.Cliente c ON l.cliente_id = c.Id
+            INNER JOIN l6a.Equipamento e ON l.equipamento_id = e.Id;
+
             SELECT l.Id, l.cliente_id as ClienteId, c.Nome as ClienteNome,
                    l.equipamento_id as EquipamentoId, e.Nome as EquipamentoNome,
                    l.Status, l.data_retirada as DataRetirada, l.previsao_devolucao as PrevisaoDevolucao,
@@ -32,12 +41,16 @@ public class LocacaoRepository : DataDapperRepository, ILocacaoRepository
             FROM l6a.Locacao l
             INNER JOIN l6a.Cliente c ON l.cliente_id = c.Id
             INNER JOIN l6a.Equipamento e ON l.equipamento_id = e.Id
-            ORDER BY l.data_retirada DESC";
+            ORDER BY c.Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<LocacaoQuery>(sql);
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, new { TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<LocacaoQuery>()).ToList();
+        return new ResultadoPaginado<LocacaoQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<LocacaoQuery>> ObterPorFiltroAsync(Guid? clienteId, Guid? equipamentoId, StatusLocacao? status, DateTime? dataRetiradaInicio, DateTime? dataRetiradaFim, CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<LocacaoQuery>> ObterPorFiltroAsync(Guid? clienteId, Guid? equipamentoId, StatusLocacao? status, DateTime? dataRetiradaInicio, DateTime? dataRetiradaFim, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
         var whereConditions = new List<string>();
         var parameters = new Dictionary<string, object>();
@@ -74,7 +87,15 @@ public class LocacaoRepository : DataDapperRepository, ILocacaoRepository
 
         var whereClause = whereConditions.Any() ? "WHERE " + string.Join(" AND ", whereConditions) : string.Empty;
 
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
         var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Locacao l
+            INNER JOIN l6a.Cliente c ON l.cliente_id = c.Id
+            INNER JOIN l6a.Equipamento e ON l.equipamento_id = e.Id
+            {whereClause};
+
             SELECT l.Id, l.cliente_id as ClienteId, c.Nome as ClienteNome,
                    l.equipamento_id as EquipamentoId, e.Nome as EquipamentoNome,
                    l.Status, l.data_retirada as DataRetirada, l.previsao_devolucao as PrevisaoDevolucao,
@@ -94,9 +115,16 @@ public class LocacaoRepository : DataDapperRepository, ILocacaoRepository
             INNER JOIN l6a.Cliente c ON l.cliente_id = c.Id
             INNER JOIN l6a.Equipamento e ON l.equipamento_id = e.Id
             {whereClause}
-            ORDER BY l.data_retirada DESC";
+            ORDER BY c.Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<LocacaoQuery>(sql, parameters);
+        parameters["TamanhoPagina"] = paginacao.TamanhoPagina;
+        parameters["Offset"] = paginacao.Offset;
+
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, parameters);
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<LocacaoQuery>()).ToList();
+        return new ResultadoPaginado<LocacaoQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task<LocacaoQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken)
@@ -282,9 +310,15 @@ public class LocacaoRepository : DataDapperRepository, ILocacaoRepository
         return count == 0;
     }
 
-    public async Task<IEnumerable<LocacaoQuery>> ObterAtrasadasAsync(CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<LocacaoQuery>> ObterAtrasadasAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Locacao l
+            WHERE l.Status = @StatusAtrasada;
+
             SELECT l.Id, l.cliente_id as ClienteId, c.Nome as ClienteNome,
                    l.equipamento_id as EquipamentoId, e.Nome as EquipamentoNome,
                    l.Status, l.data_retirada as DataRetirada, l.previsao_devolucao as PrevisaoDevolucao,
@@ -295,9 +329,14 @@ public class LocacaoRepository : DataDapperRepository, ILocacaoRepository
             INNER JOIN l6a.Cliente c ON l.cliente_id = c.Id
             INNER JOIN l6a.Equipamento e ON l.equipamento_id = e.Id
             WHERE l.Status = @StatusAtrasada
-            ORDER BY l.previsao_devolucao";
+            ORDER BY c.Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<LocacaoQuery>(sql, new { StatusAtrasada = (int)StatusLocacao.Atrasada });
+        var param = new { StatusAtrasada = (int)StatusLocacao.Atrasada, TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset };
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, param);
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<LocacaoQuery>()).ToList();
+        return new ResultadoPaginado<LocacaoQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task AtualizarStatusAtrasadasAsync(CancellationToken cancellationToken)

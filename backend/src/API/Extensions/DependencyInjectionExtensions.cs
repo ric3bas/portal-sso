@@ -1,5 +1,4 @@
-using FluentValidation;
-using Portal.Application.Cliente.UseCases.AtualizarCliente;
+﻿using Portal.Application.Cliente.UseCases.AtualizarCliente;
 using Portal.Application.Cliente.UseCases.BloquearCliente;
 using Portal.Application.Cliente.UseCases.CriarCliente;
 using Portal.Application.Cliente.UseCases.DesbloquearCliente;
@@ -7,14 +6,12 @@ using Portal.Application.Cliente.UseCases.InativarCliente;
 using Portal.Application.Cliente.UseCases.ObterClientePorId;
 using Portal.Application.Cliente.UseCases.ObterClientes;
 using Portal.Application.Cliente.UseCases.ObterClientesPorFiltro;
-using Portal.Application.Cliente.Validators;
 using Portal.Application.Equipamento.UseCases.AtualizarEquipamento;
 using Portal.Application.Equipamento.UseCases.CriarEquipamento;
 using Portal.Application.Equipamento.UseCases.InativarEquipamento;
 using Portal.Application.Equipamento.UseCases.ObterEquipamentoPorId;
 using Portal.Application.Equipamento.UseCases.ObterEquipamentos;
 using Portal.Application.Equipamento.UseCases.ObterEquipamentosPorFiltro;
-using Portal.Application.Equipamento.Validators;
 using Portal.Application.Escopo.UseCases.AtualizarEscopo;
 using Portal.Application.Escopo.UseCases.CriarEscopo;
 using Portal.Application.Escopo.UseCases.ObterEscopoPorId;
@@ -54,8 +51,8 @@ using Portal.Application.Categoria.UseCases.AtualizarCategoria;
 using Portal.Application.Categoria.UseCases.InativarCategoria;
 using Portal.Application.Categoria.UseCases.ObterCategoriasPorFiltro;
 using Portal.Application.Usuario.UseCases.AtualizarUsuario;
-using Portal.Application.Usuario.UseCases.ListarUsuarios;
-using Portal.Application.Usuario.UseCases.RegistrarUsuario;
+using Portal.Application.Usuario.UseCases.ObterUsuarios;
+using Portal.Application.Usuario.UseCases.CriarUsuario;
 using Portal.Domain.Base.Email;
 using Portal.Domain.Cliente.Interfaces;
 using Portal.Domain.Categoria.Interfaces;
@@ -75,10 +72,8 @@ public static class DependencyInjectionExtensions
 {
     public static IServiceCollection AddCleanArchitecture(this IServiceCollection services)
     {
-        // Infrastructure Layer
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         
-        // Repositories
         services.AddScoped<ICategoriaRepository, CategoriaRepository>();
         services.AddScoped<IClienteRepository, ClienteRepository>();
         services.AddScoped<IEquipamentoRepository, EquipamentoRepository>();
@@ -92,7 +87,6 @@ public static class DependencyInjectionExtensions
         services.AddScoped<ITokenAtualizacaoRepository, TokenAtualizacaoRepository>();
         services.AddScoped<IEmailService, SmtpEmailService>();
         
-        // Application Layer - Handlers
         services.AddScoped<CriarCategoriaHandler>();
         services.AddScoped<ObterCategoriasHandler>();
         services.AddScoped<ObterCategoriaPorIdHandler>();
@@ -100,7 +94,6 @@ public static class DependencyInjectionExtensions
         services.AddScoped<InativarCategoriaHandler>();
         services.AddScoped<ObterCategoriasPorFiltroHandler>();
 
-        // Application Layer - Cliente Handlers
         services.AddScoped<ObterClientesHandler>();
         services.AddScoped<ObterClientesPorFiltroHandler>();
         services.AddScoped<ObterClientePorIdHandler>();
@@ -110,7 +103,6 @@ public static class DependencyInjectionExtensions
         services.AddScoped<DesbloquearClienteHandler>();
         services.AddScoped<InativarClienteHandler>();
 
-        // Application Layer - Equipamento Handlers
         services.AddScoped<ObterEquipamentosHandler>();
         services.AddScoped<ObterEquipamentosPorFiltroHandler>();
         services.AddScoped<ObterEquipamentoPorIdHandler>();
@@ -118,17 +110,14 @@ public static class DependencyInjectionExtensions
         services.AddScoped<AtualizarEquipamentoHandler>();
         services.AddScoped<InativarEquipamentoHandler>();
 
-        // Application Layer - Escopo Handlers
         services.AddScoped<ObterEscoposHandler>();
         services.AddScoped<ObterEscopoPorIdHandler>();
         services.AddScoped<CriarEscopoHandler>();
         services.AddScoped<AtualizarEscopoHandler>();
 
-        // Application Layer - Financeiro Handlers
         services.AddScoped<ObterLancamentosFinanceirosHandler>();
         services.AddScoped<ObterLancamentosFinanceirosPorPeriodoHandler>();
 
-        // Application Layer - Locacao Handlers
         services.AddScoped<ObterLocacoesHandler>();
         services.AddScoped<ObterLocacoesPorFiltroHandler>();
         services.AddScoped<ObterLocacaoPorIdHandler>();
@@ -138,14 +127,12 @@ public static class DependencyInjectionExtensions
         services.AddScoped<CancelarLocacaoHandler>();
         services.AddScoped<ObterLocacoesAtrasadasHandler>();
 
-        // Application Layer - Parceiro Handlers
         services.AddScoped<ObterParceirosHandler>();
         services.AddScoped<ObterParceirosPorFiltroHandler>();
         services.AddScoped<ObterParceiroPorIdHandler>();
         services.AddScoped<CriarParceiroHandler>();
         services.AddScoped<AtualizarParceiroHandler>();
 
-        // Application Layer - Perfil Handlers
         services.AddScoped<ObterPerfisComEscopoHandler>();
         services.AddScoped<ObterPerfisParaComboHandler>();
         services.AddScoped<ObterPerfilPorIdHandler>();
@@ -155,37 +142,17 @@ public static class DependencyInjectionExtensions
         services.AddScoped<ClonarPerfilHandler>();
         services.AddScoped<AtualizarNomePerfilHandler>();
 
-        // Application Layer - Usuario Handlers
-        services.AddScoped<ListarUsuariosHandler>();
-        services.AddScoped<RegistrarUsuarioHandler>();
+        services.AddScoped<ObterUsuariosHandler>();
+        services.AddScoped<CriarUsuarioHandler>();
         services.AddScoped<AtualizarUsuarioHandler>();
 
-        // Application Layer - Auth Handlers
         services.AddScoped<LoginHandler>();
         services.AddScoped<RefreshTokenHandler>();
         services.AddScoped<LogoutHandler>();
         services.AddScoped<RecuperarSenhaHandler>();
-        //services.AddScoped<ValidarTokenRecuperacaoHandler>();
         services.AddScoped<ValidarTokenRecuperacaoHandler>();
-        
-        // Validators
-        services.AddValidatorsFromAssemblyContaining<Portal.Application.Cliente.UseCases.CriarCliente.CriarClienteValidator>();
-        //services.AddScoped<IValidator<CriarCategoriaRequest>, CriarCategoriaValidator>();
-        //services.AddScoped<IValidator<AtualizarCategoriaRequest>, AtualizarCategoriaValidator>();
-        //services.AddScoped<IValidator<CriarClienteRequest>, CriarClienteValidator>();
-        //services.AddScoped<IValidator<AtualizarClienteRequest>, AtualizarClienteValidator>();
-        //services.AddScoped<IValidator<CriarEquipamentoRequest>, CriarEquipamentoValidator>();
-        //services.AddScoped<IValidator<AtualizarEquipamentoRequest>, AtualizarEquipamentoValidator>();
-        //services.AddScoped<IValidator<CriarEscopoRequest>, CriarEscopoValidator>();
-        //services.AddScoped<IValidator<AtualizarEscopoRequest>, AtualizarEscopoValidator>();
-        //services.AddScoped<IValidator<CriarLocacaoRequest>, CriarLocacaoValidator>();
-        //services.AddScoped<IValidator<AtualizarLocacaoRequest>, AtualizarLocacaoValidator>();
-        //services.AddScoped<IValidator<DevolverLocacaoRequest>, DevolverLocacaoValidator>();
-        //services.AddScoped<IValidator<CriarParceiroRequest>, CriarParceiroValidator>();
-        //services.AddScoped<IValidator<AtualizarParceiroRequest>, AtualizarParceiroValidator>();
-        //services.AddScoped<IValidator<CriarPerfilRequest>, CriarPerfilValidator>();
-        //services.AddScoped<IValidator<RegistrarUsuarioRequest>, RegistrarUsuarioValidator>();
         
         return services;
     }
 }
+

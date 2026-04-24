@@ -1,4 +1,4 @@
-namespace Portal.Domain.Exceptions
+﻿namespace Portal.Domain.Exceptions
 {
     public class NotFoundException : Exception
     {

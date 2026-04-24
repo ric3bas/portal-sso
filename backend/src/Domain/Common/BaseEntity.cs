@@ -1,4 +1,4 @@
-namespace Portal.Domain.Common;
+﻿namespace Portal.Domain.Common;
 
 public abstract class BaseEntity
 {

@@ -1,4 +1,4 @@
-namespace Portal.Domain.Cliente;
+﻿namespace Portal.Domain.Cliente;
 
 public class ClienteCommand
 {

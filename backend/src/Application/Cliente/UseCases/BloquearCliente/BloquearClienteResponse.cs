@@ -1,4 +1,4 @@
-namespace Portal.Application.Cliente.UseCases.BloquearCliente;
+﻿namespace Portal.Application.Cliente.UseCases.BloquearCliente;
 
 public class BloquearClienteResponse
 {

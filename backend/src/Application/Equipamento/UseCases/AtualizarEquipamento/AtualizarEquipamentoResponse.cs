@@ -1,4 +1,4 @@
-namespace Portal.Application.Equipamento.UseCases.AtualizarEquipamento;
+﻿namespace Portal.Application.Equipamento.UseCases.AtualizarEquipamento;
 
 public class AtualizarEquipamentoResponse
 {

@@ -1,4 +1,4 @@
-using Portal.Application.Locacao.Common;
+﻿using Portal.Application.Locacao.Common;
 
 namespace Portal.Application.Locacao.UseCases.CriarLocacao;
 

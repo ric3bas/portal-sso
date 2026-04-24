@@ -1,4 +1,4 @@
-namespace Portal.Application.Cliente.UseCases.DesbloquearCliente;
+﻿namespace Portal.Application.Cliente.UseCases.DesbloquearCliente;
 
 public class DesbloquearClienteRequest
 {

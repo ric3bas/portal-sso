@@ -1,4 +1,4 @@
-namespace Portal.Application.Equipamento.UseCases.ObterEquipamentoPorId;
+﻿namespace Portal.Application.Equipamento.UseCases.ObterEquipamentoPorId;
 
 public class ObterEquipamentoPorIdRequest
 {

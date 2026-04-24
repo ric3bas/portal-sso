@@ -1,4 +1,4 @@
-namespace Portal.Domain.Usuario;
+﻿namespace Portal.Domain.Usuario;
 
 public class UsuarioQuery
 {
@@ -12,4 +12,7 @@ public class UsuarioQuery
     public int TentativasLogin { get; set; }
     public bool Bloqueado { get; set; }
     public bool Ativo { get; set; }
+    public string CorPrimaria { get; set; }
+    public string CorSecundaria { get; set; }
+
 }

@@ -1,5 +1,4 @@
-using FluentValidation;
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Escopo;
 using Portal.Domain.Escopo.Interfaces;
 
@@ -8,34 +7,28 @@ namespace Portal.Application.Escopo.UseCases.AtualizarEscopo;
 public class AtualizarEscopoHandler
 {
     private readonly IEscopoRepository _repository;
-    private readonly IValidator<AtualizarEscopoRequest> _validator;
 
-    public AtualizarEscopoHandler(IEscopoRepository repository, IValidator<AtualizarEscopoRequest> validator)
+    public AtualizarEscopoHandler(IEscopoRepository repository)
     {
         _repository = repository;
-        _validator = validator;
     }
 
-    public async Task<Result<AtualizarEscopoResponse>> Handle(AtualizarEscopoRequest request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(AtualizarEscopoRequest request, CancellationToken cancellationToken)
     {
-        var validation = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
-        {
-            return Result.ValidationResult<AtualizarEscopoResponse>(validation.Errors.Select(x => x.ErrorMessage));
-        }
+        if (!request.IsValid()) return Result.ValidationResult<string>(request.ObterErros());
 
         var atual = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
         if (atual is null)
         {
-            return Result.NotFoundResult<AtualizarEscopoResponse>("Escopo não encontrado");
+            return Result.NotFoundResult<string>("Escopo não encontrado");
         }
 
         if (await _repository.ExisteNomeAsync(request.Nome.Trim(), request.Id, cancellationToken))
         {
-            return Result.BusinessResult<AtualizarEscopoResponse>("Nome do escopo já existe");
+            return Result.BusinessResult<string>("Nome do escopo já existe");
         }
 
         await _repository.AtualizarAsync(new EscopoCommand { Id = request.Id, Nome = request.Nome.Trim() }, cancellationToken);
-        return Result.OkResult(new AtualizarEscopoResponse { Mensagem = "Atualizado com sucesso" });
+        return Result.OkResult("Escopo atualizado com sucesso");
     }
 }

@@ -1,4 +1,4 @@
-namespace Portal.Domain.Escopo;
+﻿namespace Portal.Domain.Escopo;
 
 public class EscopoCommand
 {

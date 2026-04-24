@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Portal.API.Extensions;
 using Portal.Application.Auth.UseCases.Login;
 using Portal.Application.Auth.UseCases.Logout;
@@ -14,7 +14,8 @@ public static class AuthEndpoints
     public static void MapAuthEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/v1/auth")
-            .WithTags("🔑 Auth");
+            .WithTags("🔑 Auth")
+            .AllowAnonymous();
 
         group.MapPost("/login", async (
             [FromServices] LoginHandler handler,

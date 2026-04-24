@@ -1,4 +1,4 @@
-namespace Portal.Application.Perfil.UseCases.VincularEscoposPerfil;
+﻿namespace Portal.Application.Perfil.UseCases.VincularEscoposPerfil;
 
 public class VincularEscoposPerfilRequest
 {

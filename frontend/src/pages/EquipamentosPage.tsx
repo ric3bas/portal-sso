@@ -1,9 +1,11 @@
 import { Pencil, Power } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Badge, Button, Feedback, Modal, PageIntro, Panel, TextareaField } from '../components/ui'
+import { AdminPage, AdminPanel } from '../components/admin'
+import { DataTable } from '../components/DataTable'
+import { Badge, Button, Modal, TextareaField } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { categoriasApi, equipamentosApi } from '../services/sso'
-import type { CategoriaResponse, EquipamentoResponse } from '../types/api'
+import type { CategoriaResponse, EquipamentoResponse, PaginatedResult } from '../types/api'
 
 interface EquipamentoFormState {
   nome: string
@@ -58,6 +60,7 @@ export function EquipamentosPage() {
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [tableMessage, setTableMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginatedResult<EquipamentoResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isSaving, setIsSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<EquipamentoResponse | null>(null)
@@ -70,24 +73,26 @@ export function EquipamentosPage() {
     setCategorias(response)
   }
 
-  async function loadData(options?: { nome?: string; marca?: string; modelo?: string; categoriaId?: string; ativo?: string }) {
+  async function loadData(options?: { nome?: string; marca?: string; modelo?: string; categoriaId?: string; ativo?: string }, page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
       const response = options?.nome || options?.marca || options?.modelo || options?.categoriaId || options?.ativo
-        ? await equipamentosApi.listFilter({
+        ? await equipamentosApi.listFilterPage({
             Nome: options.nome,
             Marca: options.marca,
             Modelo: options.modelo,
             CategoriaId: options.categoriaId,
             Ativo: options.ativo === '' ? undefined : options.ativo === 'true',
-          })
-        : await equipamentosApi.list()
+          }, { Pagina: page, TamanhoPagina: pageSize })
+        : await equipamentosApi.listPage({ Pagina: page, TamanhoPagina: pageSize })
 
-      setItems(response)
-      setTableMessage(response.length === 0 ? 'Nenhum equipamento encontrado' : null)
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhum equipamento encontrado' : null)
     } catch (error) {
       setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
       setTableMessage(getErrorMessage(error, 'Falha ao carregar equipamentos.'))
     } finally {
       setIsLoading(false)
@@ -159,7 +164,7 @@ export function EquipamentosPage() {
       modelo: filterModelo.trim() || undefined,
       categoriaId: filterCategoriaId || undefined,
       ativo: filterAtivo,
-    })
+    }, 1, pagination.pageSize)
   }
 
   async function handleClearFilters() {
@@ -168,7 +173,7 @@ export function EquipamentosPage() {
     setFilterModelo('')
     setFilterCategoriaId('')
     setFilterAtivo('')
-    await loadData()
+    await loadData(undefined, 1, pagination.pageSize)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -234,12 +239,8 @@ export function EquipamentosPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro action={<Button onClick={openCreateModal}>Novo</Button>} eyebrow="" title="Equipamentos" description="" />
-
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-5 md:p-6">
+    <AdminPage action={<Button onClick={openCreateModal}>Novo</Button>} feedback={feedback} title="Equipamentos">
+      <AdminPanel>
         <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6 xl:items-end">
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <span>Nome</span>
@@ -276,60 +277,53 @@ export function EquipamentosPage() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando equipamentos...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold">Categoria</th>
-                    <th className="px-4 py-3 font-semibold">Estoque</th>
-                    <th className="px-4 py-3 font-semibold">Diária</th>
-                    <th className="px-4 py-3 font-semibold">Marca</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.categoriaNome || '-'}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.quantidadeEstoque}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.precoDiaria)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.marca || '-'}</td>
-                        <td className="px-4 py-3"><Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Ativo' : 'Inativo'}</Badge></td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button aria-label="Editar equipamento" className="h-11 w-11 px-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
-                              <Pencil className="h-5 w-5" />
-                            </Button>
-                            {item.ativo ? (
-                              <Button aria-label="Inativar equipamento" className="h-11 w-11 px-0" onClick={() => void handleInactivate(item)} title="Inativar" type="button" variant="danger">
-                                <Power className="h-5 w-5" />
-                              </Button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={7}>
-                        {tableMessage ?? 'Nenhum equipamento encontrado'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Panel>
+        <DataTable
+          colSpan={7}
+          emptyMessage={tableMessage ?? 'Nenhum equipamento encontrado'}
+          getRowKey={(item) => item.id}
+          headers={(
+            <tr>
+              <th className="px-2.5 py-2 font-semibold">Nome</th>
+              <th className="px-2.5 py-2 font-semibold">Categoria</th>
+              <th className="px-2.5 py-2 font-semibold">Estoque</th>
+              <th className="px-2.5 py-2 font-semibold">Diária</th>
+              <th className="px-2.5 py-2 font-semibold">Marca</th>
+              <th className="px-2.5 py-2 font-semibold">Status</th>
+              <th className="px-2.5 py-2 font-semibold text-right">Ações</th>
+            </tr>
+          )}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando equipamentos..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) => void loadData({ nome: filterNome.trim() || undefined, marca: filterMarca.trim() || undefined, modelo: filterModelo.trim() || undefined, categoriaId: filterCategoriaId || undefined, ativo: filterAtivo }, page, pagination.pageSize),
+            onPageSizeChange: (pageSize) => void loadData({ nome: filterNome.trim() || undefined, marca: filterMarca.trim() || undefined, modelo: filterModelo.trim() || undefined, categoriaId: filterCategoriaId || undefined, ativo: filterAtivo }, 1, pageSize),
+          }}
+          renderRow={(item) => (
+            <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
+              <td className="px-2.5 py-1.5 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.categoriaNome || '-'}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.quantidadeEstoque}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.precoDiaria)}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.marca || '-'}</td>
+              <td className="px-2.5 py-1.5"><Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Ativo' : 'Inativo'}</Badge></td>
+              <td className="px-2.5 py-1.5 text-right">
+                <div className="flex justify-end gap-2">
+                  <Button aria-label="Editar equipamento" className="h-8 w-8 !p-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
+                    <Pencil className="h-[18px] w-[18px]" />
+                  </Button>
+                  {item.ativo ? (
+                    <Button aria-label="Inativar equipamento" className="h-8 w-8 !p-0" onClick={() => void handleInactivate(item)} title="Inativar" type="button" variant="danger">
+                      <Power className="h-[18px] w-[18px]" />
+                    </Button>
+                  ) : null}
+                </div>
+              </td>
+            </tr>
+          )}
+        />
+      </AdminPanel>
 
       <Modal onClose={() => setIsModalOpen(false)} open={isModalOpen} title={editingItem ? 'Editar equipamento' : 'Novo equipamento'}>
         <form className="space-y-5" noValidate onSubmit={handleSubmit}>
@@ -407,6 +401,6 @@ export function EquipamentosPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

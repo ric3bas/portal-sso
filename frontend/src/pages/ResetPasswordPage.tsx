@@ -1,7 +1,7 @@
-import { Eye, EyeOff } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Feedback, Panel } from '../components/ui'
+import { AuthCard, AuthHeader, AuthLayout, PasswordField } from '../components/auth'
+import { Button, Feedback } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 import { getErrorMessage } from '../lib/errors'
 import { authApi } from '../services/sso'
@@ -59,14 +59,6 @@ function hasErrors(errors: ResetPasswordErrors) {
   return Boolean(errors.novaSenha || errors.confirmarSenha)
 }
 
-function fieldClass(error: string) {
-  return [
-    error
-      ? 'border-red-500 focus:border-red-600 focus:ring-red-100 dark:border-red-400 dark:focus:border-red-300 dark:focus:ring-red-950'
-      : '',
-  ].join(' ')
-}
-
 export function ResetPasswordPage() {
   const navigate = useNavigate()
   const { session, clearAuth } = useAuth()
@@ -85,9 +77,6 @@ export function ResetPasswordPage() {
   const [isValidating, setIsValidating] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState<ResetPasswordErrors>(initialErrors)
-  const [showNewPassword, setShowNewPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-
   useEffect(() => {
     return () => {
       if (redirectTimeoutRef.current) {
@@ -189,12 +178,10 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <Panel className="w-full max-w-2xl p-6 md:p-8">
+    <AuthLayout>
+      <AuthCard className="max-w-2xl">
         <form className="space-y-5" noValidate onSubmit={handleSubmit}>
-          <div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[var(--text)]">Definir nova senha</h1>
-          </div>
+          <AuthHeader title="Definir nova senha" />
 
           {isValidating ? <Feedback tone="neutral">Validando link de recuperacao...</Feedback> : null}
           {validationMessage ? <Feedback tone="success">{validationMessage}</Feedback> : null}
@@ -203,69 +190,31 @@ export function ResetPasswordPage() {
 
           {isTokenValid ? (
             <div className="grid gap-4 md:grid-cols-2">
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                <span>
-                  Nova senha <span className="text-red-600 dark:text-red-400">*</span>
-                </span>
-                <div className="relative">
-                  <input
-                    autoComplete="new-password"
-                    className={[
-                      'w-full rounded-md border bg-white px-3 py-2 pr-11 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400',
-                      fieldClass(formErrors.novaSenha) || 'border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:focus:border-slate-900 dark:focus:ring-slate-200',
-                    ].join(' ')}
-                    onChange={(event) => {
-                      setForm((current) => ({ ...current, novaSenha: event.target.value }))
-                      setFormErrors((current) => ({ ...current, novaSenha: '' }))
-                    }}
-                    placeholder="Digite a nova senha"
-                    required
-                    type={showNewPassword ? 'text' : 'password'}
-                    value={form.novaSenha}
-                  />
-                  <button
-                    aria-label={showNewPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                    onClick={() => setShowNewPassword((current) => !current)}
-                    type="button"
-                  >
-                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {formErrors.novaSenha ? <span className="text-xs text-red-600 dark:text-red-400">{formErrors.novaSenha}</span> : null}
-              </label>
+              <PasswordField
+                autoComplete="new-password"
+                error={formErrors.novaSenha}
+                label="Nova senha"
+                onChange={(event) => {
+                  setForm((current) => ({ ...current, novaSenha: event.target.value }))
+                  setFormErrors((current) => ({ ...current, novaSenha: '' }))
+                }}
+                placeholder="Digite a nova senha"
+                required
+                value={form.novaSenha}
+              />
 
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                <span>
-                  Confirmar senha <span className="text-red-600 dark:text-red-400">*</span>
-                </span>
-                <div className="relative">
-                  <input
-                    autoComplete="new-password"
-                    className={[
-                      'w-full rounded-md border bg-white px-3 py-2 pr-11 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400',
-                      fieldClass(formErrors.confirmarSenha) || 'border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:focus:border-slate-900 dark:focus:ring-slate-200',
-                    ].join(' ')}
-                    onChange={(event) => {
-                      setForm((current) => ({ ...current, confirmarSenha: event.target.value }))
-                      setFormErrors((current) => ({ ...current, confirmarSenha: '' }))
-                    }}
-                    placeholder="Repita a nova senha"
-                    required
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={form.confirmarSenha}
-                  />
-                  <button
-                    aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                    onClick={() => setShowConfirmPassword((current) => !current)}
-                    type="button"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {formErrors.confirmarSenha ? <span className="text-xs text-red-600 dark:text-red-400">{formErrors.confirmarSenha}</span> : null}
-              </label>
+              <PasswordField
+                autoComplete="new-password"
+                error={formErrors.confirmarSenha}
+                label="Confirmar senha"
+                onChange={(event) => {
+                  setForm((current) => ({ ...current, confirmarSenha: event.target.value }))
+                  setFormErrors((current) => ({ ...current, confirmarSenha: '' }))
+                }}
+                placeholder="Repita a nova senha"
+                required
+                value={form.confirmarSenha}
+              />
 
               <div className="text-xs text-slate-500 dark:text-slate-400 md:col-span-2">
                 Use ao menos uma letra maiuscula, um numero, minimo de 6 e maximo de 100 caracteres.
@@ -286,7 +235,7 @@ export function ResetPasswordPage() {
             </Link>
           </div>
         </form>
-      </Panel>
-    </div>
+      </AuthCard>
+    </AuthLayout>
   )
 }

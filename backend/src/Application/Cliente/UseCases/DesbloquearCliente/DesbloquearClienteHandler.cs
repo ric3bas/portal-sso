@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Cliente.Interfaces;
 
 namespace Portal.Application.Cliente.UseCases.DesbloquearCliente;
@@ -16,13 +16,13 @@ public class DesbloquearClienteHandler
     {
         if (!await _repository.ExisteAsync(request.Id, cancellationToken))
         {
-            return Result.NotFoundResult<DesbloquearClienteResponse>("Cliente não encontrado");
+            return Result.NotFoundResult<DesbloquearClienteResponse>("Cliente nÃ£o encontrado");
         }
 
         var linhasAfetadas = await _repository.DefinirBloqueadoAsync(request.Id, false, cancellationToken);
         if (linhasAfetadas == 0)
         {
-            return Result.NotFoundResult<DesbloquearClienteResponse>("Cliente não encontrado");
+            return Result.NotFoundResult<DesbloquearClienteResponse>("Cliente nÃ£o encontrado");
         }
 
         return Result.OkResult(new DesbloquearClienteResponse { Mensagem = "Cliente desbloqueado com sucesso" });

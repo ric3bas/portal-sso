@@ -1,4 +1,4 @@
-namespace Portal.Application.Escopo.UseCases.ObterEscopos;
+﻿namespace Portal.Application.Escopo.UseCases.ObterEscopos;
 
 public class ObterEscoposResponse
 {

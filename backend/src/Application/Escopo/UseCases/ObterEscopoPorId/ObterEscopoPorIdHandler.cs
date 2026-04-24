@@ -1,6 +1,5 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Escopo.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Escopo.UseCases.ObterEscopoPorId;
 
@@ -17,15 +16,15 @@ public class ObterEscopoPorIdHandler
     {
         if (request.Id <= 0)
         {
-            return Result.ValidationResult<ObterEscopoPorIdResponse>("Id do escopo inválido");
+            return Result.ValidationResult<ObterEscopoPorIdResponse>("Id do escopo invÃ¡lido");
         }
 
         var escopo = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
         if (escopo is null)
         {
-            return Result.NotFoundResult<ObterEscopoPorIdResponse>("Escopo não encontrado");
+            return Result.NotFoundResult<ObterEscopoPorIdResponse>("Escopo nÃ£o encontrado");
         }
 
-        return Result.OkResult(escopo.ToResponse<ObterEscopoPorIdResponse>());
+        return Result.OkResult(escopo.ToResponsePorId());
     }
 }

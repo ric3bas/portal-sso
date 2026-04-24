@@ -1,4 +1,4 @@
-namespace Portal.Application.Parceiro.UseCases.ObterParceiroPorId;
+﻿namespace Portal.Application.Parceiro.UseCases.ObterParceiroPorId;
 
 public class ObterParceiroPorIdRequest
 {

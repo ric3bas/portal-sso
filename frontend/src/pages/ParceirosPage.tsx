@@ -1,9 +1,34 @@
 import { Pencil } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Badge, Button, Feedback, Modal, PageIntro, Panel, CheckboxField, TextareaField } from '../components/ui'
+import { AdminPage, AdminPanel, FilterBar, FormModalFooter, RowActions } from '../components/admin'
+import { DataTable } from '../components/DataTable'
+import { Badge, Button, ColorField, Modal, CheckboxField, TextareaField } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { parceirosApi } from '../services/sso'
-import type { ParceiroResponse } from '../types/api'
+import type { PaginatedResult, ParceiroResponse } from '../types/api'
+
+const DEFAULT_PRIMARY_COLOR = '#0F172A'
+const DEFAULT_SECONDARY_COLOR = '#CBD5E1'
+
+function normalizeHexColor(value?: string | null, fallback = DEFAULT_PRIMARY_COLOR) {
+  if (!value) {
+    return fallback
+  }
+
+  const normalizedValue = value.trim().toUpperCase()
+
+  return /^#[0-9A-F]{6}$/.test(normalizedValue) ? normalizedValue : fallback
+}
+
+function createInitialFormState() {
+  return {
+    nome: '',
+    descricao: '',
+    corPrimaria: DEFAULT_PRIMARY_COLOR,
+    corSecundaria: DEFAULT_SECONDARY_COLOR,
+    ativo: true,
+  }
+}
 
 export function ParceirosPage() {
   const didLoadInitiallyRef = useRef(false)
@@ -11,22 +36,27 @@ export function ParceirosPage() {
   const [filterNome, setFilterNome] = useState('')
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [tableMessage, setTableMessage] = useState<string | null>(null)
+  const [pagination, setPagination] = useState<PaginatedResult<ParceiroResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ParceiroResponse | null>(null)
-  const [form, setForm] = useState({ nome: '', descricao: '', ativo: true })
+  const [form, setForm] = useState(createInitialFormState)
   const [nomeError, setNomeError] = useState('')
 
-  async function loadData(nome?: string) {
+  async function loadData(nome?: string, page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
-      const response = await parceirosApi.listFilter(nome)
-      setItems(response)
-      setTableMessage(response.length === 0 ? 'Nenhum parceiro encontrado' : null)
+      const response = nome?.trim()
+        ? await parceirosApi.listFilterPage(nome, { Pagina: page, TamanhoPagina: pageSize })
+        : await parceirosApi.listPage({ Pagina: page, TamanhoPagina: pageSize })
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhum parceiro encontrado' : null)
     } catch (error) {
       setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
       setTableMessage(getErrorMessage(error, 'Falha ao carregar parceiros.'))
     } finally {
       setIsLoading(false)
@@ -44,7 +74,7 @@ export function ParceirosPage() {
 
   function openCreateModal() {
     setEditingItem(null)
-    setForm({ nome: '', descricao: '', ativo: true })
+    setForm(createInitialFormState())
     setNomeError('')
     setIsModalOpen(true)
   }
@@ -58,6 +88,8 @@ export function ParceirosPage() {
       setForm({
         nome: fullItem.nome ?? '',
         descricao: fullItem.descricao ?? '',
+        corPrimaria: normalizeHexColor(fullItem.corPrimaria, DEFAULT_PRIMARY_COLOR),
+        corSecundaria: normalizeHexColor(fullItem.corSecundaria, DEFAULT_SECONDARY_COLOR),
         ativo: fullItem.ativo,
       })
       setNomeError('')
@@ -73,12 +105,12 @@ export function ParceirosPage() {
     const normalizedValue = value.trim()
 
     if (normalizedValue.length >= 3) {
-      await loadData(normalizedValue)
+      await loadData(normalizedValue, 1, pagination.pageSize)
       return
     }
 
     if (normalizedValue.length === 0) {
-      await loadData()
+      await loadData(undefined, 1, pagination.pageSize)
     }
   }
 
@@ -98,12 +130,17 @@ export function ParceirosPage() {
         await parceirosApi.update(editingItem.id, { ...form, nome: form.nome.trim() })
         setFeedback({ tone: 'success', message: 'Parceiro atualizado com sucesso.' })
       } else {
-        await parceirosApi.create({ nome: form.nome.trim(), descricao: form.descricao })
+        await parceirosApi.create({
+          nome: form.nome.trim(),
+          descricao: form.descricao,
+          corPrimaria: form.corPrimaria,
+          corSecundaria: form.corSecundaria,
+        })
         setFeedback({ tone: 'success', message: 'Parceiro criado com sucesso.' })
       }
 
       setIsModalOpen(false)
-      await loadData(filterNome)
+      await loadData(filterNome, pagination.page, pagination.pageSize)
     } catch (error) {
       setFeedback({ tone: 'danger', message: getErrorMessage(error, 'Falha ao salvar parceiro.') })
     } finally {
@@ -112,18 +149,10 @@ export function ParceirosPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro
-        action={<Button onClick={openCreateModal}>Novo</Button>}
-        eyebrow=""
-        title="Parceiros"
-        description=""
-      />
-
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-5 md:p-6">
-        <div className="max-w-md">
+    <AdminPage action={<Button onClick={openCreateModal}>Novo</Button>} feedback={feedback} title="Parceiros">
+      <AdminPanel>
+        <FilterBar className="md:block">
+          <div className="max-w-md">
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <span>Filtrar por nome</span>
             <input
@@ -134,58 +163,54 @@ export function ParceirosPage() {
               value={filterNome}
             />
           </label>
-        </div>
-
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando parceiros...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold">Descricao</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 align-top dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.descricao || '-'}</td>
-                        <td className="px-4 py-3">
-                          <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Ativo' : 'Inativo'}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            aria-label="Editar parceiro"
-                            className="h-11 w-11 px-0"
-                            onClick={() => void openEditModal(item)}
-                            title="Editar"
-                            type="button"
-                            variant="secondary"
-                          >
-                            <Pencil className="h-5 w-5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={5}>
-                        {tableMessage ?? 'Nenhum parceiro encontrado'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
-        )}
-      </Panel>
+        </FilterBar>
+
+        <DataTable
+          colSpan={4}
+          emptyMessage={tableMessage ?? 'Nenhum parceiro encontrado'}
+          getRowKey={(item) => item.id}
+          headers={(
+            <tr>
+              <th className="px-2.5 py-2 font-semibold">Nome</th>
+              <th className="px-2.5 py-2 font-semibold">Descricao</th>
+              <th className="px-2.5 py-2 font-semibold">Status</th>
+              <th className="px-2.5 py-2 font-semibold text-right">Ações</th>
+            </tr>
+          )}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando parceiros..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) => void loadData(filterNome || undefined, page, pagination.pageSize),
+            onPageSizeChange: (pageSize) => void loadData(filterNome || undefined, 1, pageSize),
+          }}
+          renderRow={(item) => (
+            <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 align-top dark:border-slate-300 dark:bg-white">
+              <td className="px-2.5 py-1.5 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.descricao || '-'}</td>
+              <td className="px-2.5 py-1.5">
+                <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Ativo' : 'Inativo'}</Badge>
+              </td>
+              <td className="px-2.5 py-1.5 text-right">
+                <RowActions>
+                  <Button
+                    aria-label="Editar parceiro"
+                    className="h-8 w-8 !p-0"
+                    onClick={() => void openEditModal(item)}
+                    title="Editar"
+                    type="button"
+                    variant="secondary"
+                  >
+                    <Pencil className="h-[18px] w-[18px]" />
+                  </Button>
+                </RowActions>
+              </td>
+            </tr>
+          )}
+        />
+      </AdminPanel>
 
       <Modal
         onClose={() => setIsModalOpen(false)}
@@ -220,6 +245,21 @@ export function ParceirosPage() {
             />
           </div>
 
+          <div className="grid gap-4 md:grid-cols-2">
+            <ColorField
+              hint="Cor principal da identidade visual do parceiro"
+              label="Cor primária"
+              onChange={(value) => setForm((current) => ({ ...current, corPrimaria: normalizeHexColor(value, current.corPrimaria) }))}
+              value={form.corPrimaria}
+            />
+            <ColorField
+              hint="Cor de apoio usada em botões, detalhes e contraste"
+              label="Cor secundária"
+              onChange={(value) => setForm((current) => ({ ...current, corSecundaria: normalizeHexColor(value, current.corSecundaria) }))}
+              value={form.corSecundaria}
+            />
+          </div>
+
           {editingItem ? (
             <CheckboxField
               checked={form.ativo}
@@ -228,16 +268,9 @@ export function ParceirosPage() {
             />
           ) : null}
 
-          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <Button onClick={() => setIsModalOpen(false)} type="button" variant="ghost">
-              Cancelar
-            </Button>
-            <Button disabled={isSaving} type="submit">
-              {isSaving ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </div>
+          <FormModalFooter isSaving={isSaving} onCancel={() => setIsModalOpen(false)} />
         </form>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

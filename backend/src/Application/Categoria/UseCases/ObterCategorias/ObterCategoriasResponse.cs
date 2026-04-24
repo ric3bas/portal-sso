@@ -1,4 +1,4 @@
-namespace Portal.Application.Categoria.UseCases.ObterCategorias;
+﻿namespace Portal.Application.Categoria.UseCases.ObterCategorias;
 
 public class ObterCategoriasResponse
 {

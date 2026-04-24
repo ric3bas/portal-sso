@@ -1,4 +1,5 @@
-using Dapper;
+﻿using Dapper;
+using Portal.Domain.Common;
 using Portal.Domain.Equipamento;
 using Portal.Domain.Equipamento.Interfaces;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
@@ -12,21 +13,31 @@ public class EquipamentoRepository : DataDapperRepository, IEquipamentoRepositor
     {
     }
 
-    public async Task<IEnumerable<EquipamentoQuery>> ObterTodosAsync(CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<EquipamentoQuery>> ObterTodosAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Equipamento e
+            INNER JOIN l6a.Categoria c ON e.categoria_id = c.Id;
+
             SELECT e.Id, e.Nome, e.categoria_id as CategoriaId, e.quantidade_estoque as QuantidadeEstoque,
                    e.preco_diaria as PrecoDiaria, e.Marca, e.Modelo, e.numero_serie as NumeroSerie,
                    e.ano_fabricacao as AnoFabricacao, e.Descricao, e.observacao_internas as ObservacaoInternas,
                    e.Ativo, e.parceiro_id as ParceiroId, c.Nome as CategoriaNome
             FROM l6a.Equipamento e
             INNER JOIN l6a.Categoria c ON e.categoria_id = c.Id
-            ORDER BY e.Nome";
+            ORDER BY e.Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<EquipamentoQuery>(sql);
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, new { TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<EquipamentoQuery>()).ToList();
+        return new ResultadoPaginado<EquipamentoQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<EquipamentoQuery>> ObterPorFiltroAsync(string? nome, string? marca, string? modelo, Guid? categoriaId, bool? ativo, CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<EquipamentoQuery>> ObterPorFiltroAsync(string? nome, string? marca, string? modelo, Guid? categoriaId, bool? ativo, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
         var whereClause = new List<string>();
         var parameters = new DynamicParameters();
@@ -63,7 +74,14 @@ public class EquipamentoRepository : DataDapperRepository, IEquipamentoRepositor
 
         var whereString = whereClause.Count > 0 ? $"WHERE {string.Join(" AND ", whereClause)}" : string.Empty;
 
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
         var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Equipamento e
+            INNER JOIN l6a.Categoria c ON e.categoria_id = c.Id
+            {whereString};
+
             SELECT e.Id, e.Nome, e.categoria_id as CategoriaId, e.quantidade_estoque as QuantidadeEstoque,
                    e.preco_diaria as PrecoDiaria, e.Marca, e.Modelo, e.numero_serie as NumeroSerie,
                    e.ano_fabricacao as AnoFabricacao, e.Descricao, e.observacao_internas as ObservacaoInternas,
@@ -71,9 +89,16 @@ public class EquipamentoRepository : DataDapperRepository, IEquipamentoRepositor
             FROM l6a.Equipamento e
             INNER JOIN l6a.Categoria c ON e.categoria_id = c.Id
             {whereString}
-            ORDER BY e.Nome";
+            ORDER BY e.Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<EquipamentoQuery>(sql, parameters);
+        parameters.Add("TamanhoPagina", paginacao.TamanhoPagina);
+        parameters.Add("Offset", paginacao.Offset);
+
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, parameters);
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<EquipamentoQuery>()).ToList();
+        return new ResultadoPaginado<EquipamentoQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task<EquipamentoQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken)

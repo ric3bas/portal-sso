@@ -1,4 +1,4 @@
-namespace Portal.Application.Locacao.UseCases.CancelarLocacao;
+﻿namespace Portal.Application.Locacao.UseCases.CancelarLocacao;
 
 public class CancelarLocacaoResponse
 {

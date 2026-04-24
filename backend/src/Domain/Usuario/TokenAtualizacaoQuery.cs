@@ -1,4 +1,4 @@
-namespace Portal.Domain.Usuario;
+﻿namespace Portal.Domain.Usuario;
 
 public class TokenAtualizacaoQuery
 {

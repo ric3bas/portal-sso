@@ -1,4 +1,4 @@
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -19,6 +19,8 @@ namespace Portal.Domain.Base
             string issuer,
             string audience,
             bool? isMaster,
+            string corPrimaria, 
+            string corSecundaria,
             string[] escopos)
         {
             var claims = new[]
@@ -29,6 +31,8 @@ namespace Portal.Domain.Base
                 new Claim("email", email),
                 new Claim("tenantId", parceiroId),
                 new Claim("isMaster", (isMaster ?? false).ToString()),
+                new Claim("corPrimaria", corPrimaria),
+                new Claim("corSecundaria", corSecundaria),
                 new Claim("escopos", JsonSerializer.Serialize(escopos), JsonClaimValueTypes.JsonArray)
             };
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));

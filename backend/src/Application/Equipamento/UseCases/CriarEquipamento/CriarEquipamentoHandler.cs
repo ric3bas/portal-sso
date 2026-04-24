@@ -1,5 +1,4 @@
-using FluentValidation;
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Equipamento;
 using Portal.Domain.Equipamento.Interfaces;
 
@@ -8,30 +7,24 @@ namespace Portal.Application.Equipamento.UseCases.CriarEquipamento;
 public class CriarEquipamentoHandler
 {
     private readonly IEquipamentoRepository _repository;
-    private readonly IValidator<CriarEquipamentoRequest> _validator;
 
-    public CriarEquipamentoHandler(IEquipamentoRepository repository, IValidator<CriarEquipamentoRequest> validator)
+    public CriarEquipamentoHandler(IEquipamentoRepository repository)
     {
         _repository = repository;
-        _validator = validator;
     }
 
-    public async Task<Result<CriarEquipamentoResponse>> Handle(CriarEquipamentoRequest request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(CriarEquipamentoRequest request, CancellationToken cancellationToken)
     {
-        var validation = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
-        {
-            return Result.ValidationResult<CriarEquipamentoResponse>(validation.Errors.Select(x => x.ErrorMessage));
-        }
+        if (!request.IsValid()) return Result.ValidationResult<string>(request.ObterErros());
 
         if (!await _repository.CategoriaExisteAsync(Guid.Parse(request.CategoriaId), cancellationToken))
         {
-            return Result.ValidationResult<CriarEquipamentoResponse>("Categoria não encontrada");
+            return Result.ValidationResult<string>("Categoria não encontrada");
         }
 
         if (await _repository.ExisteNumeroSerieAsync(request.NumeroSerie, cancellationToken: cancellationToken))
         {
-            return Result.ValidationResult<CriarEquipamentoResponse>("Já existe um equipamento com este número de série");
+            return Result.ValidationResult<string>("Já existe um equipamento com este número de série");
         }
 
         var entity = new EquipamentoCommand
@@ -49,7 +42,7 @@ public class CriarEquipamentoHandler
             Ativo = true
         };
 
-        var id = await _repository.CriarAsync(entity, cancellationToken);
-        return Result.OkResult(new CriarEquipamentoResponse { Id = id });
+        _ = await _repository.CriarAsync(entity, cancellationToken);
+        return Result.OkResult("Equipamento criado com sucesso");
     }
 }

@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Portal.API.Extensions;
 using Portal.Application.Usuario.UseCases.AtualizarUsuario;
-using Portal.Application.Usuario.UseCases.ListarUsuarios;
-using Portal.Application.Usuario.UseCases.RegistrarUsuario;
+using Portal.Application.Usuario.UseCases.ObterUsuarios;
+using Portal.Application.Usuario.UseCases.CriarUsuario;
+using Portal.WebApi.Extensions;
 
 namespace Portal.API.Endpoints;
 
@@ -14,22 +15,24 @@ public static class UsuarioEndpoints
             .WithTags("👥 Usuários");
 
         group.MapGet("/", async (
-            [FromServices] ListarUsuariosHandler handler,
-            [FromQuery] string? parceiroId,
-            CancellationToken cancellationToken) =>
+            [FromServices] ObterUsuariosHandler handler,
+            [AsParameters] ObterUsuariosRequest request,
+            CancellationToken cancellationToken = default) =>
         {
-            var result = await handler.Handle(new ListarUsuariosRequest { ParceiroId = parceiroId }, cancellationToken);
+            var result = await handler.Handle(request, cancellationToken);
             return result.ToHttpResult();
-        });
+        })
+        .RequireScopes("usuario.ler");
 
         group.MapPost("/", async (
-            [FromServices] RegistrarUsuarioHandler handler,
-            [FromBody] RegistrarUsuarioRequest request,
+            [FromServices] CriarUsuarioHandler handler,
+            [FromBody] CriarUsuarioRequest request,
             CancellationToken cancellationToken) =>
         {
             var result = await handler.Handle(request, cancellationToken);
             return result.ToHttpResult();
-        });
+        })
+        .RequireScopes("usuario.criar");
 
         group.MapPatch("/{id:int}", async (
             [FromServices] AtualizarUsuarioHandler handler,
@@ -40,6 +43,8 @@ public static class UsuarioEndpoints
             request.Id = id;
             var result = await handler.Handle(request, cancellationToken);
             return result.ToHttpResult();
-        });
+        })
+        .RequireScopes("usuario.atualizar");
     }
 }
+

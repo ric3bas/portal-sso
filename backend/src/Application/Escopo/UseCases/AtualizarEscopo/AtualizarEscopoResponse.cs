@@ -1,4 +1,4 @@
-namespace Portal.Application.Escopo.UseCases.AtualizarEscopo;
+﻿namespace Portal.Application.Escopo.UseCases.AtualizarEscopo;
 
 public class AtualizarEscopoResponse
 {

@@ -1,6 +1,5 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Parceiro.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Parceiro.UseCases.ObterParceiroPorId;
 
@@ -17,7 +16,7 @@ public class ObterParceiroPorIdHandler
     {
         var parceiro = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
         if (parceiro is null)
-            return Result.NotFoundResult<ObterParceiroPorIdResponse>("Parceiro não encontrado");
+            return Result.NotFoundResult<ObterParceiroPorIdResponse>("Parceiro nÃ£o encontrado");
 
         return Result.OkResult(parceiro.ToResponse<ObterParceiroPorIdResponse>());
     }

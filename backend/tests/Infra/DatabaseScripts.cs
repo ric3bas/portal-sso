@@ -1,4 +1,4 @@
-namespace Infra;
+﻿namespace Infra;
 
 internal static class DatabaseScripts
 {

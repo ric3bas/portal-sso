@@ -1,7 +1,7 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
+using Portal.Domain.Common;
 using Portal.Domain.Categoria;
 using Portal.Domain.Categoria.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Categoria.UseCases.ObterCategoriasPorFiltro;
 
@@ -19,20 +19,20 @@ public class ObterCategoriasPorFiltroHandler : BaseService
         _logger = logger;
     }
 
-    public async Task<Result<List<ObterCategoriasPorFiltroResponse>>> Handle(ObterCategoriasPorFiltroRequest request, CancellationToken cancellationToken)
+    public async Task<Result<TabelaPaginadaResponse<ObterCategoriasPorFiltroResponse>>> Handle(ObterCategoriasPorFiltroRequest request, CancellationToken cancellationToken)
     {
         _logger.LogInformation($"Listando categorias com filtro de nome: {request.Nome}");
 
         var usuario = ObterUsuario();
         var parceiroId = usuario.IsMaster ? Guid.Empty : usuario.ParceiroId;
 
-        var result = usuario.IsMaster
-            ? await _repository.ObterPorFiltroAsync(request.Nome ?? string.Empty, cancellationToken)
-            : await _repository.ObterPorFiltroEParceiroAsync(parceiroId, request.Nome ?? string.Empty, cancellationToken);
+        var resultado = usuario.IsMaster
+            ? await _repository.ObterPorFiltroAsync(request.Nome ?? string.Empty, request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken)
+            : await _repository.ObterPorFiltroEParceiroAsync(parceiroId, request.Nome ?? string.Empty, request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken);
 
-        if (result == null || !result.Any())
-            return Result.NotFoundResult<List<ObterCategoriasPorFiltroResponse>>("Nenhuma categoria encontrada");
+        var response = resultado.Itens.Select(c => c.ToResponsePorFiltro()).ToList();
+        var tabela = TabelaPaginadaResponse<ObterCategoriasPorFiltroResponse>.Criar(response, resultado.TotalRegistros, resultado.TotalRegistros, resultado.NumeroPagina, resultado.TamanhoPagina);
 
-        return Result.OkResult(result.Select(c => c.ToResponse<ObterCategoriasPorFiltroResponse>()).ToList());
+        return Result.OkResult(tabela);
     }
 }

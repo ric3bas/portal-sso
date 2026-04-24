@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Perfil.Interfaces;
 
 namespace Portal.Application.Perfil.UseCases.ApagarPerfil;
@@ -16,7 +16,7 @@ public class ApagarPerfilHandler
     {
         var perfilExiste = await _repository.ExistePerfilAsync(request.Id, cancellationToken);
         if (!perfilExiste)
-            return Result.NotFoundResult<ApagarPerfilResponse>($"Perfil {request.Id} não encontrado");
+            return Result.NotFoundResult<ApagarPerfilResponse>($"Perfil {request.Id} nÃ£o encontrado");
 
         await _repository.DeletarAsync(request.Id, cancellationToken);
         return Result.OkResult(new ApagarPerfilResponse { Mensagem = "Apagado com sucesso" });

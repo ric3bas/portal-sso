@@ -1,4 +1,4 @@
-namespace Portal.Domain.Base
+ï»¿namespace Portal.Domain.Base
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -11,7 +11,6 @@ namespace Portal.Domain.Base
         public static Result<T> BusinessResult<T>(string message) => Result<T>.Business(message);
         public static Result<T> NotFoundResult<T>(string message) => Result<T>.NotFound(message);
 
-        // Métodos para Result não-genérico
         public static SimpleResult OkResult() => SimpleResult.Ok();
         public static SimpleResult ValidationResult(string error) => SimpleResult.Validation(error);
         public static SimpleResult ValidationResult(IEnumerable<string> errors) => SimpleResult.Validation(errors);

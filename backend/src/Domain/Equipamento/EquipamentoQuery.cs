@@ -1,3 +1,5 @@
+﻿using Portal.Application.Equipamento.UseCases.ObterEquipamentos;
+
 namespace Portal.Domain.Equipamento;
 
 public class EquipamentoQuery
@@ -16,4 +18,24 @@ public class EquipamentoQuery
     public string? ObservacaoInternas { get; set; }
     public bool Ativo { get; set; }
     public Guid ParceiroId { get; set; }
+
+    public TResponse ToResponse<TResponse>() where TResponse : ObterEquipamentosResponse, new()
+    {
+        return new TResponse
+        {
+            Id = Id,
+            Nome = Nome,
+            CategoriaId = CategoriaId,
+            CategoriaNome = CategoriaNome,
+            QuantidadeEstoque = QuantidadeEstoque,
+            PrecoDiaria = PrecoDiaria,
+            Marca = Marca,
+            Modelo = Modelo,
+            NumeroSerie = NumeroSerie,
+            AnoFabricacao = AnoFabricacao,
+            Descricao = Descricao,
+            ObservacaoInternas = ObservacaoInternas,
+            Ativo = Ativo
+        };
+    }
 }

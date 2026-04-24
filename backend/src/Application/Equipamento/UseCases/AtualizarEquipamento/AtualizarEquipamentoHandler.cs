@@ -1,5 +1,4 @@
-using FluentValidation;
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Equipamento;
 using Portal.Domain.Equipamento.Interfaces;
 
@@ -8,35 +7,29 @@ namespace Portal.Application.Equipamento.UseCases.AtualizarEquipamento;
 public class AtualizarEquipamentoHandler
 {
     private readonly IEquipamentoRepository _repository;
-    private readonly IValidator<AtualizarEquipamentoRequest> _validator;
 
-    public AtualizarEquipamentoHandler(IEquipamentoRepository repository, IValidator<AtualizarEquipamentoRequest> validator)
+    public AtualizarEquipamentoHandler(IEquipamentoRepository repository)
     {
         _repository = repository;
-        _validator = validator;
     }
 
-    public async Task<Result<AtualizarEquipamentoResponse>> Handle(AtualizarEquipamentoRequest request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(AtualizarEquipamentoRequest request, CancellationToken cancellationToken)
     {
-        var validation = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
-        {
-            return Result.ValidationResult<AtualizarEquipamentoResponse>(validation.Errors.Select(x => x.ErrorMessage));
-        }
+        if (!request.IsValid()) return Result.ValidationResult<string>(request.ObterErros());
 
         if (!await _repository.ExisteAsync(request.Id, cancellationToken))
         {
-            return Result.NotFoundResult<AtualizarEquipamentoResponse>("Equipamento não encontrado");
+            return Result.NotFoundResult<string>("Equipamento não encontrado");
         }
 
         if (!await _repository.CategoriaExisteAsync(Guid.Parse(request.CategoriaId), cancellationToken))
         {
-            return Result.ValidationResult<AtualizarEquipamentoResponse>("Categoria não encontrada");
+            return Result.ValidationResult<string>("Categoria não encontrada");
         }
 
         if (await _repository.ExisteNumeroSerieAsync(request.NumeroSerie, request.Id, cancellationToken))
         {
-            return Result.ValidationResult<AtualizarEquipamentoResponse>("Já existe um equipamento com este número de série");
+            return Result.ValidationResult<string>("Já existe um equipamento com este número de série");
         }
 
         var entity = new EquipamentoCommand
@@ -58,9 +51,9 @@ public class AtualizarEquipamentoHandler
         var rows = await _repository.AtualizarAsync(entity, cancellationToken);
         if (rows == 0)
         {
-            return Result.NotFoundResult<AtualizarEquipamentoResponse>("Equipamento não encontrado");
+            return Result.NotFoundResult<string>("Equipamento não encontrado");
         }
 
-        return Result.OkResult(new AtualizarEquipamentoResponse { Mensagem = "Equipamento atualizado com sucesso" });
+        return Result.OkResult("Equipamento atualizado com sucesso");
     }
 }

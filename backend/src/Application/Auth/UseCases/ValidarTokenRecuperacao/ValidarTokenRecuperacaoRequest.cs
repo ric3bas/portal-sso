@@ -1,4 +1,7 @@
-﻿using Portal.Domain.Base;
+﻿using FluentValidation;
+using Microsoft.Extensions.Options;
+using Portal.Application.Auth.UseCases.TrocarSenha;
+using Portal.Domain.Base;
 
 namespace Portal.Application.Auth.UseCases.ValidarTokenRecuperacao
 {
@@ -8,7 +11,9 @@ namespace Portal.Application.Auth.UseCases.ValidarTokenRecuperacao
 
         public override bool IsValid()
         {
-            var validator = new ValidarTokenRecuperacaoValidator();
+            var validator = new InlineValidator<ValidarTokenRecuperacaoRequest>();
+
+            validator.RuleFor(x => x.Token).AplicaRegraCampoObrigatorio();
             return Validate(this, validator);
         }
     }

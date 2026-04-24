@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Categoria.Interfaces;
 
 namespace Portal.Application.Categoria.UseCases.InativarCategoria;
@@ -17,47 +17,28 @@ public class InativarCategoriaHandler : BaseService
         _logger = logger;
     }
 
-    public async Task<Result<InativarCategoriaResponse>> Handle(InativarCategoriaRequest request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(InativarCategoriaRequest request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Inativando categoria {Id}", request.Id);
+
+        if (!request.IsValid()) return Result.ValidationResult<string>(request.ObterErros());
+
 
         var usuario = ObterUsuario();
         var parceiroId = usuario.IsMaster ? Guid.Empty : usuario.ParceiroId;
 
-        // Verificar se categoria existe
         var categoriaExistente = parceiroId == Guid.Empty 
             ? await _repository.ObterPorIdAsync(request.Id, cancellationToken)
             : await _repository.ObterPorIdEParceiroAsync(request.Id, parceiroId, cancellationToken);
 
         if (categoriaExistente == null)
         {
-            return Result.NotFoundResult<InativarCategoriaResponse>("Categoria não encontrada");
+            return Result.NotFoundResult<string>("Categoria nÃ£o encontrada");
         }
 
-        // Inativar categoria
-        var linhasAfetadas = await _repository.InativarAsync(request.Id, categoriaExistente.ParceiroId, cancellationToken);
+        await _repository.InativarAsync(request.Id, categoriaExistente.ParceiroId, cancellationToken);
 
-        if (linhasAfetadas == 0)
-        {
-            return Result.BusinessResult<InativarCategoriaResponse>("Erro ao inativar categoria");
-        }
 
-        // Obter categoria inativada
-        var categoriaInativada = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
-
-        if (categoriaInativada == null)
-        {
-            return Result.BusinessResult<InativarCategoriaResponse>("Erro ao obter categoria inativada");
-        }
-
-        var response = new InativarCategoriaResponse
-        {
-            Id = categoriaInativada.Id,
-            Nome = categoriaInativada.Nome,
-            Ativo = categoriaInativada.Ativo,
-            ParceiroId = categoriaInativada.ParceiroId
-        };
-
-        return Result.OkResult(response);
+        return Result.OkResult("Categoria inativada com sucesso");
     }
 }

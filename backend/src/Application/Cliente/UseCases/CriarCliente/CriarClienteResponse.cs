@@ -1,4 +1,4 @@
-namespace Portal.Application.Cliente.UseCases.CriarCliente;
+﻿namespace Portal.Application.Cliente.UseCases.CriarCliente;
 
 public class CriarClienteResponse
 {

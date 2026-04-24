@@ -1,4 +1,4 @@
-namespace Portal.Application.Perfil.UseCases.AtualizarNomePerfil;
+﻿namespace Portal.Application.Perfil.UseCases.AtualizarNomePerfil;
 
 public class AtualizarNomePerfilRequest
 {

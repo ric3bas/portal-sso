@@ -1,4 +1,4 @@
-namespace Portal.Domain.Base.Email
+﻿namespace Portal.Domain.Base.Email
 {
     public interface IEmailService
     {

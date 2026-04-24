@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+Ôªøusing Microsoft.Extensions.Logging;
 using NSubstitute;
 using Portal.Domain.Exceptions;
 using Portal.Features.Escopo.Domain.Interfaces;
@@ -28,22 +28,18 @@ public class PerfilServiceTests
     [Fact]
     public void Constructor_InitializesAllDependencies()
     {
-        // Arrange
         var repository = Substitute.For<IPerfilRepository>();
         var escopoRepository = Substitute.For<IEscopoRepository>();
         var logger = Substitute.For<ILogger<PerfilService>>();
 
-        // Act
         var service = new PerfilService(repository, escopoRepository, logger);
 
-        // Assert
         Assert.NotNull(service);
     }
 
     [Fact]
     public async Task ListarComEscoposAsync_WithResults_ReturnsResults()
     {
-        // Arrange
         var perfis = new List<PerfilComEscopoQuery>
         {
             new PerfilComEscopoQuery { Id = 1, Nome = "Perfil 1" },
@@ -51,10 +47,8 @@ public class PerfilServiceTests
         };
         _repository.ListarComEscoposAsync(Arg.Any<CancellationToken>()).Returns(perfis);
 
-        // Act
         var result = await _service.ListarComEscoposAsync(CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.Equal(2, result.Data.Count());
     }
@@ -62,11 +56,9 @@ public class PerfilServiceTests
     [Fact]
     public async Task ListarComEscoposAsync_NoResults_ThrowsNotFoundException()
     {
-        // Arrange
         var perfis = new List<PerfilComEscopoQuery>();
         _repository.ListarComEscoposAsync(Arg.Any<CancellationToken>()).Returns(perfis);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _service.ListarComEscoposAsync(CancellationToken.None));
         Assert.Equal("Nenhum perfil encontrado", exception.Message);
@@ -75,16 +67,13 @@ public class PerfilServiceTests
     [Fact]
     public async Task CriarAsync_ValidNome_ReturnsId()
     {
-        // Arrange
         var nome = "Perfil Teste";
         var expectedId = 1;
         _repository.ExisteNomeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
         _repository.InserirAsync(Arg.Any<PerfilCommand>(), Arg.Any<CancellationToken>()).Returns(expectedId);
 
-        // Act
         var result = await _service.CriarAsync(nome, CancellationToken.None);
 
-        // Assert
         Assert.Equal(expectedId, result.Data);
         await _repository.Received(1).InserirAsync(
             Arg.Is<PerfilCommand>(p => p.Nome == nome.Trim()),
@@ -94,89 +83,74 @@ public class PerfilServiceTests
     [Fact]
     public async Task CriarAsync_NullNome_ThrowsValidationException()
     {
-        // Arrange
         string? nome = null;
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.CriarAsync(nome!, CancellationToken.None));
-        Assert.Contains("Nome do perfil È obrigatÛrio", exception.Errors);
+        Assert.Contains("Nome do perfil √© obrigat√≥rio", exception.Errors);
     }
 
     [Fact]
     public async Task CriarAsync_EmptyNome_ThrowsValidationException()
     {
-        // Arrange
         var nome = "";
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.CriarAsync(nome, CancellationToken.None));
-        Assert.Contains("Nome do perfil È obrigatÛrio", exception.Errors);
+        Assert.Contains("Nome do perfil √© obrigat√≥rio", exception.Errors);
     }
 
     [Fact]
     public async Task CriarAsync_WhitespaceNome_ThrowsValidationException()
     {
-        // Arrange
         var nome = "   ";
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.CriarAsync(nome, CancellationToken.None));
-        Assert.Contains("Nome do perfil È obrigatÛrio", exception.Errors);
+        Assert.Contains("Nome do perfil √© obrigat√≥rio", exception.Errors);
     }
 
     [Fact]
     public async Task CriarAsync_NomeTooShort_ThrowsValidationException()
     {
-        // Arrange
         var nome = "ab";
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.CriarAsync(nome, CancellationToken.None));
-        Assert.Contains("Nome do perfil deve ter no mÌnimo 3 caracteres", exception.Errors);
+        Assert.Contains("Nome do perfil deve ter no m√≠nimo 3 caracteres", exception.Errors);
     }
 
     [Fact]
     public async Task CriarAsync_NomeTooLong_ThrowsValidationException()
     {
-        // Arrange
         var nome = new string('a', 101);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.CriarAsync(nome, CancellationToken.None));
-        Assert.Contains("Nome do perfil deve ter no m·ximo 100 caracteres", exception.Errors);
+        Assert.Contains("Nome do perfil deve ter no m√°ximo 100 caracteres", exception.Errors);
     }
 
     [Fact]
     public async Task CriarAsync_ExistingNome_ThrowsBusinessException()
     {
-        // Arrange
         var nome = "Perfil Existente";
         _repository.ExisteNomeAsync(nome.Trim(), Arg.Any<CancellationToken>()).Returns(true);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(
             () => _service.CriarAsync(nome, CancellationToken.None));
-        Assert.Contains($"J· existe um perfil com o nome '{nome}'", exception.Errors);
+        Assert.Contains($"J√° existe um perfil com o nome '{nome}'", exception.Errors);
     }
 
     [Fact]
     public async Task CriarAsync_NomeWithLeadingTrailingSpaces_TrimsName()
     {
-        // Arrange
         var nome = "  Perfil Teste  ";
         var expectedId = 1;
         _repository.ExisteNomeAsync("Perfil Teste", Arg.Any<CancellationToken>()).Returns(false);
         _repository.InserirAsync(Arg.Any<PerfilCommand>(), Arg.Any<CancellationToken>()).Returns(expectedId);
 
-        // Act
         var result = await _service.CriarAsync(nome, CancellationToken.None);
 
-        // Assert
         Assert.Equal(expectedId, result.Data);
         await _repository.Received(1).ExisteNomeAsync("Perfil Teste", Arg.Any<CancellationToken>());
         await _repository.Received(1).InserirAsync(
@@ -187,15 +161,12 @@ public class PerfilServiceTests
     [Fact]
     public async Task ObterPorIdAsync_ValidId_ReturnsPerfil()
     {
-        // Arrange
         var id = 1;
         var perfil = new PerfilQuery { Id = id, Nome = "Perfil Teste" };
         _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>()).Returns(perfil);
 
-        // Act
         var result = await _service.ObterPorIdAsync(id, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.Equal(id, result.Data.Id);
         Assert.Equal("Perfil Teste", result.Data.Nome);
@@ -204,54 +175,45 @@ public class PerfilServiceTests
     [Fact]
     public async Task ObterPorIdAsync_InvalidId_ThrowsValidationException()
     {
-        // Arrange
         var id = 0;
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.ObterPorIdAsync(id, CancellationToken.None));
-        Assert.Contains("Id do perfil inv·lido", exception.Errors);
+        Assert.Contains("Id do perfil inv√°lido", exception.Errors);
     }
 
     [Fact]
     public async Task ObterPorIdAsync_NegativeId_ThrowsValidationException()
     {
-        // Arrange
         var id = -1;
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.ObterPorIdAsync(id, CancellationToken.None));
-        Assert.Contains("Id do perfil inv·lido", exception.Errors);
+        Assert.Contains("Id do perfil inv√°lido", exception.Errors);
     }
 
     [Fact]
     public async Task ObterPorIdAsync_NotFound_ThrowsNotFoundException()
     {
-        // Arrange
         var id = 99;
         _repository.ObterPorIdAsync(id, Arg.Any<CancellationToken>()).Returns((PerfilQuery?)null);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _service.ObterPorIdAsync(id, CancellationToken.None));
-        Assert.Equal($"Perfil {id} n„o encontrado", exception.Message);
+        Assert.Equal($"Perfil {id} n√£o encontrado", exception.Message);
     }
 
     [Fact]
     public async Task VincularEscoposAsync_ValidData_CallsRepository()
     {
-        // Arrange
         var perfilId = 1;
         var escopoIds = new List<int> { 1, 2, 3 };
         _repository.ExistePerfilAsync(perfilId, Arg.Any<CancellationToken>()).Returns(true);
         _escopoRepository.ObterIdsExistentesAsync(Arg.Any<List<int>>(), Arg.Any<CancellationToken>())
             .Returns(escopoIds);
 
-        // Act
         await _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None);
 
-        // Assert
         await _repository.Received(1).VincularEscoposAsync(
             perfilId,
             Arg.Is<List<int>>(ids => ids.Count == 3),
@@ -261,37 +223,31 @@ public class PerfilServiceTests
     [Fact]
     public async Task VincularEscoposAsync_InvalidPerfilId_ThrowsValidationException()
     {
-        // Arrange
         var perfilId = 0;
         var escopoIds = new List<int> { 1, 2 };
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None));
-        Assert.Contains("PerfilId inv·lido", exception.Errors);
+        Assert.Contains("PerfilId inv√°lido", exception.Errors);
     }
 
     [Fact]
     public async Task VincularEscoposAsync_NegativePerfilId_ThrowsValidationException()
     {
-        // Arrange
         var perfilId = -1;
         var escopoIds = new List<int> { 1, 2 };
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None));
-        Assert.Contains("PerfilId inv·lido", exception.Errors);
+        Assert.Contains("PerfilId inv√°lido", exception.Errors);
     }
 
     [Fact]
     public async Task VincularEscoposAsync_NullEscopoIds_ThrowsValidationException()
     {
-        // Arrange
         var perfilId = 1;
         IEnumerable<int>? escopoIds = null;
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds!, CancellationToken.None));
         Assert.Contains("Informe ao menos um EscopoId", exception.Errors);
@@ -300,11 +256,9 @@ public class PerfilServiceTests
     [Fact]
     public async Task VincularEscoposAsync_EmptyEscopoIds_ThrowsValidationException()
     {
-        // Arrange
         var perfilId = 1;
         var escopoIds = new List<int>();
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None));
         Assert.Contains("Informe ao menos um EscopoId", exception.Errors);
@@ -313,11 +267,9 @@ public class PerfilServiceTests
     [Fact]
     public async Task VincularEscoposAsync_InvalidEscopoId_ThrowsValidationException()
     {
-        // Arrange
         var perfilId = 1;
         var escopoIds = new List<int> { 1, 0, 3 };
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None));
         Assert.Contains("Todos os EscopoIds devem ser maiores que zero", exception.Errors);
@@ -326,11 +278,9 @@ public class PerfilServiceTests
     [Fact]
     public async Task VincularEscoposAsync_NegativeEscopoId_ThrowsValidationException()
     {
-        // Arrange
         var perfilId = 1;
         var escopoIds = new List<int> { 1, -1, 3 };
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None));
         Assert.Contains("Todos os EscopoIds devem ser maiores que zero", exception.Errors);
@@ -339,21 +289,18 @@ public class PerfilServiceTests
     [Fact]
     public async Task VincularEscoposAsync_PerfilNotFound_ThrowsNotFoundException()
     {
-        // Arrange
         var perfilId = 99;
         var escopoIds = new List<int> { 1, 2, 3 };
         _repository.ExistePerfilAsync(perfilId, Arg.Any<CancellationToken>()).Returns(false);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None));
-        Assert.Equal($"Perfil {perfilId} n„o encontrado", exception.Message);
+        Assert.Equal($"Perfil {perfilId} n√£o encontrado", exception.Message);
     }
 
     [Fact]
     public async Task VincularEscoposAsync_NonExistentEscopoIds_ThrowsValidationException()
     {
-        // Arrange
         var perfilId = 1;
         var escopoIds = new List<int> { 1, 2, 3, 4 };
         var existingIds = new List<int> { 1, 3 };
@@ -361,16 +308,14 @@ public class PerfilServiceTests
         _escopoRepository.ObterIdsExistentesAsync(Arg.Any<List<int>>(), Arg.Any<CancellationToken>())
             .Returns(existingIds);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(
             () => _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None));
-        Assert.Contains("Os seguintes EscopoIds n„o existem: 2, 4", exception.Errors);
+        Assert.Contains("Os seguintes EscopoIds n√£o existem: 2, 4", exception.Errors);
     }
 
     [Fact]
     public async Task VincularEscoposAsync_DuplicateEscopoIds_RemovesDuplicates()
     {
-        // Arrange
         var perfilId = 1;
         var escopoIds = new List<int> { 1, 2, 2, 3, 3 };
         var expectedIds = new List<int> { 1, 2, 3 };
@@ -378,10 +323,8 @@ public class PerfilServiceTests
         _escopoRepository.ObterIdsExistentesAsync(Arg.Any<List<int>>(), Arg.Any<CancellationToken>())
             .Returns(expectedIds);
 
-        // Act
         await _service.VincularEscoposAsync(perfilId, escopoIds, CancellationToken.None);
 
-        // Assert
         await _repository.Received(1).VincularEscoposAsync(
             perfilId,
             Arg.Is<List<int>>(ids => ids.Count == 3 && ids.Contains(1) && ids.Contains(2) && ids.Contains(3)),

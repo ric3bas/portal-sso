@@ -1,5 +1,7 @@
+﻿using Dapper;
 using Portal.Domain.Escopo;
 using Portal.Domain.Escopo.Interfaces;
+using Portal.Domain.Common;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
 using DataUnitOfWork = Portal.Infrastructure.Data.IUnitOfWork;
 
@@ -11,10 +13,33 @@ public class EscopoRepository : DataDapperRepository, IEscopoRepository
     {
     }
 
-    public async Task<IEnumerable<EscopoQuery>> ObterTodosAsync(CancellationToken cancellationToken = default)
+    public async Task<ResultadoPaginado<EscopoQuery>> ObterTodosAsync(string? nome, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken = default)
     {
-        const string sql = "SELECT id, nome FROM sso.escopo ORDER BY id";
-        return await QueryAsync<EscopoQuery>(sql);
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+        var temFiltroNome = !string.IsNullOrWhiteSpace(nome);
+
+        var sql = $@"
+            SELECT COUNT(1)
+            FROM sso.escopo
+            {(temFiltroNome ? "WHERE LOWER(nome) LIKE LOWER(@Nome)" : string.Empty)};
+
+            SELECT id, nome
+            FROM sso.escopo
+            {(temFiltroNome ? "WHERE LOWER(nome) LIKE LOWER(@Nome)" : string.Empty)}
+            ORDER BY nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset;";
+
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, new
+        {
+            Nome = $"%{nome}%",
+            TamanhoPagina = paginacao.TamanhoPagina,
+            Offset = paginacao.Offset
+        });
+
+        var totalRegistros = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<EscopoQuery>()).ToList();
+
+        return new ResultadoPaginado<EscopoQuery>(itens, totalRegistros, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task<EscopoQuery?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default)

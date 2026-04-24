@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Categoria;
 using Portal.Domain.Categoria.Interfaces;
 
@@ -22,6 +22,8 @@ public class ObterCategoriaPorIdHandler : BaseService
     {
         _logger.LogInformation("Buscando categoria por ID {Id}", request.Id);
 
+        if (!request.IsValid()) return Result.ValidationResult<ObterCategoriaPorIdResponse>(request.ObterErros());
+
         var usuario = ObterUsuario();
         var parceiroId = usuario.IsMaster ? Guid.Empty : usuario.ParceiroId;
 
@@ -37,7 +39,7 @@ public class ObterCategoriaPorIdHandler : BaseService
         }
 
         if (categoria == null)
-            return Result.NotFoundResult<ObterCategoriaPorIdResponse>("Categoria não encontrada");
+            return Result.NotFoundResult<ObterCategoriaPorIdResponse>("Categoria nÃ£o encontrada");
 
         var response = new ObterCategoriaPorIdResponse
         {

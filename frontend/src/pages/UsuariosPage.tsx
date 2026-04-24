@@ -1,9 +1,11 @@
 import { Pencil } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Badge, Button, CheckboxField, Feedback, Modal, PageIntro, Panel } from '../components/ui'
+import { AdminPage, AdminPanel } from '../components/admin'
+import { DataTable, type DataTableColumn } from '../components/DataTable'
+import { Badge, Button, CheckboxField, Modal } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { parceirosApi, perfisApi, UsuariosApi } from '../services/sso'
-import type { ParceiroResponse, PerfilComEscopoResponse, SelectOption, UsuarioComPerfilResponse } from '../types/api'
+import type { PaginatedResult, ParceiroResponse, PerfilComEscopoResponse, SelectOption, UsuarioComPerfilResponse } from '../types/api'
 
 interface UserFormState {
   nome: string
@@ -160,6 +162,7 @@ export function UsuariosPage() {
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [tableMessage, setTableMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginatedResult<UsuarioComPerfilResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isSaving, setIsSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<UsuarioComPerfilResponse | null>(null)
@@ -189,15 +192,17 @@ export function UsuariosPage() {
     setPerfis(loadedProfiles)
   }
 
-  async function loadUsers(parceiroId?: string) {
+  async function loadUsers(parceiroId?: string, page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
-      const response = await UsuariosApi.list(parceiroId)
-      setItems(response)
-      setTableMessage(response.length === 0 ? 'Nenhum usuario encontrado' : null)
+      const response = await UsuariosApi.listPage(parceiroId, { Pagina: page, TamanhoPagina: pageSize })
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhum usuario encontrado' : null)
     } catch (error) {
       setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
       setTableMessage(getErrorMessage(error, 'Falha ao carregar usuarios.'))
     } finally {
       setIsLoading(false)
@@ -350,24 +355,19 @@ export function UsuariosPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro
+    <AdminPage
         action={<Button onClick={openCreateModal}>Novo</Button>}
-        eyebrow=""
+        feedback={feedback}
         title="Usuários"
-        description=""
-      />
-
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-5 md:p-6">
+      >
+      <AdminPanel>
         <div className="max-w-xs">
           <select
             className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-900 dark:focus:border-slate-900 dark:focus:ring-slate-200"
             onChange={async (event) => {
               const nextValue = event.target.value
               setSelectedPartnerFilter(nextValue)
-              await loadUsers(nextValue || undefined)
+              await loadUsers(nextValue || undefined, 1, pagination.pageSize)
             }}
             value={selectedPartnerFilter}
           >
@@ -379,68 +379,46 @@ export function UsuariosPage() {
           </select>
         </div>
 
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando usuarios...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Id</th>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold">Login</th>
-                    <th className="px-4 py-3 font-semibold">E-mail</th>
-                    <th className="px-4 py-3 font-semibold">Parceiro</th>
-                    <th className="px-4 py-3 font-semibold">Perfil</th>
-                    <th className="px-4 py-3 font-semibold">Ativo</th>
-                    <th className="px-4 py-3 font-semibold">Bloqueado</th>
-                    <th className="px-4 py-3 font-semibold text-right">Acoes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-mono-ui text-xs text-[var(--text-soft)] dark:text-slate-500">#{item.id}</td>
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.login}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.email}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.parceiro ?? item.parceiroId ?? '-'}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{String(item.perfil ?? item.perfilId ?? '-')}</td>
-                        <td className="px-4 py-3">
-                          <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Sim' : 'Não'}</Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge tone={item.bloqueado ? 'danger' : 'success'}>{item.bloqueado ? 'Sim' : 'Não'}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            aria-label="Editar usuario"
-                            className="h-11 w-11 px-0"
-                            onClick={() => openEditModal(item)}
-                            title="Editar"
-                            type="button"
-                            variant="secondary"
-                          >
-                            <Pencil className="h-5 w-5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={9}>
-                        {tableMessage ?? 'Nenhum usuario encontrado'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Panel>
+        <DataTable
+          columns={[
+            { key: 'nome', header: 'Nome', cellClassName: 'font-medium text-[var(--text)] dark:text-slate-900', renderCell: (item) => item.nome },
+            { key: 'login', header: 'Login', renderCell: (item) => item.login },
+            { key: 'email', header: 'E-mail', renderCell: (item) => item.email },
+            { key: 'parceiro', header: 'Parceiro', renderCell: (item) => item.parceiro ?? item.parceiroId ?? '-' },
+            { key: 'perfil', header: 'Perfil', renderCell: (item) => String(item.perfil ?? item.perfilId ?? '-') },
+            { key: 'ativo', header: 'Ativo', renderCell: (item) => <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Sim' : 'Não'}</Badge> },
+            { key: 'bloqueado', header: 'Bloqueado', renderCell: (item) => <Badge tone={item.bloqueado ? 'danger' : 'success'}>{item.bloqueado ? 'Sim' : 'Não'}</Badge> },
+            {
+              key: 'acoes',
+              header: 'Acoes',
+              headerClassName: 'text-right',
+              cellClassName: 'text-right',
+              renderCell: (item) => (
+                <Button
+                  aria-label="Editar usuario"
+                  className="h-8 w-8 !p-0"
+                  onClick={() => openEditModal(item)}
+                  title="Editar"
+                  type="button"
+                  variant="secondary"
+                >
+                  <Pencil className="h-[18px] w-[18px]" />
+                </Button>
+              ),
+            },
+          ] satisfies DataTableColumn<UsuarioComPerfilResponse>[]}
+          emptyMessage={tableMessage ?? 'Nenhum usuario encontrado'}
+          getRowKey={(item) => item.id}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando usuarios..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) => void loadUsers(selectedPartnerFilter || undefined, page, pagination.pageSize),
+            onPageSizeChange: (pageSize) => void loadUsers(selectedPartnerFilter || undefined, 1, pageSize),
+          }}
+        />
+      </AdminPanel>
 
       <Modal
         onClose={() => setIsModalOpen(false)}
@@ -585,6 +563,6 @@ export function UsuariosPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

@@ -1,13 +1,14 @@
-using Portal.Domain.Categoria;
+﻿using Portal.Domain.Categoria;
+using Portal.Domain.Common;
 
 namespace Portal.Domain.Categoria.Interfaces
 {
     public interface ICategoriaRepository
     {
-        Task<IEnumerable<CategoriaQuery>> ObterTodasAsync(CancellationToken cancellationToken);
-        Task<IEnumerable<CategoriaQuery>> ObterPorParceiroAsync(Guid parceiroId, CancellationToken cancellationToken);
-        Task<IEnumerable<CategoriaQuery>> ObterPorFiltroAsync(string nome, CancellationToken cancellationToken);
-        Task<IEnumerable<CategoriaQuery>> ObterPorFiltroEParceiroAsync(Guid parceiroId, string nome, CancellationToken cancellationToken);
+        Task<ResultadoPaginado<CategoriaQuery>> ObterTodasAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken);
+        Task<ResultadoPaginado<CategoriaQuery>> ObterPorParceiroAsync(Guid parceiroId, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken);
+        Task<ResultadoPaginado<CategoriaQuery>> ObterPorFiltroAsync(string nome, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken);
+        Task<ResultadoPaginado<CategoriaQuery>> ObterPorFiltroEParceiroAsync(Guid parceiroId, string nome, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken);
         Task<CategoriaQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken);
         Task<CategoriaQuery?> ObterPorIdEParceiroAsync(Guid id, Guid parceiroId, CancellationToken cancellationToken);
         Task<Guid> CriarAsync(CategoriaCommand categoria, CancellationToken cancellationToken);

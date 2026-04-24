@@ -1,3 +1,4 @@
+﻿using FluentValidation;
 using Portal.Domain.Base;
 
 namespace Portal.Application.Equipamento.UseCases.CriarEquipamento;
@@ -18,8 +19,17 @@ public class CriarEquipamentoRequest : BaseRequest
 
     public override bool IsValid()
     {
-        var validator = new CriarEquipamentoValidator();
-        var result = validator.Validate(this);
-        return result.IsValid;
+        var validator = new InlineValidator<CriarEquipamentoRequest>();
+        validator.RuleFor(x => x.Nome).NotEmpty().MinimumLength(2).MaximumLength(200);
+        validator.RuleFor(x => x.CategoriaId).NotEmpty();
+        validator.RuleFor(x => x.QuantidadeEstoque).GreaterThanOrEqualTo(0);
+        validator.RuleFor(x => x.PrecoDiaria).GreaterThan(0);
+        validator.RuleFor(x => x.Marca).NotEmpty().MaximumLength(100);
+        validator.RuleFor(x => x.Modelo).NotEmpty().MaximumLength(100);
+        validator.RuleFor(x => x.NumeroSerie).NotEmpty().MaximumLength(50);
+        validator.RuleFor(x => x.AnoFabricacao).GreaterThan(1900).LessThanOrEqualTo(DateTime.Now.Year + 1);
+        validator.RuleFor(x => x.Descricao).MaximumLength(500);
+        validator.RuleFor(x => x.ObservacaoInternas).MaximumLength(1000);
+        return Validate(this, validator);
     }
 }

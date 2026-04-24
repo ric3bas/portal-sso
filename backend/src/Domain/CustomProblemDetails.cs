@@ -1,4 +1,4 @@
-namespace Portal.Domain
+﻿namespace Portal.Domain
 {
     public class CustomProblemDetails
     {

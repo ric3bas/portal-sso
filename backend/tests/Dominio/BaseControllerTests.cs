@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+ï»¿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Portal.Domain.Base;
 
@@ -8,7 +8,7 @@ public class BaseControllerTests
 {
     private sealed class TestableBaseController : BaseController
     {
-        public new ObjectResult BadRequestProblem(string detail, string title = "Erro de validação")
+        public new ObjectResult BadRequestProblem(string detail, string title = "Erro de validaÃ§Ã£o")
             => base.BadRequestProblem(detail, title);
 
         public new ObjectResult NotFoundProblem(string detail, string title = "Nenhum registro encontrado")
@@ -17,7 +17,7 @@ public class BaseControllerTests
         public new ObjectResult InternalServerErrorProblem(string detail, string title = "Erro interno do servidor")
             => base.InternalServerErrorProblem(detail, title);
 
-        public new ObjectResult BusinessErrorProblem(string detail, string title = "Erro de negócio")
+        public new ObjectResult BusinessErrorProblem(string detail, string title = "Erro de negÃ³cio")
             => base.BusinessErrorProblem(detail, title);
     }
 
@@ -60,7 +60,7 @@ public class BaseControllerTests
         Assert.Equal(StatusCodes.Status400BadRequest, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Validation error", problemDetails.Detail);
-        Assert.Equal("Erro de validação", problemDetails.Title);
+        Assert.Equal("Erro de validaÃ§Ã£o", problemDetails.Title);
     }
 
     [Fact]
@@ -222,7 +222,7 @@ public class BaseControllerTests
         Assert.Equal(StatusCodes.Status422UnprocessableEntity, result.Data.StatusCode);
         var problemDetails = Assert.IsType<ProblemDetails>(result.Value);
         Assert.Equal("Rule failed", problemDetails.Detail);
-        Assert.Equal("Erro de negócio", problemDetails.Title);
+        Assert.Equal("Erro de negÃ³cio", problemDetails.Title);
     }
 
     [Fact]

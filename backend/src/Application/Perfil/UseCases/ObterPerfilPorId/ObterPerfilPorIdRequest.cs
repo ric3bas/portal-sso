@@ -1,4 +1,4 @@
-namespace Portal.Application.Perfil.UseCases.ObterPerfilPorId;
+﻿namespace Portal.Application.Perfil.UseCases.ObterPerfilPorId;
 
 public class ObterPerfilPorIdRequest
 {

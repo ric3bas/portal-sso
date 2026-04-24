@@ -1,4 +1,4 @@
-using Portal.Domain.Usuario;
+﻿using Portal.Domain.Usuario;
 using Portal.Domain.Usuario.Interfaces;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
 using DataUnitOfWork = Portal.Infrastructure.Data.IUnitOfWork;

@@ -1,4 +1,4 @@
-﻿using Portal.Application.Locacao.Validators;
+﻿using FluentValidation;
 using Portal.Domain.Base;
 
 namespace Portal.Application.Locacao.Common
@@ -14,7 +14,16 @@ namespace Portal.Application.Locacao.Common
 
         public override bool IsValid()
         {
-            return Validate(this, new LocacaoRequestValidator());
+            var validator = new InlineValidator<LocacaoRequest>();
+            validator.RuleFor(x => x.ClienteId).NotNull().NotEmpty().Must(BeValidGuid);
+            validator.RuleFor(x => x.EquipamentoId).NotNull().NotEmpty().Must(BeValidGuid);
+            validator.RuleFor(x => x.DataRetirada).NotEmpty().GreaterThanOrEqualTo(DateTime.Today);
+            validator.RuleFor(x => x.PrevisaoDevolucao).NotEmpty().GreaterThan(x => x.DataRetirada);
+            validator.RuleFor(x => x.ValorDiaria).GreaterThan(0);
+            validator.RuleFor(x => x.Observacao).MaximumLength(500);
+            return Validate(this, validator);
         }
+
+        private static bool BeValidGuid(string? guid) => Guid.TryParse(guid, out _);
     }
 }

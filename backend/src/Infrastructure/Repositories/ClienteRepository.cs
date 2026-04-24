@@ -1,5 +1,7 @@
-using Portal.Domain.Cliente;
+﻿using Portal.Domain.Cliente;
 using Portal.Domain.Cliente.Interfaces;
+using Portal.Domain.Common;
+using Dapper;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
 using DataUnitOfWork = Portal.Infrastructure.Data.IUnitOfWork;
 using System.Text.RegularExpressions;
@@ -12,14 +14,21 @@ public class ClienteRepository : DataDapperRepository, IClienteRepository
     {
     }
 
-    public async Task<IEnumerable<ClienteQuery>> ObterTodosAsync(CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<ClienteQuery>> ObterTodosAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1) FROM l6a.Cliente;
+
             SELECT Id, Nome, Cpf, Email, Observacao, Bloqueado, Ativo, parceiro_id as ParceiroId 
             FROM l6a.Cliente 
-            ORDER BY Nome";
+            ORDER BY Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        var clientes = await QueryAsync<ClienteQuery>(sql);
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, new { TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+        var total = await multi.ReadSingleAsync<int>();
+        var clientes = (await multi.ReadAsync<ClienteQuery>()).ToList();
 
         foreach (var cliente in clientes)
         {
@@ -27,10 +36,10 @@ public class ClienteRepository : DataDapperRepository, IClienteRepository
             cliente.Endereco = await ObterEnderecoAsync(cliente.Id, cancellationToken);
         }
 
-        return clientes;
+        return new ResultadoPaginado<ClienteQuery>(clientes, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<ClienteQuery>> ObterPorFiltroAsync(string? nome, string? cpf, CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<ClienteQuery>> ObterPorFiltroAsync(string? nome, string? cpf, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
         var whereConditions = new List<string>();
         var parameters = new Dictionary<string, object>();
@@ -50,13 +59,25 @@ public class ClienteRepository : DataDapperRepository, IClienteRepository
 
         var whereClause = whereConditions.Any() ? "WHERE " + string.Join(" AND ", whereConditions) : string.Empty;
 
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
         var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Cliente
+            {whereClause};
+
             SELECT Id, Nome, Cpf, Email, Observacao, Bloqueado, Ativo, parceiro_id as ParceiroId 
             FROM l6a.Cliente 
             {whereClause}
-            ORDER BY Nome";
+            ORDER BY Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        var clientes = await QueryAsync<ClienteQuery>(sql, parameters);
+        parameters["TamanhoPagina"] = paginacao.TamanhoPagina;
+        parameters["Offset"] = paginacao.Offset;
+
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, parameters);
+        var total = await multi.ReadSingleAsync<int>();
+        var clientes = (await multi.ReadAsync<ClienteQuery>()).ToList();
 
         foreach (var cliente in clientes)
         {
@@ -64,7 +85,7 @@ public class ClienteRepository : DataDapperRepository, IClienteRepository
             cliente.Endereco = await ObterEnderecoAsync(cliente.Id, cancellationToken);
         }
 
-        return clientes;
+        return new ResultadoPaginado<ClienteQuery>(clientes, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task<ClienteQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken)

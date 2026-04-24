@@ -1,4 +1,4 @@
-
+﻿
 using Portal.Application.Perfil.UseCases.ObterPerfisParaCombo;
 
 namespace Portal.Application.Perfil.UseCases.ObterPerfisComEscopo;

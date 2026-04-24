@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Perfil.Interfaces;
 
 namespace Portal.Application.Perfil.UseCases.AtualizarNomePerfil;
@@ -15,11 +15,11 @@ public class AtualizarNomePerfilHandler
     public async Task<Result<AtualizarNomePerfilResponse>> Handle(AtualizarNomePerfilRequest request, CancellationToken cancellationToken)
     {
         if (request.Id <= 0 || string.IsNullOrWhiteSpace(request.NovoNome))
-            return Result.ValidationResult<AtualizarNomePerfilResponse>("Id ou nome inválido");
+            return Result.ValidationResult<AtualizarNomePerfilResponse>("Id ou nome invÃ¡lido");
 
         var perfilExiste = await _repository.ExistePerfilAsync(request.Id, cancellationToken);
         if (!perfilExiste)
-            return Result.NotFoundResult<AtualizarNomePerfilResponse>($"Perfil {request.Id} não encontrado");
+            return Result.NotFoundResult<AtualizarNomePerfilResponse>($"Perfil {request.Id} nÃ£o encontrado");
 
         await _repository.AtualizarNomeAsync(request.Id, request.NovoNome, cancellationToken);
         return Result.OkResult(new AtualizarNomePerfilResponse { Mensagem = "Alterado com sucesso" });

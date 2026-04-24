@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Portal.Domain.Exceptions;
 using Portal.Features.Escopo.Domain;
@@ -53,7 +53,7 @@ public class EscopoServiceTests
 
         var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CriarAsync(" "));
 
-        Assert.Contains("obrigatório", ex.Errors[0]);
+        Assert.Contains("obrigatÃ³rio", ex.Errors[0]);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class EscopoServiceTests
 
         var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CriarAsync("ab"));
 
-        Assert.Contains("no mínimo 3", ex.Errors[0]);
+        Assert.Contains("no mÃ­nimo 3", ex.Errors[0]);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class EscopoServiceTests
 
         var ex = await Assert.ThrowsAsync<ValidationException>(() => service.CriarAsync(nome));
 
-        Assert.Contains("no máximo 100", ex.Errors[0]);
+        Assert.Contains("no mÃ¡ximo 100", ex.Errors[0]);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class EscopoServiceTests
 
         var ex = await Assert.ThrowsAsync<BusinessException>(() => service.CriarAsync("admin"));
 
-        Assert.Contains("Já existe", ex.Errors[0]);
+        Assert.Contains("JÃ¡ existe", ex.Errors[0]);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class EscopoServiceTests
 
         var ex = await Assert.ThrowsAsync<ValidationException>(() => service.ObterPorIdAsync(0));
 
-        Assert.Contains("inválido", ex.Errors[0]);
+        Assert.Contains("invÃ¡lido", ex.Errors[0]);
     }
 
     [Fact]

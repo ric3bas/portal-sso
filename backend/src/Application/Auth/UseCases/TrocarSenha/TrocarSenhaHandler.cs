@@ -1,4 +1,4 @@
-using Portal.Application.Auth.UseCases.ValidarTokenRecuperacao;
+﻿using Portal.Application.Auth.UseCases.ValidarTokenRecuperacao;
 using Portal.Domain.Base;
 using Portal.Domain.Usuario.Interfaces;
 
@@ -21,10 +21,10 @@ public class TrocarSenhaHandler
         var entity = await _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, cancellationToken);
 
         if (entity == null)
-            return Result.BusinessResult<string>("Token inválido");
+            return Result.BusinessResult<string>("Token invÃ¡lido");
 
         if (entity.Usado)
-            return Result.BusinessResult<string>("Token já utilizado");
+            return Result.BusinessResult<string>("Token jÃ¡ utilizado");
 
         if (entity.ExpiraEm < DateTime.UtcNow)
             return Result.BusinessResult<string>("Token expirado");

@@ -1,3 +1,5 @@
+﻿using Portal.Application.Locacao.UseCases.ObterLocacoes;
+
 namespace Portal.Domain.Locacao;
 
 public class LocacaoQuery
@@ -16,4 +18,25 @@ public class LocacaoQuery
     public int? DiasLocados { get; set; }
     public string? Observacao { get; set; }
     public Guid ParceiroId { get; set; }
+
+    public TResponse ToResponse<TResponse>() where TResponse : ObterLocacoesResponse, new()
+    {
+        return new TResponse
+        {
+            Id = Id,
+            ClienteId = ClienteId,
+            ClienteNome = ClienteNome,
+            EquipamentoId = EquipamentoId,
+            EquipamentoNome = EquipamentoNome,
+            Status = Status,
+            StatusDescricao = Status.ToString(),
+            DataRetirada = DataRetirada,
+            PrevisaoDevolucao = PrevisaoDevolucao,
+            DataDevolucaoReal = DataDevolucaoReal,
+            ValorDiaria = ValorDiaria,
+            ValorTotal = ValorTotal,
+            DiasLocados = DiasLocados,
+            Observacao = Observacao
+        };
+    }
 }

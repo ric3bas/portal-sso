@@ -1,4 +1,4 @@
-namespace Portal.WebApi.Extensions;
+﻿namespace Portal.WebApi.Extensions;
 
 public static class ScopeRequirementExtensions
 {
@@ -8,13 +8,12 @@ public static class ScopeRequirementExtensions
         {
             policyBuilder.RequireAuthenticatedUser();
             
-            // Se há escopos específicos, exige pelo menos um deles
             if (scopes.Length > 0)
             {
                 policyBuilder.RequireAssertion(context =>
                 {
                     var userScopes = context.User.Claims
-                        .Where(c => c.Type == "scope")
+                        .Where(c => c.Type == "escopos")
                         .Select(c => c.Value)
                         .ToList();
 

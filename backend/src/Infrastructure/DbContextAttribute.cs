@@ -1,4 +1,4 @@
-namespace Portal.Infrastructure
+﻿namespace Portal.Infrastructure
 {
     [AttributeUsage(AttributeTargets.Class)]
     public class DbContextAttribute : Attribute

@@ -1,4 +1,4 @@
-namespace Portal.Domain.Categoria;
+﻿namespace Portal.Domain.Categoria;
 
 public class CategoriaCommand
 {

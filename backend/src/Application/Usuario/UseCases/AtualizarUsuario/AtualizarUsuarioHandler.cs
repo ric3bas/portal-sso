@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Usuario;
 using Portal.Domain.Usuario.Interfaces;
 
@@ -17,7 +17,7 @@ public class AtualizarUsuarioHandler
     {
         var usuario = await _usuarioRepository.ObterPorIdAsync(request.Id, cancellationToken);
         if (usuario == null)
-            return Result.NotFoundResult<AtualizarUsuarioResponse>("Usuário não encontrado");
+            return Result.NotFoundResult<AtualizarUsuarioResponse>("UsuÃ¡rio nÃ£o encontrado");
 
         await _usuarioRepository.AtualizarAsync(new UsuarioCommand
         {

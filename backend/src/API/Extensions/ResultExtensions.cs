@@ -1,12 +1,9 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 
 namespace Portal.API.Extensions;
 
 public static class ResultExtensions
 {
-    /// <summary>
-    /// Converte um Result&lt;T&gt; em IResult para Minimal APIs
-    /// </summary>
     public static IResult ToHttpResult<T>(this Result<T> result)
     {
         if (result.Success)
@@ -23,9 +20,6 @@ public static class ResultExtensions
         };
     }
 
-    /// <summary>
-    /// Converte um SimpleResult em IResult para Minimal APIs
-    /// </summary>
     public static IResult ToHttpResult(this SimpleResult result)
     {
         if (result.Success)
@@ -42,9 +36,6 @@ public static class ResultExtensions
         };
     }
 
-    /// <summary>
-    /// Converte um Result&lt;T&gt; em Created result para operações de criação
-    /// </summary>
     public static IResult ToCreatedResult<T>(this Result<T> result, string? location = null)
     {
         if (result.Success)

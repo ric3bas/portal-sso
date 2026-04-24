@@ -1,4 +1,4 @@
-namespace Portal.Domain.Financeiro;
+﻿namespace Portal.Domain.Financeiro;
 
 public class FinanceiroCommand
 {

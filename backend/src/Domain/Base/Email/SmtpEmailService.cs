@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Mail;
 
 namespace Portal.Domain.Base.Email
@@ -27,7 +27,7 @@ namespace Portal.Domain.Base.Email
             };
             var mensagem = new MailMessage(from, destinatario)
             {
-                Subject = "Alteração de senha",
+                Subject = "AlteraÃ§Ã£o de senha",
                 Body = corpo,
                 IsBodyHtml = true
             };

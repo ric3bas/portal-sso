@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 
 namespace Portal.Infrastructure {
 
@@ -12,13 +12,6 @@ namespace Portal.Infrastructure {
             _unitOfWork = unitOfWork;
         }
 
-        //private static string ResolveContext(Type type)
-        //{
-        //    var attr = type.GetCustomAttributes(typeof(DbContextAttribute), inherit: true).FirstOrDefault() as DbContextAttribute;
-        //    if (attr == null)
-        //        throw new Exception($"Classe {type.Name} não possui DbContextAttribute.");
-        //    return attr.ContextName;
-        //}
 
         public virtual IEnumerable<T> Query<T>(string sql, object? param = null, int? timeout = null)
             => _unitOfWork.Connection.Query<T>(sql, param, _unitOfWork.Transaction, commandTimeout: timeout);

@@ -1,8 +1,9 @@
+﻿using Portal.Domain.Common;
 using Portal.Domain.Locacao;
 
 namespace Portal.Application.Locacao.UseCases.ObterLocacoesPorFiltro;
 
-public class ObterLocacoesPorFiltroRequest
+public class ObterLocacoesPorFiltroRequest : PaginacaoFiltro
 {
     public Guid? ClienteId { get; set; }
     public Guid? EquipamentoId { get; set; }

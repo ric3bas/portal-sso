@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Portal.Features.Auth.Domain.Requests;
 using Portal.Features.Usuario.Controller;
@@ -170,7 +170,7 @@ public class AuthControllerTests
         var authService = Substitute.For<IAuthService>();
         var expectedResponse = new ValidarTokenRecuperacaoResponse
         {
-            Mensagem = "Token v�lido"
+            Mensagem = "Token válido"
         };
         authService.ValidarTokenAsync(Arg.Any<ValidarTokenRecuperacaoRequest>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(expectedResponse));
         var controller = new AuthController(authService);

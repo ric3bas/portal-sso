@@ -1,9 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Portal.API.Extensions;
 using Portal.Application.Escopo.UseCases.AtualizarEscopo;
 using Portal.Application.Escopo.UseCases.CriarEscopo;
 using Portal.Application.Escopo.UseCases.ObterEscopoPorId;
 using Portal.Application.Escopo.UseCases.ObterEscopos;
+using Portal.WebApi.Extensions;
 
 namespace Portal.API.Endpoints;
 
@@ -14,11 +15,12 @@ public static class EscopoEndpoints
         var group = app.MapGroup("/api/v1/escopos")
             .WithTags("🔐 Escopos");
 
-        group.MapGet("/", async ([FromServices] ObterEscoposHandler handler, CancellationToken cancellationToken) =>
+        group.MapGet("/", async ([FromServices] ObterEscoposHandler handler, [AsParameters] ObterEscoposRequest request, CancellationToken cancellationToken = default) =>
         {
-            var result = await handler.Handle(new ObterEscoposRequest(), cancellationToken);
+            var result = await handler.Handle(request, cancellationToken);
             return result.ToHttpResult();
-        });
+        })
+        .RequireScopes("escopo.ler");
 
         group.MapGet("/{id:int}", async (
             [FromServices] ObterEscopoPorIdHandler handler,
@@ -27,7 +29,8 @@ public static class EscopoEndpoints
         {
             var result = await handler.Handle(new ObterEscopoPorIdRequest { Id = id }, cancellationToken);
             return result.ToHttpResult();
-        });
+        })
+        .RequireScopes("escopo.ler");
 
         group.MapPost("/", async (
             [FromServices] CriarEscopoHandler handler,
@@ -35,8 +38,9 @@ public static class EscopoEndpoints
             CancellationToken cancellationToken) =>
         {
             var result = await handler.Handle(request, cancellationToken);
-            return result.ToCreatedResult($"/api/v1/escopos/{result.Data?.Id}");
-        });
+            return result.ToCreatedResult(result.Data);
+        })
+        .RequireScopes("escopo.criar");
 
         group.MapPut("/{id:int}", async (
             [FromServices] AtualizarEscopoHandler handler,
@@ -47,6 +51,7 @@ public static class EscopoEndpoints
             request.Id = id;
             var result = await handler.Handle(request, cancellationToken);
             return result.ToHttpResult();
-        });
+        })
+        .RequireScopes("escopo.atualizar");
     }
 }

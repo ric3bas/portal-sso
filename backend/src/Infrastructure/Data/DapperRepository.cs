@@ -1,4 +1,4 @@
-using Portal.Domain.Common;
+﻿using Portal.Domain.Common;
 using System.Data;
 using Dapper;
 

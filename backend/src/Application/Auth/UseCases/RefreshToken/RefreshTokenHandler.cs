@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using AuthRepo = Portal.Domain.Usuario.Interfaces.IAuthRepository;
 using TokenRepo = Portal.Domain.Usuario.Interfaces.ITokenAtualizacaoRepository;
 using Portal.Domain.Usuario;
@@ -26,11 +26,11 @@ public class RefreshTokenHandler
 
         var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken, cancellationToken);
         if (token is null || token.Revogado || token.ExpiraEm < DateTime.UtcNow)
-            return Result.BusinessResult<LoginResponse>("Refresh token inválido ou expirado");
+            return Result.BusinessResult<LoginResponse>("Refresh token invÃ¡lido ou expirado");
 
         var dados = await _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId, cancellationToken);
         if (dados.Usuario is null)
-            return Result.BusinessResult<LoginResponse>("Usuário não encontrado");
+            return Result.BusinessResult<LoginResponse>("UsuÃ¡rio nÃ£o encontrado");
 
         var jwtSection = _config.GetSection("Jwt");
         var accessTokenMinutes = int.Parse(jwtSection["AccessTokenExpireMinutes"] ?? "0");
@@ -48,6 +48,8 @@ public class RefreshTokenHandler
             jwtSection["Issuer"] ?? string.Empty,
             jwtSection["Audience"] ?? string.Empty,
             dados.Perfil?.IsMaster,
+            dados.Usuario.CorPrimaria,
+            dados.Usuario.CorSecundaria,
             dados.Escopos.ToArray());
 
         await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);

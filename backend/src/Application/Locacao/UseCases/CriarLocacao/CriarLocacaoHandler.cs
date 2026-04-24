@@ -1,5 +1,4 @@
-using FluentValidation;
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Locacao;
 using Portal.Domain.Locacao.Interfaces;
 
@@ -8,35 +7,31 @@ namespace Portal.Application.Locacao.UseCases.CriarLocacao;
 public class CriarLocacaoHandler
 {
     private readonly ILocacaoRepository _repository;
-    private readonly IValidator<CriarLocacaoRequest> _validator;
 
-    public CriarLocacaoHandler(ILocacaoRepository repository, IValidator<CriarLocacaoRequest> validator)
+    public CriarLocacaoHandler(ILocacaoRepository repository)
     {
         _repository = repository;
-        _validator = validator;
     }
 
-    public async Task<Result<CriarLocacaoResponse>> Handle(CriarLocacaoRequest request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(CriarLocacaoRequest request, CancellationToken cancellationToken)
     {
-        var validation = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
-            return Result.ValidationResult<CriarLocacaoResponse>(validation.Errors.Select(x => x.ErrorMessage));
+        if (!request.IsValid()) return Result.ValidationResult<string>(request.ObterErros());
 
         if (!await _repository.ClienteExisteAsync(Guid.Parse(request.ClienteId), cancellationToken))
-            return Result.ValidationResult<CriarLocacaoResponse>("Cliente não encontrado");
+            return Result.ValidationResult<string>("Cliente não encontrado");
 
         if (!await _repository.EquipamentoExisteAsync(Guid.Parse(request.EquipamentoId), cancellationToken))
-            return Result.ValidationResult<CriarLocacaoResponse>("Equipamento não encontrado");
+            return Result.ValidationResult<string>("Equipamento não encontrado");
 
         if (await _repository.ClienteBloqueadoAsync(Guid.Parse(request.ClienteId), cancellationToken))
-            return Result.ValidationResult<CriarLocacaoResponse>("Cliente está bloqueado e não pode fazer locações");
+            return Result.ValidationResult<string>("Cliente está bloqueado e não pode fazer locações");
 
         if (!await _repository.EquipamentoDisponivelAsync(Guid.Parse(request.EquipamentoId), request.DataRetirada, request.PrevisaoDevolucao, null, cancellationToken))
-            return Result.ValidationResult<CriarLocacaoResponse>("Equipamento não está disponível no período solicitado");
+            return Result.ValidationResult<string>("Equipamento não está disponível no período solicitado");
 
         var valorDiariaEquipamento = await _repository.ObterValorDiariaEquipamentoAsync(Guid.Parse(request.EquipamentoId), cancellationToken);
         if (Math.Abs(request.ValorDiaria - valorDiariaEquipamento) > 0.01m)
-            return Result.ValidationResult<CriarLocacaoResponse>($"Valor da diária informado ({request.ValorDiaria:C}) não confere com o valor do equipamento ({valorDiariaEquipamento:C})");
+            return Result.ValidationResult<string>($"Valor da diária informado ({request.ValorDiaria:C}) não confere com o valor do equipamento ({valorDiariaEquipamento:C})");
 
         var entity = new LocacaoCommand
         {
@@ -49,7 +44,7 @@ public class CriarLocacaoHandler
             Observacao = request.Observacao
         };
 
-        var id = await _repository.CriarAsync(entity, cancellationToken);
-        return Result.OkResult(new CriarLocacaoResponse { Id = id });
+        _ = await _repository.CriarAsync(entity, cancellationToken);
+        return Result.OkResult("Locação criada com sucesso");
     }
 }

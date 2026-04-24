@@ -1,4 +1,4 @@
-namespace Portal.Application.Perfil.UseCases.CriarPerfil;
+﻿namespace Portal.Application.Perfil.UseCases.CriarPerfil;
 
 public class CriarPerfilResponse
 {

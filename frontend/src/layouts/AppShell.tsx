@@ -56,8 +56,8 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
               [
                 'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100',
+                  ? 'bg-[var(--brand)] text-[var(--brand-contrast)]'
+                  : 'text-[var(--text-soft)] hover:bg-[var(--brand-soft)] hover:text-[var(--text)]',
               ].join(' ')
             }
             end={item.end}
@@ -150,17 +150,17 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--page-bg)] text-[var(--text)]">
       {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
 
-      <header className="shrink-0 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <header className="shrink-0 border-b border-[var(--line)] bg-[var(--header-bg)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Button className="lg:hidden" onClick={() => setIsMobileMenuOpen(true)} type="button" variant="secondary">
               <Menu className="h-4 w-4" />
             </Button>
 
-            <div className="flex h-12 min-w-40 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 text-sm font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <div className="flex h-12 min-w-40 items-center justify-center rounded-md border border-dashed border-[var(--brand)] bg-[var(--brand-soft)] px-2 text-sm font-medium text-[var(--brand)]">
               Espaco da logo
             </div>
           </div>
@@ -172,7 +172,7 @@ export function AppShell() {
 
             <div className="relative" ref={userMenuRef}>
               <button
-                className="flex items-center gap-3 rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                className="flex items-center gap-3 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-sm text-[var(--text)] transition-colors hover:bg-[var(--brand-soft)]"
                 onClick={() => setIsUserMenuOpen((current) => !current)}
                 type="button"
               >
@@ -184,9 +184,9 @@ export function AppShell() {
               </button>
 
               {isUserMenuOpen ? (
-                <div className="absolute right-0 z-30 mt-2 w-56 rounded-md border border-slate-200 bg-white py-2 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                <div className="absolute right-0 z-30 mt-2 w-56 rounded-md border border-[var(--line)] bg-[var(--surface)] py-2 shadow-lg">
                   <button
-                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--brand-soft)]"
                     disabled={isSendingPasswordReset}
                     onClick={() => void handleRequestPasswordChange()}
                     type="button"
@@ -210,10 +210,10 @@ export function AppShell() {
         </div>
       </header>
 
-      <div className="mx-auto grid h-full min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-6 overflow-hidden px-4 py-6 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8">
-        <aside className="hidden min-h-0 overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:block">
-          <div className="border-b border-slate-200 pb-4 dark:border-slate-800">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Portal Administrativo</p>
+      <div className="mx-auto grid h-[calc(95dvh-5rem)] min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-6 overflow-hidden px-4 py-4 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:px-8">
+        <aside className="hidden min-h-0 overflow-y-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm lg:block">
+          <div className="border-b border-[var(--line)] pb-4">
+            <p className="text-sm font-semibold text-[var(--text)]">Portal Administrativo</p>
           </div>
 
           <div className="mt-4">
@@ -221,7 +221,7 @@ export function AppShell() {
           </div>
         </aside>
 
-        <main className="min-h-0 min-w-0 overflow-y-auto rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm sm:p-6">
           <RouteErrorBoundary>
             <Outlet />
           </RouteErrorBoundary>
@@ -230,11 +230,11 @@ export function AppShell() {
 
       {isMobileMenuOpen ? (
         <div className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden">
-          <div className="h-full w-[88%] max-w-xs border-r border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
+          <div className="h-full w-[88%] max-w-xs border-r border-[var(--line)] bg-[var(--surface)] p-6">
+            <div className="flex items-center justify-between border-b border-[var(--line)] pb-4">
               <div>
-                <p className="text-base font-semibold text-slate-900 dark:text-slate-100">Portal SSO</p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Navegacao</p>
+                <p className="text-base font-semibold text-[var(--text)]">Portal SSO</p>
+                <p className="mt-1 text-sm text-[var(--text-soft)]">Navegacao</p>
               </div>
               <Button onClick={() => setIsMobileMenuOpen(false)} type="button" variant="ghost">
                 <X className="h-4 w-4" />

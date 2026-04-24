@@ -1,9 +1,11 @@
 import { Lock, LockOpen, Pencil, Plus, Power, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Badge, Button, Feedback, Modal, PageIntro, Panel, TextareaField } from '../components/ui'
+import { AdminPage, AdminPanel } from '../components/admin'
+import { DataTable } from '../components/DataTable'
+import { Badge, Button, Modal, TextareaField } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { clientesApi } from '../services/sso'
-import type { ClienteResponse } from '../types/api'
+import type { ClienteResponse, PaginatedResult } from '../types/api'
 
 interface ClienteTelefoneFormState {
   id?: string
@@ -139,24 +141,27 @@ export function ClientesPage() {
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [tableMessage, setTableMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginatedResult<ClienteResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isSaving, setIsSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ClienteResponse | null>(null)
   const [form, setForm] = useState<ClienteFormState>(initialFormState)
   const [formErrors, setFormErrors] = useState<ClienteFormErrors>(initialFormErrors)
 
-  async function loadData(options?: { nome?: string; cpf?: string }) {
+  async function loadData(options?: { nome?: string; cpf?: string }, page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
       const response = options?.nome || options?.cpf
-        ? await clientesApi.listFilter({ Nome: options.nome, Cpf: options.cpf })
-        : await clientesApi.list()
+        ? await clientesApi.listFilterPage({ Nome: options.nome, Cpf: options.cpf }, { Pagina: page, TamanhoPagina: pageSize })
+        : await clientesApi.listPage({ Pagina: page, TamanhoPagina: pageSize })
 
-      setItems(response)
-      setTableMessage(response.length === 0 ? 'Nenhum cliente encontrado' : null)
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhum cliente encontrado' : null)
     } catch (error) {
       setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
       setTableMessage(getErrorMessage(error, 'Falha ao carregar clientes.'))
     } finally {
       setIsLoading(false)
@@ -326,13 +331,13 @@ export function ClientesPage() {
   }
 
   async function handleSearch() {
-    await loadData({ nome: filterNome.trim() || undefined, cpf: filterCpf.trim() || undefined })
+    await loadData({ nome: filterNome.trim() || undefined, cpf: filterCpf.trim() || undefined }, 1, pagination.pageSize)
   }
 
   async function handleClearFilters() {
     setFilterNome('')
     setFilterCpf('')
-    await loadData()
+    await loadData(undefined, 1, pagination.pageSize)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -417,12 +422,8 @@ export function ClientesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro action={<Button onClick={openCreateModal}>Novo</Button>} eyebrow="" title="Clientes" description="" />
-
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-5 md:p-6">
+    <AdminPage action={<Button onClick={openCreateModal}>Novo</Button>} feedback={feedback} title="Clientes">
+      <AdminPanel>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,220px)_auto_auto] md:items-end">
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <span>Filtrar por nome</span>
@@ -436,61 +437,54 @@ export function ClientesPage() {
           <Button onClick={() => void handleClearFilters()} type="button" variant="secondary">Limpar</Button>
         </div>
 
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando clientes...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold">CPF</th>
-                    <th className="px-4 py-3 font-semibold">E-mail</th>
-                    <th className="px-4 py-3 font-semibold">Ativo</th>
-                    <th className="px-4 py-3 font-semibold">Bloqueado</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.cpf || '-'}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.email || '-'}</td>
-                        <td className="px-4 py-3"><Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Sim' : 'Não'}</Badge></td>
-                        <td className="px-4 py-3"><Badge tone={item.bloqueado ? 'danger' : 'success'}>{item.bloqueado ? 'Sim' : 'Não'}</Badge></td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button aria-label="Editar cliente" className="h-11 w-11 px-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
-                              <Pencil className="h-5 w-5" />
-                            </Button>
-                            <Button aria-label={item.bloqueado ? 'Desbloquear cliente' : 'Bloquear cliente'} className="h-11 w-11 px-0" onClick={() => void handleToggleBlocked(item)} title={item.bloqueado ? 'Desbloquear' : 'Bloquear'} type="button" variant="secondary">
-                              {item.bloqueado ? <LockOpen className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-                            </Button>
-                            {item.ativo ? (
-                              <Button aria-label="Inativar cliente" className="h-11 w-11 px-0" onClick={() => void handleInactivate(item)} title="Inativar" type="button" variant="danger">
-                                <Power className="h-5 w-5" />
-                              </Button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={6}>
-                        {tableMessage ?? 'Nenhum cliente encontrado'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Panel>
+        <DataTable
+          colSpan={6}
+          emptyMessage={tableMessage ?? 'Nenhum cliente encontrado'}
+          getRowKey={(item) => item.id}
+          headers={(
+            <tr>
+              <th className="px-2.5 py-2 font-semibold">Nome</th>
+              <th className="px-2.5 py-2 font-semibold">CPF</th>
+              <th className="px-2.5 py-2 font-semibold">E-mail</th>
+              <th className="px-2.5 py-2 font-semibold">Ativo</th>
+              <th className="px-2.5 py-2 font-semibold">Bloqueado</th>
+              <th className="px-2.5 py-2 font-semibold text-right">Ações</th>
+            </tr>
+          )}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando clientes..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) => void loadData({ nome: filterNome.trim() || undefined, cpf: filterCpf.trim() || undefined }, page, pagination.pageSize),
+            onPageSizeChange: (pageSize) => void loadData({ nome: filterNome.trim() || undefined, cpf: filterCpf.trim() || undefined }, 1, pageSize),
+          }}
+          renderRow={(item) => (
+            <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
+              <td className="px-2.5 py-1.5 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.cpf || '-'}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.email || '-'}</td>
+              <td className="px-2.5 py-1.5"><Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Sim' : 'Não'}</Badge></td>
+              <td className="px-2.5 py-1.5"><Badge tone={item.bloqueado ? 'danger' : 'success'}>{item.bloqueado ? 'Sim' : 'Não'}</Badge></td>
+              <td className="px-2.5 py-1.5 text-right">
+                <div className="flex justify-end gap-2">
+                  <Button aria-label="Editar cliente" className="h-8 w-8 !p-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
+                    <Pencil className="h-[18px] w-[18px]" />
+                  </Button>
+                  <Button aria-label={item.bloqueado ? 'Desbloquear cliente' : 'Bloquear cliente'} className="h-8 w-8 !p-0" onClick={() => void handleToggleBlocked(item)} title={item.bloqueado ? 'Desbloquear' : 'Bloquear'} type="button" variant="secondary">
+                    {item.bloqueado ? <LockOpen className="h-[18px] w-[18px]" /> : <Lock className="h-[18px] w-[18px]" />}
+                  </Button>
+                  {item.ativo ? (
+                    <Button aria-label="Inativar cliente" className="h-8 w-8 !p-0" onClick={() => void handleInactivate(item)} title="Inativar" type="button" variant="danger">
+                      <Power className="h-[18px] w-[18px]" />
+                    </Button>
+                  ) : null}
+                </div>
+              </td>
+            </tr>
+          )}
+        />
+      </AdminPanel>
 
       <Modal onClose={() => setIsModalOpen(false)} open={isModalOpen} title={editingItem ? 'Editar cliente' : 'Novo cliente'}>
         <form className="space-y-5" noValidate onSubmit={handleSubmit}>
@@ -731,6 +725,6 @@ export function ClientesPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

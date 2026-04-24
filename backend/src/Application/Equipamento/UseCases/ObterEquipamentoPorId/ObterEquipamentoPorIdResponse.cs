@@ -1,4 +1,4 @@
-using Portal.Application.Equipamento.UseCases.ObterEquipamentos;
+﻿using Portal.Application.Equipamento.UseCases.ObterEquipamentos;
 
 namespace Portal.Application.Equipamento.UseCases.ObterEquipamentoPorId;
 

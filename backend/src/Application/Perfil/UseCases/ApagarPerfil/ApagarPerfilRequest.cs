@@ -1,4 +1,4 @@
-namespace Portal.Application.Perfil.UseCases.ApagarPerfil;
+﻿namespace Portal.Application.Perfil.UseCases.ApagarPerfil;
 
 public class ApagarPerfilRequest
 {

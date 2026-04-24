@@ -1,4 +1,4 @@
-using Portal.Features.Usuario.Infra;
+﻿using Portal.Features.Usuario.Infra;
 
 namespace sso.repositories;
 
@@ -24,7 +24,7 @@ public sealed class UsuarioRepositoryIntegrationTests
         var repository = new UsuarioRepository(uow);
         var entity = new UsuarioCommand
         {
-            Nome = "Usuário",
+            Nome = "UsuÃ¡rio",
             Email = "user@teste.com",
             Login = "user-teste",
             Senha = "hash",

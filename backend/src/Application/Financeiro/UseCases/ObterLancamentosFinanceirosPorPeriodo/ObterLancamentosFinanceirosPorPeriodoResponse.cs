@@ -1,4 +1,4 @@
-using Portal.Application.Financeiro.UseCases.ObterLancamentosFinanceiros;
+﻿using Portal.Application.Financeiro.UseCases.ObterLancamentosFinanceiros;
 
 namespace Portal.Application.Financeiro.UseCases.ObterLancamentosFinanceirosPorPeriodo;
 

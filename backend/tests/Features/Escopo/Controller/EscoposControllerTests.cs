@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Portal.Features.Escopo.Controller;
 using Portal.Features.Escopo.Domain;

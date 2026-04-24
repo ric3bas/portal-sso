@@ -1,6 +1,8 @@
+﻿using Portal.Domain.Common;
+
 namespace Portal.Application.Parceiro.UseCases.ObterParceiros;
 
-public class ObterParceirosRequest
+public class ObterParceirosRequest : PaginacaoFiltro
 {
-    public Guid? Id { get; set; }
+
 }

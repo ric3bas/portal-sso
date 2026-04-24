@@ -1,4 +1,4 @@
-using Portal.Application.Perfil.UseCases.ObterPerfisComEscopo;
+﻿using Portal.Application.Perfil.UseCases.ObterPerfisComEscopo;
 
 namespace Portal.Application.Perfil.UseCases.ObterPerfilPorId;
 

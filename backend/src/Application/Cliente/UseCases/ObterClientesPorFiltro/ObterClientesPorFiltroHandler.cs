@@ -1,7 +1,7 @@
-using Portal.Application.Cliente.Common;
+﻿using Portal.Application.Cliente.Common;
 using Portal.Domain.Base;
+using Portal.Domain.Common;
 using Portal.Domain.Cliente.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Cliente.UseCases.ObterClientesPorFiltro;
 
@@ -16,16 +16,14 @@ public class ObterClientesPorFiltroHandler
         _logger = logger;
     }
 
-    public async Task<Result<List<ObterClientesPorFiltroResponse>>> Handle(ObterClientesPorFiltroRequest request, CancellationToken cancellationToken)
+    public async Task<Result<TabelaPaginadaResponse<ObterClientesPorFiltroResponse>>> Handle(ObterClientesPorFiltroRequest request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Listando clientes por filtro");
 
-        var clientes = await _repository.ObterPorFiltroAsync(request.Nome, request.Cpf, cancellationToken);
-        if (clientes == null || !clientes.Any())
-        {
-            return Result.NotFoundResult<List<ObterClientesPorFiltroResponse>>("Nenhum cliente encontrado");
-        }
+        var resultado = await _repository.ObterPorFiltroAsync(request.Nome, request.Cpf, request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken);
+        var response = resultado.Itens.Select(c => c.ToResponse<ObterClientesPorFiltroResponse>()).ToList();
+        var tabela = TabelaPaginadaResponse<ObterClientesPorFiltroResponse>.Criar(response, resultado.TotalRegistros, resultado.TotalRegistros, resultado.NumeroPagina, resultado.TamanhoPagina);
 
-        return Result.OkResult(clientes.Select(c => c.ToResponse<ObterClientesPorFiltroResponse>()).ToList());
+        return Result.OkResult(tabela);
     }
 }

@@ -1,9 +1,11 @@
 import { Check, Pencil, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Button, Feedback, Modal, PageIntro, Panel, TextareaField } from '../components/ui'
+import { AdminPage, AdminPanel } from '../components/admin'
+import { DataTable } from '../components/DataTable'
+import { Button, Modal, TextareaField } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { clientesApi, equipamentosApi, locacoesApi } from '../services/sso'
-import type { ClienteResponse, EquipamentoResponse, LocacaoResponse, StatusLocacao } from '../types/api'
+import type { ClienteResponse, EquipamentoResponse, LocacaoResponse, PaginatedResult, StatusLocacao } from '../types/api'
 
 interface LocacaoFormState {
   clienteId: string
@@ -84,6 +86,7 @@ export function LocacoesPage() {
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [tableMessage, setTableMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginatedResult<LocacaoResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isSaving, setIsSaving] = useState(false)
   const [isReturning, setIsReturning] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -92,6 +95,7 @@ export function LocacoesPage() {
   const [returningItem, setReturningItem] = useState<LocacaoResponse | null>(null)
   const [returnDate, setReturnDate] = useState(toDateTimeLocalValue(new Date().toISOString()))
   const [returnObservation, setReturnObservation] = useState('')
+  const [showOnlyLate, setShowOnlyLate] = useState(false)
   const [form, setForm] = useState<LocacaoFormState>(initialFormState)
   const [clienteError, setClienteError] = useState('')
   const [equipamentoError, setEquipamentoError] = useState('')
@@ -109,26 +113,28 @@ export function LocacoesPage() {
     dataRetiradaInicio?: string
     dataRetiradaFim?: string
     onlyLate?: boolean
-  }) {
+  }, page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
       const response = filters?.onlyLate
-        ? await locacoesApi.listLate()
+        ? await locacoesApi.listLatePage({ Pagina: page, TamanhoPagina: pageSize })
         : filters?.clienteId || filters?.equipamentoId || filters?.status || filters?.dataRetiradaInicio || filters?.dataRetiradaFim
-          ? await locacoesApi.listFilter({
+          ? await locacoesApi.listFilterPage({
               ClienteId: filters.clienteId,
               EquipamentoId: filters.equipamentoId,
               Status: filters.status ? Number.parseInt(filters.status, 10) as StatusLocacao : undefined,
               DataRetiradaInicio: filters.dataRetiradaInicio,
               DataRetiradaFim: filters.dataRetiradaFim,
-            })
-          : await locacoesApi.list()
+            }, { Pagina: page, TamanhoPagina: pageSize })
+          : await locacoesApi.listPage({ Pagina: page, TamanhoPagina: pageSize })
 
-      setItems(response)
-      setTableMessage(response.length === 0 ? 'Nenhuma locação encontrada' : null)
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhuma locação encontrada' : null)
     } catch (error) {
       setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
       setTableMessage(getErrorMessage(error, 'Falha ao carregar locações.'))
     } finally {
       setIsLoading(false)
@@ -189,13 +195,14 @@ export function LocacoesPage() {
   }
 
   async function handleSearch() {
+    setShowOnlyLate(false)
     await loadData({
       clienteId: filterClienteId || undefined,
       equipamentoId: filterEquipamentoId || undefined,
       status: filterStatus || undefined,
       dataRetiradaInicio: filterInicio ? toIsoDateTime(filterInicio) : undefined,
       dataRetiradaFim: filterFim ? toIsoDateTime(filterFim) : undefined,
-    })
+    }, 1, pagination.pageSize)
   }
 
   async function handleClearFilters() {
@@ -204,11 +211,13 @@ export function LocacoesPage() {
     setFilterStatus('')
     setFilterInicio('')
     setFilterFim('')
-    await loadData()
+    setShowOnlyLate(false)
+    await loadData(undefined, 1, pagination.pageSize)
   }
 
   async function handleShowLate() {
-    await loadData({ onlyLate: true })
+    setShowOnlyLate(true)
+    await loadData({ onlyLate: true }, 1, pagination.pageSize)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -301,12 +310,8 @@ export function LocacoesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro action={<Button onClick={openCreateModal}>Novo</Button>} eyebrow="" title="Locações" description="" />
-
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-5 md:p-6">
+    <AdminPage action={<Button onClick={openCreateModal}>Novo</Button>} feedback={feedback} title="Locações">
+      <AdminPanel>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6 xl:items-end">
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <span>Cliente</span>
@@ -349,63 +354,82 @@ export function LocacoesPage() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando locações...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Cliente</th>
-                    <th className="px-4 py-3 font-semibold">Equipamento</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Retirada</th>
-                    <th className="px-4 py-3 font-semibold">Previsão</th>
-                    <th className="px-4 py-3 font-semibold">Diária</th>
-                    <th className="px-4 py-3 font-semibold">Total</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.clienteNome || '-'}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.equipamentoNome || '-'}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.statusDescricao || `Status ${item.status}`}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatDateTime(item.dataRetirada)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatDateTime(item.previsaoDevolucao)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.valorDiaria)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.valorTotal)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button aria-label="Editar locação" className="h-11 w-11 px-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
-                              <Pencil className="h-5 w-5" />
-                            </Button>
-                            <Button aria-label="Devolver locação" className="h-11 w-11 px-0" onClick={() => openReturnModal(item)} title="Devolver" type="button" variant="secondary">
-                              <Check className="h-5 w-5" />
-                            </Button>
-                            <Button aria-label="Cancelar locação" className="h-11 w-11 px-0" onClick={() => void handleCancelRental(item)} title="Cancelar" type="button" variant="danger">
-                              <X className="h-5 w-5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={8}>
-                        {tableMessage ?? 'Nenhuma locação encontrada'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Panel>
+        <DataTable
+          colSpan={8}
+          emptyMessage={tableMessage ?? 'Nenhuma locação encontrada'}
+          getRowKey={(item) => item.id}
+          headers={(
+            <tr>
+              <th className="px-2.5 py-2 font-semibold">Cliente</th>
+              <th className="px-2.5 py-2 font-semibold">Equipamento</th>
+              <th className="px-2.5 py-2 font-semibold">Status</th>
+              <th className="px-2.5 py-2 font-semibold">Retirada</th>
+              <th className="px-2.5 py-2 font-semibold">Previsão</th>
+              <th className="px-2.5 py-2 font-semibold">Diária</th>
+              <th className="px-2.5 py-2 font-semibold">Total</th>
+              <th className="px-2.5 py-2 font-semibold text-right">Ações</th>
+            </tr>
+          )}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando locações..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) =>
+              void loadData(
+                showOnlyLate
+                  ? { onlyLate: true }
+                  : {
+                      clienteId: filterClienteId || undefined,
+                      equipamentoId: filterEquipamentoId || undefined,
+                      status: filterStatus || undefined,
+                      dataRetiradaInicio: filterInicio ? toIsoDateTime(filterInicio) : undefined,
+                      dataRetiradaFim: filterFim ? toIsoDateTime(filterFim) : undefined,
+                    },
+                page,
+                pagination.pageSize,
+              ),
+            onPageSizeChange: (pageSize) =>
+              void loadData(
+                showOnlyLate
+                  ? { onlyLate: true }
+                  : {
+                      clienteId: filterClienteId || undefined,
+                      equipamentoId: filterEquipamentoId || undefined,
+                      status: filterStatus || undefined,
+                      dataRetiradaInicio: filterInicio ? toIsoDateTime(filterInicio) : undefined,
+                      dataRetiradaFim: filterFim ? toIsoDateTime(filterFim) : undefined,
+                    },
+                1,
+                pageSize,
+              ),
+          }}
+          renderRow={(item) => (
+            <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
+              <td className="px-2.5 py-1.5 font-medium text-[var(--text)] dark:text-slate-900">{item.clienteNome || '-'}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.equipamentoNome || '-'}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{item.statusDescricao || `Status ${item.status}`}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{formatDateTime(item.dataRetirada)}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{formatDateTime(item.previsaoDevolucao)}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.valorDiaria)}</td>
+              <td className="px-2.5 py-1.5 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.valorTotal)}</td>
+              <td className="px-2.5 py-1.5 text-right">
+                <div className="flex justify-end gap-2">
+                  <Button aria-label="Editar locação" className="h-8 w-8 !p-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
+                    <Pencil className="h-[18px] w-[18px]" />
+                  </Button>
+                  <Button aria-label="Devolver locação" className="h-8 w-8 !p-0" onClick={() => openReturnModal(item)} title="Devolver" type="button" variant="secondary">
+                    <Check className="h-[18px] w-[18px]" />
+                  </Button>
+                  <Button aria-label="Cancelar locação" className="h-8 w-8 !p-0" onClick={() => void handleCancelRental(item)} title="Cancelar" type="button" variant="danger">
+                    <X className="h-[18px] w-[18px]" />
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          )}
+        />
+      </AdminPanel>
 
       <Modal onClose={() => setIsModalOpen(false)} open={isModalOpen} title={editingItem ? 'Editar locação' : 'Nova locação'}>
         <form className="space-y-5" noValidate onSubmit={handleSubmit}>
@@ -474,6 +498,6 @@ export function LocacoesPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

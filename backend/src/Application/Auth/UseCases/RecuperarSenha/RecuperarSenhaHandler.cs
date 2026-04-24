@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Base.Email;
 using Portal.Domain.Usuario.Interfaces;
 
@@ -23,20 +23,20 @@ public class RecuperarSenhaHandler
         var loginData = await _authRepository.ObterDadosLoginAsync(request.Login, cancellationToken);
         var usuario = loginData.Usuario;
         if (usuario == null || string.IsNullOrEmpty(usuario.Email))
-            return Result.BusinessResult<string>("Usuário não encontrado");
+            return Result.BusinessResult<string>("UsuÃ¡rio nÃ£o encontrado");
 
         if (!usuario.Ativo)
-            return Result.BusinessResult<string>("Usuário inativo no sistema");
+            return Result.BusinessResult<string>("UsuÃ¡rio inativo no sistema");
 
         var token = TokenBase.GerarToken();
         await _authRepository.InserirRecuperacaoSenhaAsync(usuario.Id, token, DateTime.UtcNow.AddMinutes(15), false, cancellationToken);
 
-        var assunto = "Recuperação de Senha";
+        var assunto = "RecuperaÃ§Ã£o de Senha";
         var corpo = $@"<!DOCTYPE html>
 <html><body style='font-family: Arial, sans-serif;'>
-<p>Olá,</p>
+<p>OlÃ¡,</p>
 <p>Clique no <a href='http://localhost:5173/auth/trocar-senha?token={token}'>Link</a> para alterar sua senha.</p>
-<p>Se você não solicitou a alteração, ignore este e-mail.</p>
+<p>Se vocÃª nÃ£o solicitou a alteraÃ§Ã£o, ignore este e-mail.</p>
 </body></html>";
 
         await _emailService.EnviarEmailAsync(usuario.Email, assunto, corpo);
@@ -51,10 +51,10 @@ public class RecuperarSenhaHandler
         var loginData = await _authRepository.ObterDadosLoginAsync(request.Login, cancellationToken);
         var usuario = loginData.Usuario;
         if (usuario == null || string.IsNullOrEmpty(usuario.Email))
-            return Result.BusinessResult<string>("Usuário não encontrado");
+            return Result.BusinessResult<string>("UsuÃ¡rio nÃ£o encontrado");
 
         if (!usuario.Ativo)
-            return Result.BusinessResult<string>("Usuário inativo no sistema");
+            return Result.BusinessResult<string>("UsuÃ¡rio inativo no sistema");
 
         var token = TokenBase.GerarToken();
         await _authRepository.InserirRecuperacaoSenhaAsync(usuario.Id, token, DateTime.UtcNow.AddMinutes(15), false, cancellationToken);

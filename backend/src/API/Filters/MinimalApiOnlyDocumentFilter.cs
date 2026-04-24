@@ -1,11 +1,8 @@
-using Microsoft.OpenApi.Models;
+﻿using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Portal.API.Filters;
 
-/// <summary>
-/// Filtro para remover controllers tradicionais do Swagger, mantendo apenas Minimal APIs
-/// </summary>
 public class MinimalApiOnlyDocumentFilter : IDocumentFilter
 {
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
@@ -14,7 +11,6 @@ public class MinimalApiOnlyDocumentFilter : IDocumentFilter
 
         foreach (var path in swaggerDoc.Paths)
         {
-            // Remove paths que correspondem aos controllers tradicionais
             if (IsTraditionalControllerPath(path.Key))
             {
                 pathsToRemove.Add(path.Key);
@@ -26,14 +22,12 @@ public class MinimalApiOnlyDocumentFilter : IDocumentFilter
             swaggerDoc.Paths.Remove(path);
         }
 
-        // Atualizar informações do documento
         swaggerDoc.Info.Title = "Portal SSO - Clean Architecture APIs";
-        swaggerDoc.Info.Description = "Apenas endpoints refatorados para Clean Architecture são exibidos. Controllers tradicionais foram ocultados.";
+        swaggerDoc.Info.Description = "Apenas endpoints refatorados para Clean Architecture sÃ£o exibidos. Controllers tradicionais foram ocultados.";
     }
 
     private static bool IsTraditionalControllerPath(string path)
     {
-        // Lista de paths dos controllers tradicionais que queremos remover
         var traditionalControllerPaths = new[]
         {
             "/api/v1/categorias", // Controller tradicional de categorias
@@ -45,7 +39,7 @@ public class MinimalApiOnlyDocumentFilter : IDocumentFilter
             "/api/v1/perfis",
             "/api/v1/escopos",
             "/api/v1/auth",
-            "/api/categorias", // Sem versionamento também
+            "/api/categorias", // Sem versionamento tambÃ©m
             "/api/clientes",
             "/api/equipamentos",
             "/api/locacoes",
@@ -56,7 +50,6 @@ public class MinimalApiOnlyDocumentFilter : IDocumentFilter
             "/api/auth"
         };
 
-        // Remove paths que começam com estes padrões, EXCETO se contém "v{version}" (Minimal API)
         return traditionalControllerPaths.Any(controllerPath => 
             path.StartsWith(controllerPath, StringComparison.OrdinalIgnoreCase)) &&
             !path.Contains("v{version}", StringComparison.OrdinalIgnoreCase);

@@ -1,5 +1,7 @@
+﻿using Dapper;
 using Portal.Domain.Perfil;
 using Portal.Domain.Perfil.Interfaces;
+using Portal.Domain.Common;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
 using DataUnitOfWork = Portal.Infrastructure.Data.IUnitOfWork;
 
@@ -11,19 +13,30 @@ public class PerfilRepository : DataDapperRepository, IPerfilRepository
     {
     }
 
-    public async Task<IEnumerable<PerfilQuery>> ListarComEscoposAsync(CancellationToken cancellationToken = default)
+    public async Task<ResultadoPaginado<PerfilQuery>> ObterComEscoposAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken = default)
     {
-        const string sql = @"SELECT p.id   AS PerfilId,
-                                     p.nome AS PerfilNome,
-                                     e.id   AS EscopoId,
-                                     e.nome AS EscopoNome
-                              FROM sso.perfil p
-                              LEFT JOIN sso.perfil_escopo pe ON pe.perfil_id = p.id
-                              LEFT JOIN sso.escopo e ON e.id = pe.escopo_id
-                              ORDER BY p.id, e.id";
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
 
-        var rows = await QueryAsync<PerfilEscopoRow>(sql);
-        return rows
+        var sql = $@"WITH perfis_paginados AS (
+                          SELECT p.id, p.nome
+                          FROM sso.perfil p
+                          ORDER BY p.nome {paginacao.OrdemSql}
+                          LIMIT @TamanhoPagina OFFSET @Offset
+                      )
+                      SELECT pp.id   AS PerfilId,
+                             pp.nome AS PerfilNome,
+                             e.id    AS EscopoId,
+                             e.nome  AS EscopoNome
+                      FROM perfis_paginados pp
+                      LEFT JOIN sso.perfil_escopo pe ON pe.perfil_id = pp.id
+                      LEFT JOIN sso.escopo e ON e.id = pe.escopo_id
+                      ORDER BY pp.nome {paginacao.OrdemSql}, e.id";
+
+        const string sqlCount = "SELECT COUNT(1) FROM sso.perfil";
+        var total = await QuerySingleAsync<int>(sqlCount);
+        var rows = await QueryAsync<PerfilEscopoRow>(sql, new { TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+
+        var itens = rows
             .GroupBy(r => new { r.PerfilId, r.PerfilNome })
             .Select(group => new PerfilQuery
             {
@@ -35,16 +48,21 @@ public class PerfilRepository : DataDapperRepository, IPerfilRepository
                     .ToList()
             })
             .ToList();
+
+        return new ResultadoPaginado<PerfilQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<PerfilQuery>> ObterPerfilParaComboAsync(bool isMaster, CancellationToken cancellationToken = default)
+    public async Task<ResultadoPaginado<PerfilQuery>> ObterPerfilParaComboAsync(bool isMaster, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken = default)
     {
-        var sql = "SELECT p.id, p.nome FROM sso.perfil p";
-        if (!isMaster)
-            sql += " WHERE p.is_master = False";
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
 
-        var rows = await QueryAsync<PerfilComboRow>(sql);
-        return rows.Select(x => new PerfilQuery { Id = x.Id, Nome = x.Nome ?? string.Empty }).ToList();
+        var sql = $"SELECT p.id, p.nome FROM sso.perfil p ORDER BY p.nome {paginacao.OrdemSql} LIMIT @TamanhoPagina OFFSET @Offset";
+        const string sqlCount = "SELECT COUNT(1) FROM sso.perfil p";
+
+        var total = await QuerySingleAsync<int>(sqlCount);
+        var rows = await QueryAsync<PerfilComboRow>(sql, new { TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+        var itens = rows.Select(x => new PerfilQuery { Id = x.Id, Nome = x.Nome ?? string.Empty }).ToList();
+        return new ResultadoPaginado<PerfilQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task<PerfilQuery?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default)
@@ -134,3 +152,4 @@ public class PerfilRepository : DataDapperRepository, IPerfilRepository
         public string? Nome { get; set; }
     }
 }
+

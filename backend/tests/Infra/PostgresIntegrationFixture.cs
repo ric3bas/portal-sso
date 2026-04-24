@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 using Infra;
 using Npgsql;
 using Portal.Infra;

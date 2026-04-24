@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -30,7 +30,7 @@ public class GlobalExceptionFilterTests
     {
         var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
         var filter = new GlobalExceptionFilter(logger);
-        var context = CreateContext(new ValidationException("campo inválido"));
+        var context = CreateContext(new ValidationException("campo invÃ¡lido"));
 
         filter.OnException(context);
 
@@ -39,7 +39,7 @@ public class GlobalExceptionFilterTests
         Assert.Equal(StatusCodes.Status400BadRequest, result.Data.StatusCode);
 
         var problem = Assert.IsType<ProblemDetails>(result.Value);
-        Assert.Equal("Erro de validação", problem.Title);
+        Assert.Equal("Erro de validaÃ§Ã£o", problem.Title);
         Assert.Equal(StatusCodes.Status400BadRequest, problem.Status);
     }
 
@@ -48,7 +48,7 @@ public class GlobalExceptionFilterTests
     {
         var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
         var filter = new GlobalExceptionFilter(logger);
-        var context = CreateContext(new NotFoundException("não encontrado"));
+        var context = CreateContext(new NotFoundException("nÃ£o encontrado"));
 
         filter.OnException(context);
 
@@ -66,7 +66,7 @@ public class GlobalExceptionFilterTests
     {
         var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
         var filter = new GlobalExceptionFilter(logger);
-        var context = CreateContext(new BusinessException("regra de negócio"));
+        var context = CreateContext(new BusinessException("regra de negÃ³cio"));
 
         filter.OnException(context);
 
@@ -83,7 +83,7 @@ public class GlobalExceptionFilterTests
     {
         var logger = Substitute.For<ILogger<GlobalExceptionFilter>>();
         var filter = new GlobalExceptionFilter(logger);
-        var context = CreateContext(new Exception("erro genérico"));
+        var context = CreateContext(new Exception("erro genÃ©rico"));
 
         filter.OnException(context);
 

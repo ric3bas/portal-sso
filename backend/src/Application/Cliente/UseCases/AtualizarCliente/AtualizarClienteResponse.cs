@@ -1,4 +1,4 @@
-namespace Portal.Application.Cliente.UseCases.AtualizarCliente;
+﻿namespace Portal.Application.Cliente.UseCases.AtualizarCliente;
 
 public class AtualizarClienteResponse
 {

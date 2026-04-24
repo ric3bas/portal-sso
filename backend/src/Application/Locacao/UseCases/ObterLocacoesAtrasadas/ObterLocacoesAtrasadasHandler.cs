@@ -1,7 +1,7 @@
-using Portal.Application.Locacao.Common;
+﻿using Portal.Application.Locacao.Common;
 using Portal.Domain.Base;
+using Portal.Domain.Common;
 using Portal.Domain.Locacao.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Locacao.UseCases.ObterLocacoesAtrasadas;
 
@@ -14,14 +14,14 @@ public class ObterLocacoesAtrasadasHandler
         _repository = repository;
     }
 
-    public async Task<Result<List<ObterLocacoesAtrasadasResponse>>> Handle(ObterLocacoesAtrasadasRequest request, CancellationToken cancellationToken)
+    public async Task<Result<TabelaPaginadaResponse<ObterLocacoesAtrasadasResponse>>> Handle(ObterLocacoesAtrasadasRequest request, CancellationToken cancellationToken)
     {
         await _repository.AtualizarStatusAtrasadasAsync(cancellationToken);
 
-        var locacoes = await _repository.ObterAtrasadasAsync(cancellationToken);
-        if (locacoes == null || !locacoes.Any())
-            return Result.NotFoundResult<List<ObterLocacoesAtrasadasResponse>>("Nenhuma locação atrasada encontrada");
+        var resultado = await _repository.ObterAtrasadasAsync(request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken);
+        var response = resultado.Itens.Select(c=>c.ToResponse<ObterLocacoesAtrasadasResponse>()).ToList();
+        var tabela = TabelaPaginadaResponse<ObterLocacoesAtrasadasResponse>.Criar(response, resultado.TotalRegistros, resultado.TotalRegistros, resultado.NumeroPagina, resultado.TamanhoPagina);
 
-        return Result.OkResult(locacoes.Select(c=>c.ToResponse<ObterLocacoesAtrasadasResponse>()).ToList());
+        return Result.OkResult(tabela);
     }
 }

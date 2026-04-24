@@ -1,9 +1,11 @@
 import { Pencil, Power } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Badge, Button, Feedback, Modal, PageIntro, Panel } from '../components/ui'
+import { AdminPage, AdminPanel, FilterBar, FormModalFooter, RowActions } from '../components/admin'
+import { DataTable, type DataTableColumn } from '../components/DataTable'
+import { Badge, Button, Modal } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { categoriasApi } from '../services/sso'
-import type { CategoriaResponse } from '../types/api'
+import type { CategoriaResponse, PaginatedResult } from '../types/api'
 
 interface CategoriaFormState {
   nome: string
@@ -30,6 +32,7 @@ export function CategoriasPage() {
   const [filterNome, setFilterNome] = useState('')
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [tableMessage, setTableMessage] = useState<string | null>(null)
+  const [pagination, setPagination] = useState<PaginatedResult<CategoriaResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -37,15 +40,19 @@ export function CategoriasPage() {
   const [form, setForm] = useState<CategoriaFormState>(initialFormState)
   const [nomeError, setNomeError] = useState('')
 
-  async function loadData(nome?: string) {
+  async function loadData(nome?: string, page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
-      const response = nome?.trim() ? await categoriasApi.listFilter(nome.trim()) : await categoriasApi.list()
-      setItems(response)
-      setTableMessage(response.length === 0 ? 'Nenhuma categoria encontrada' : null)
+      const response = nome?.trim()
+        ? await categoriasApi.listFilterPage(nome.trim(), { Pagina: page, TamanhoPagina: pageSize })
+        : await categoriasApi.listPage({ Pagina: page, TamanhoPagina: pageSize })
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhuma categoria encontrada' : null)
     } catch (error) {
       setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
       setTableMessage(getErrorMessage(error, 'Falha ao carregar categorias.'))
     } finally {
       setIsLoading(false)
@@ -91,12 +98,12 @@ export function CategoriasPage() {
     const normalizedValue = value.trim()
 
     if (normalizedValue.length >= 3) {
-      await loadData(normalizedValue)
+      await loadData(normalizedValue, 1, pagination.pageSize)
       return
     }
 
     if (normalizedValue.length === 0) {
-      await loadData()
+      await loadData(undefined, 1, pagination.pageSize)
     }
   }
 
@@ -124,7 +131,7 @@ export function CategoriasPage() {
       }
 
       setIsModalOpen(false)
-      await loadData(filterNome)
+      await loadData(filterNome, pagination.page, pagination.pageSize)
     } catch (error) {
       setFeedback({ tone: 'danger', message: getErrorMessage(error, 'Falha ao salvar categoria.') })
     } finally {
@@ -144,14 +151,43 @@ export function CategoriasPage() {
     }
   }
 
+  const columns: DataTableColumn<CategoriaResponse>[] = [
+    {
+      key: 'nome',
+      header: 'Nome',
+      cellClassName: 'font-medium text-[var(--text)] dark:text-slate-900',
+      renderCell: (item) => item.nome,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      renderCell: (item) => <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Ativa' : 'Inativa'}</Badge>,
+    },
+    {
+      key: 'acoes',
+      header: 'Ações',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
+      renderCell: (item) => (
+        <RowActions>
+          <Button aria-label="Editar categoria" className="h-8 w-8 !p-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
+            <Pencil className="h-[18px] w-[18px]" />
+          </Button>
+          {item.ativo ? (
+            <Button aria-label="Inativar categoria" className="h-8 w-8 !p-0" onClick={() => void handleInactivate(item)} title="Inativar" type="button" variant="danger">
+              <Power className="h-[18px] w-[18px]" />
+            </Button>
+          ) : null}
+        </RowActions>
+      ),
+    },
+  ]
+
   return (
-    <div className="space-y-6">
-      <PageIntro action={<Button onClick={openCreateModal}>Novo</Button>} eyebrow="" title="Categorias" description="" />
-
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-5 md:p-6">
-        <div className="max-w-md">
+    <AdminPage action={<Button onClick={openCreateModal}>Novo</Button>} feedback={feedback} title="Categorias">
+      <AdminPanel>
+        <FilterBar className="md:block">
+          <div className="max-w-md">
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <span>Filtrar por nome</span>
             <input
@@ -162,56 +198,23 @@ export function CategoriasPage() {
               value={filterNome}
             />
           </label>
-        </div>
-
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando categorias...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
-                        <td className="px-4 py-3">
-                          <Badge tone={item.ativo ? 'success' : 'danger'}>{item.ativo ? 'Ativa' : 'Inativa'}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button aria-label="Editar categoria" className="h-11 w-11 px-0" onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
-                              <Pencil className="h-5 w-5" />
-                            </Button>
-                            {item.ativo ? (
-                              <Button aria-label="Inativar categoria" className="h-11 w-11 px-0" onClick={() => void handleInactivate(item)} title="Inativar" type="button" variant="danger">
-                                <Power className="h-5 w-5" />
-                              </Button>
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={3}>
-                        {tableMessage ?? 'Nenhuma categoria encontrada'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
           </div>
-        )}
-      </Panel>
+        </FilterBar>
+
+        <DataTable
+          columns={columns}
+          emptyMessage={tableMessage ?? 'Nenhuma categoria encontrada'}
+          getRowKey={(item) => item.id}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando categorias..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) => void loadData(filterNome || undefined, page, pagination.pageSize),
+            onPageSizeChange: (pageSize) => void loadData(filterNome || undefined, 1, pageSize),
+          }}
+        />
+      </AdminPanel>
 
       <Modal onClose={() => setIsModalOpen(false)} open={isModalOpen} title={editingItem ? 'Editar categoria' : 'Nova categoria'}>
         <form className="space-y-5" noValidate onSubmit={handleSubmit}>
@@ -236,16 +239,9 @@ export function CategoriasPage() {
             </label>
           ) : null}
 
-          <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <Button onClick={() => setIsModalOpen(false)} type="button" variant="ghost">
-              Cancelar
-            </Button>
-            <Button disabled={isSaving} type="submit">
-              {isSaving ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </div>
+          <FormModalFooter isSaving={isSaving} onCancel={() => setIsModalOpen(false)} />
         </form>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

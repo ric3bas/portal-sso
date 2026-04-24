@@ -1,4 +1,4 @@
-using Portal.Domain.Usuario;
+﻿using Portal.Domain.Usuario;
 
 namespace Portal.Domain.Usuario.Interfaces;
 

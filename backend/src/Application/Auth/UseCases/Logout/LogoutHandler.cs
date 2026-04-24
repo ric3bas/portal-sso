@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using TokenRepo = Portal.Domain.Usuario.Interfaces.ITokenAtualizacaoRepository;
 
 namespace Portal.Application.Auth.UseCases.Logout;
@@ -19,7 +19,7 @@ public class LogoutHandler
 
         var token = await _tokenRepo.ObterPorTokenAsync(request.RefreshToken, cancellationToken);
         if (token is null || token.Revogado)
-            return Result.BusinessResult<bool>("Refresh token inválido ou já revogado");
+            return Result.BusinessResult<bool>("Refresh token invÃ¡lido ou jÃ¡ revogado");
 
         await _tokenRepo.RevogarAsync(request.RefreshToken, cancellationToken);
         return Result.OkResult(true);

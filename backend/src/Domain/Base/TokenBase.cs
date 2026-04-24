@@ -1,4 +1,4 @@
-namespace Portal.Domain.Base
+﻿namespace Portal.Domain.Base
 {
     public class TokenBase()
     {

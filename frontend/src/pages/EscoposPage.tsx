@@ -1,9 +1,23 @@
 import { Pencil } from 'lucide-react'
 import { useDeferredValue, useEffect, useState, type FormEvent } from 'react'
-import { Button, Feedback, Modal, PageIntro, Panel, TextField } from '../components/ui'
+import { AdminPage, AdminPanel } from '../components/admin'
+import { DataTable, type DataTableColumn } from '../components/DataTable'
+import { Button, Modal, TextField } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { escoposApi } from '../services/sso'
-import type { EscopoResponse } from '../types/api'
+import type { EscopoResponse, PaginatedResult } from '../types/api'
+
+let initialEscoposLoadPromise: Promise<PaginatedResult<EscopoResponse>> | null = null
+
+function loadInitialEscoposPage() {
+  if (!initialEscoposLoadPromise) {
+    initialEscoposLoadPromise = escoposApi.listPage({ Pagina: 1, TamanhoPagina: 20 }).finally(() => {
+      initialEscoposLoadPromise = null
+    })
+  }
+
+  return initialEscoposLoadPromise
+}
 
 export function EscoposPage() {
   const [items, setItems] = useState<EscopoResponse[]>([])
@@ -11,6 +25,8 @@ export function EscoposPage() {
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [tableMessage, setTableMessage] = useState<string | null>(null)
+  const [pagination, setPagination] = useState<PaginatedResult<EscopoResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<EscopoResponse | null>(null)
   const [nome, setNome] = useState('')
@@ -21,13 +37,20 @@ export function EscoposPage() {
     item.nome?.toLocaleLowerCase().includes(deferredFilter.toLocaleLowerCase()),
   )
 
-  async function loadData() {
+  async function loadData(page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
-      const response = await escoposApi.list()
-      setItems(response)
+      const response = page === 1 && pageSize === 20
+        ? await loadInitialEscoposPage()
+        : await escoposApi.listPage({ Pagina: page, TamanhoPagina: pageSize })
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhum escopo encontrado' : null)
     } catch (error) {
+      setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
+      setTableMessage(getErrorMessage(error, 'Falha ao carregar escopos.'))
       setFeedback({ tone: 'danger', message: getErrorMessage(error, 'Falha ao carregar escopos.') })
     } finally {
       setIsLoading(false)
@@ -82,7 +105,7 @@ export function EscoposPage() {
       }
 
       setIsModalOpen(false)
-      await loadData()
+        await loadData(pagination.page, pagination.pageSize)
     } catch (error) {
       setFeedback({ tone: 'danger', message: getErrorMessage(error, 'Falha ao salvar escopo.') })
     } finally {
@@ -91,66 +114,52 @@ export function EscoposPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro
-        action={<Button onClick={openCreateModal}>Novo</Button>}
-        eyebrow=""
-        title="Escopos"
-        description=""
-      />
-
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-5 md:p-6">
+    <AdminPage action={<Button onClick={openCreateModal}>Novo</Button>} feedback={feedback} title="Escopos">
+      <AdminPanel>
         <div className="grid gap-4 md:grid-cols-[minmax(0,320px)_1fr] md:items-end">
           <TextField label="Filtrar por nome" onChange={(event) => setFilter(event.target.value)} placeholder="Digite para pesquisar" value={filter} />
         </div>
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando escopos...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Id</th>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.length > 0 ? (
-                    filteredItems.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-mono-ui text-xs text-[var(--text-soft)] dark:text-slate-500">#{item.id}</td>
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.nome}</td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            aria-label="Editar escopo"
-                            className="h-11 w-11 px-0"
-                            onClick={() => void openEditModal(item)}
-                            title="Editar"
-                            type="button"
-                            variant="secondary"
-                          >
-                            <Pencil className="h-5 w-5" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={3}>
-                        Nenhum escopo encontrado
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Panel>
+        <DataTable
+          columns={[
+            {
+              key: 'nome',
+              header: 'Nome',
+              cellClassName: 'font-medium text-[var(--text)] dark:text-slate-900',
+              renderCell: (item) => item.nome,
+            },
+            {
+              key: 'acoes',
+              header: 'Ações',
+              headerClassName: 'text-right',
+              cellClassName: 'text-right',
+              renderCell: (item) => (
+                <Button
+                  aria-label="Editar escopo"
+                  className="h-8 w-8 !p-0"
+                  onClick={() => void openEditModal(item)}
+                  title="Editar"
+                  type="button"
+                  variant="secondary"
+                >
+                  <Pencil className="h-[18px] w-[18px]" />
+                </Button>
+              ),
+            },
+          ] satisfies DataTableColumn<EscopoResponse>[]}
+          emptyMessage={tableMessage ?? 'Nenhum escopo encontrado'}
+          getRowKey={(item) => item.id}
+          items={filteredItems}
+          loading={isLoading}
+          loadingMessage="Carregando escopos..."
+          pagination={{
+            ...pagination,
+            totalRecords: filter.trim() ? filteredItems.length : pagination.totalRecords,
+            totalPages: filter.trim() ? 1 : pagination.totalPages,
+            onPageChange: (page) => void loadData(page, pagination.pageSize),
+            onPageSizeChange: (pageSize) => void loadData(1, pageSize),
+          }}
+        />
+      </AdminPanel>
 
       <Modal
         onClose={() => setIsModalOpen(false)}
@@ -186,6 +195,6 @@ export function EscoposPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

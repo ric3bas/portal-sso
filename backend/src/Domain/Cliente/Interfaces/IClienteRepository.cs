@@ -1,11 +1,12 @@
-using Portal.Domain.Cliente;
+﻿using Portal.Domain.Cliente;
+using Portal.Domain.Common;
 
 namespace Portal.Domain.Cliente.Interfaces;
 
 public interface IClienteRepository
 {
-    Task<IEnumerable<ClienteQuery>> ObterTodosAsync(CancellationToken cancellationToken);
-    Task<IEnumerable<ClienteQuery>> ObterPorFiltroAsync(string? nome, string? cpf, CancellationToken cancellationToken);
+    Task<ResultadoPaginado<ClienteQuery>> ObterTodosAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken);
+    Task<ResultadoPaginado<ClienteQuery>> ObterPorFiltroAsync(string? nome, string? cpf, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken);
     Task<ClienteQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken);
     Task<Guid> CriarAsync(ClienteCommand cliente, CancellationToken cancellationToken);
     Task<int> AtualizarAsync(ClienteCommand cliente, CancellationToken cancellationToken);

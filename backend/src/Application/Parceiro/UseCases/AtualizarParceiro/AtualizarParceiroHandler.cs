@@ -1,5 +1,4 @@
-using FluentValidation;
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Parceiro;
 using Portal.Domain.Parceiro.Interfaces;
 
@@ -8,35 +7,33 @@ namespace Portal.Application.Parceiro.UseCases.AtualizarParceiro;
 public class AtualizarParceiroHandler
 {
     private readonly IParceiroRepository _repository;
-    private readonly IValidator<AtualizarParceiroRequest> _validator;
 
-    public AtualizarParceiroHandler(IParceiroRepository repository, IValidator<AtualizarParceiroRequest> validator)
+    public AtualizarParceiroHandler(IParceiroRepository repository)
     {
         _repository = repository;
-        _validator = validator;
     }
 
-    public async Task<Result<AtualizarParceiroResponse>> Handle(AtualizarParceiroRequest request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(AtualizarParceiroRequest request, CancellationToken cancellationToken)
     {
-        var validation = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
-            return Result.ValidationResult<AtualizarParceiroResponse>(validation.Errors.Select(e => e.ErrorMessage));
+        if (!request.IsValid()) return Result.ValidationResult<string>(request.ObterErros());
 
         var (existe, nomeConflito) = await _repository.ValidarAtualizacaoAsync(request.Id, request.Nome, cancellationToken);
         if (!existe)
-            return Result.NotFoundResult<AtualizarParceiroResponse>("Parceiro não encontrado");
+            return Result.NotFoundResult<string>("Parceiro não encontrado");
 
         if (nomeConflito)
-            return Result.ValidationResult<AtualizarParceiroResponse>("Já existe outro parceiro com este nome");
+            return Result.ValidationResult<string>("Já existe outro parceiro com este nome");
 
         await _repository.AtualizarAsync(new ParceiroCommand
         {
             Id = request.Id,
             Nome = request.Nome,
             Descricao = request.Descricao,
+            CorPrimaria = request.CorPrimaria,
+            CorSecundaria = request.CorSecundaria,
             Ativo = request.Ativo
         }, cancellationToken);
 
-        return Result.OkResult(new AtualizarParceiroResponse { Mensagem = "Atualizado com sucesso" });
+        return Result.OkResult("Parceiro atualizado com sucesso");
     }
 }

@@ -1,7 +1,6 @@
-using Portal.Application.Locacao.Common;
+﻿using Portal.Application.Locacao.Common;
 using Portal.Domain.Base;
 using Portal.Domain.Locacao.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Locacao.UseCases.ObterLocacaoPorId;
 
@@ -18,7 +17,7 @@ public class ObterLocacaoPorIdHandler
     {
         var locacao = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
         if (locacao is null)
-            return Result.NotFoundResult<ObterLocacaoPorIdResponse>("Locação não encontrada");
+            return Result.NotFoundResult<ObterLocacaoPorIdResponse>("LocaÃ§Ã£o nÃ£o encontrada");
 
         return Result.OkResult(locacao.ToResponse<ObterLocacaoPorIdResponse>());
     }

@@ -1,3 +1,4 @@
+﻿using FluentValidation;
 using Portal.Domain.Base;
 
 namespace Portal.Application.Auth.UseCases.Logout;
@@ -8,7 +9,8 @@ public class LogoutRequest : BaseRequest
 
     public override bool IsValid()
     {
-        var validator = new LogoutValidator();
+        var validator = new InlineValidator<LogoutRequest>();
+        validator.RuleFor(x => x.RefreshToken).AplicaRegraCampoObrigatorio();
         return Validate(this, validator);
     }
 }

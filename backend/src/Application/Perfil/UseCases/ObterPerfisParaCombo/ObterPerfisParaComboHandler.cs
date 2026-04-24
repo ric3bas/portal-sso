@@ -1,6 +1,6 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
+using Portal.Domain.Common;
 using Portal.Domain.Perfil.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Perfil.UseCases.ObterPerfisParaCombo;
 
@@ -13,13 +13,13 @@ public class ObterPerfisParaComboHandler : BaseService
         _repository = repository;
     }
 
-    public async Task<Result<List<ObterPerfisParaComboResponse>>> Handle(ObterPerfisParaComboRequest request, CancellationToken cancellationToken)
+    public async Task<Result<TabelaPaginadaResponse<ObterPerfisParaComboResponse>>> Handle(ObterPerfisParaComboRequest request, CancellationToken cancellationToken)
     {
-        var result = await _repository.ObterPerfilParaComboAsync(ObterUsuario().IsMaster, cancellationToken);
-        if (!result.Any())
-            return Result.NotFoundResult<List<ObterPerfisParaComboResponse>>("Nenhum perfil encontrado");
+        var resultado = await _repository.ObterPerfilParaComboAsync(ObterUsuario().IsMaster, request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken);
+        var response = resultado.Itens.Select(c => c.ToResponseParaCombo()).ToList();
+        var tabela = TabelaPaginadaResponse<ObterPerfisParaComboResponse>.Criar(response, resultado.TotalRegistros, resultado.TotalRegistros, resultado.NumeroPagina, resultado.TamanhoPagina);
 
-        return Result.OkResult(result.Select(c => c.ToResponse<ObterPerfisParaComboResponse>()).ToList());
+        return Result.OkResult(tabela);
 
     }
 }

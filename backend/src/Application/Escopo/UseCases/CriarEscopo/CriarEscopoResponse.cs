@@ -1,4 +1,4 @@
-namespace Portal.Application.Escopo.UseCases.CriarEscopo;
+﻿namespace Portal.Application.Escopo.UseCases.CriarEscopo;
 
 public class CriarEscopoResponse
 {

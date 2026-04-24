@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 using Portal.Domain.Usuario;
 using Portal.Domain.Usuario.Interfaces;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
@@ -23,8 +23,11 @@ public class AuthRepository : DataDapperRepository, IAuthRepository
     {
         const string usuarioSql = @"
             SELECT u.id, u.nome, u.login, u.senha, u.email, u.parceiro_id AS ParceiroId,
-                   u.tentativas_login as TentativasLogin, u.bloqueado as Bloqueado, u.ativo as Ativo
+                   u.tentativas_login as TentativasLogin, u.bloqueado as Bloqueado, u.ativo as Ativo,
+                    p.cor_primaria CorPrimaria, p.cor_secundaria CorSecundaria
             FROM sso.usuario u
+             inner join sso.parceiro p on 
+             p.id = u.parceiro_id 
             WHERE u.login = @login or u.email = @login
             LIMIT 1;";
 
@@ -54,8 +57,11 @@ public class AuthRepository : DataDapperRepository, IAuthRepository
     {
         const string usuarioSql = @"
             SELECT u.id, u.nome, u.login, u.senha, u.email, u.parceiro_id AS ParceiroId,
-                   u.tentativas_login as TentativasLogin, u.bloqueado as Bloqueado, u.ativo as Ativo
+                   u.tentativas_login as TentativasLogin, u.bloqueado as Bloqueado, u.ativo as Ativo,
+                    p.cor_primaria CorPrimaria, p.cor_secundaria CorSecundaria
             FROM sso.usuario u
+  inner join sso.parceiro p on 
+             p.id = u.parceiro_id 
             WHERE u.id = @usuarioId
             LIMIT 1;";
 

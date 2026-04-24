@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import { Navigate, useLocation } from 'react-router-dom'
 import { getAccessTokenFromResponse, getExpiresInMinutesFromResponse, getRefreshTokenFromResponse } from '../lib/auth'
 import { clearSession, getSession, saveSession, subscribeSessionChange } from '../lib/storage'
-import { tryGetIsMasterFromAccessToken } from '../lib/jwt'
+import { getThemeColorsFromAccessToken, tryGetIsMasterFromAccessToken } from '../lib/jwt'
 import { authApi } from '../services/sso'
 import type { LoginRequest, LoginResponse, SessionData } from '../types/api'
 
@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 function mapLoginResponse(response: LoginResponse, login?: string): SessionData {
   const accessToken = getAccessTokenFromResponse(response)
   const resolvedIsMaster = tryGetIsMasterFromAccessToken(accessToken)
+  const themeColors = getThemeColorsFromAccessToken(accessToken)
 
   return {
     accessToken,
@@ -27,6 +28,8 @@ function mapLoginResponse(response: LoginResponse, login?: string): SessionData 
     expiresInMinutes: getExpiresInMinutesFromResponse(response),
     login,
     isMaster: resolvedIsMaster ?? false,
+    corPrimaria: themeColors.corPrimaria,
+    corSecundaria: themeColors.corSecundaria,
   }
 }
 
@@ -50,7 +53,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
           current?.refreshToken === nextSession?.refreshToken &&
           current?.expiresInMinutes === nextSession?.expiresInMinutes &&
           current?.login === nextSession?.login &&
-          current?.isMaster === nextSession?.isMaster
+          current?.isMaster === nextSession?.isMaster &&
+          current?.corPrimaria === nextSession?.corPrimaria &&
+          current?.corSecundaria === nextSession?.corSecundaria
         ) {
           return current
         }

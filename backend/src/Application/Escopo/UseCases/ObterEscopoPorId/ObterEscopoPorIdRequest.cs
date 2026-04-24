@@ -1,4 +1,4 @@
-namespace Portal.Application.Escopo.UseCases.ObterEscopoPorId;
+﻿namespace Portal.Application.Escopo.UseCases.ObterEscopoPorId;
 
 public class ObterEscopoPorIdRequest
 {

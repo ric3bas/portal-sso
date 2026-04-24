@@ -1,4 +1,4 @@
-namespace Portal.Application.Parceiro.UseCases.CriarParceiro;
+﻿namespace Portal.Application.Parceiro.UseCases.CriarParceiro;
 
 public class CriarParceiroResponse
 {

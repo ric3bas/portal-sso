@@ -1,4 +1,4 @@
-namespace Portal.Domain.Perfil;
+﻿namespace Portal.Domain.Perfil;
 
 public class PerfilEscopoQuery
 {

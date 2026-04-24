@@ -1,4 +1,5 @@
-using Dapper;
+﻿using Dapper;
+using Portal.Domain.Common;
 using Portal.Domain.Usuario;
 using Portal.Domain.Usuario.Interfaces;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
@@ -48,8 +49,10 @@ public class UsuarioRepository : DataDapperRepository, IUsuarioRepository
         return (parceiroExiste, loginExiste, perfilExiste);
     }
 
-    public async Task<IEnumerable<UsuarioComPerfilQuery>> ListarPorParceiroAsync(Guid? parceiroId, CancellationToken cancellationToken = default)
+    public async Task<ResultadoPaginado<UsuarioComPerfilQuery>> ObterPorParceiroAsync(Guid? parceiroId, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken = default)
     {
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
         const string sql = @"SELECT u.id,
                                     u.nome,
                                     u.login,
@@ -62,12 +65,21 @@ public class UsuarioRepository : DataDapperRepository, IUsuarioRepository
                              INNER JOIN sso.perfil p ON p.id = u.perfil_id
                              INNER JOIN sso.parceiro pp ON pp.id = u.parceiro_id
                              {WHERE}
-                             ORDER BY u.nome";
+                             ORDER BY u.nome {ORDER}
+                             LIMIT @TamanhoPagina OFFSET @Offset";
+
+        const string sqlCount = @"SELECT COUNT(1)
+                                  FROM sso.usuario u
+                                  {WHERE}";
 
         var temFiltro = parceiroId.HasValue && parceiroId != Guid.Empty;
-        var query = sql.Replace("{WHERE}", temFiltro ? "WHERE u.parceiro_id = @parceiroId" : string.Empty);
+        var query = sql.Replace("{WHERE}", temFiltro ? "WHERE u.parceiro_id = @parceiroId" : string.Empty)
+                       .Replace("{ORDER}", paginacao.OrdemSql);
+        var queryCount = sqlCount.Replace("{WHERE}", temFiltro ? "WHERE u.parceiro_id = @parceiroId" : string.Empty);
 
-        return await QueryAsync<UsuarioComPerfilQuery>(query, new { parceiroId });
+        var total = await QuerySingleAsync<int>(queryCount, new { parceiroId });
+        var itens = (await QueryAsync<UsuarioComPerfilQuery>(query, new { parceiroId, TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset })).ToList();
+        return new ResultadoPaginado<UsuarioComPerfilQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task IncrementarTentativaLoginAsync(int usuarioId, CancellationToken cancellationToken = default)
@@ -108,3 +120,4 @@ public class UsuarioRepository : DataDapperRepository, IUsuarioRepository
         await ExecuteAsync(sql, new { usuario.Id, usuario.Nome, usuario.Login, usuario.Email, usuario.Ativo, usuario.Bloqueado });
     }
 }
+

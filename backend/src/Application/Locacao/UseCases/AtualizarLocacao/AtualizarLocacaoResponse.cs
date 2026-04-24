@@ -1,4 +1,4 @@
-namespace Portal.Application.Locacao.UseCases.AtualizarLocacao;
+﻿namespace Portal.Application.Locacao.UseCases.AtualizarLocacao;
 
 public class AtualizarLocacaoResponse
 {

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, PageIntro, Panel } from '../components/ui'
+import { AdminPage, AdminPanel, FilterBar } from '../components/admin'
+import { DataTable, type DataTableColumn } from '../components/DataTable'
+import { Button } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { financeiroApi } from '../services/sso'
-import type { FinanceiroResponse } from '../types/api'
+import type { FinanceiroResponse, PaginatedResult } from '../types/api'
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -30,19 +32,22 @@ export function FinanceiroPage() {
   const [dataFim, setDataFim] = useState('')
   const [tableMessage, setTableMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [pagination, setPagination] = useState<PaginatedResult<FinanceiroResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
 
-  async function loadData(filters?: { dataInicio?: string; dataFim?: string }) {
+  async function loadData(filters?: { dataInicio?: string; dataFim?: string }, page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
       const response = filters?.dataInicio || filters?.dataFim
-        ? await financeiroApi.listByPeriod(filters)
-        : await financeiroApi.list()
+        ? await financeiroApi.listByPeriodPage(filters, { Pagina: page, TamanhoPagina: pageSize })
+        : await financeiroApi.listPage({ Pagina: page, TamanhoPagina: pageSize })
 
-      setItems(response)
-      setTableMessage(response.length === 0 ? 'Nenhum lançamento encontrado' : null)
+      setItems(response.items)
+      setPagination(response.pagination)
+      setTableMessage(response.items.length === 0 ? 'Nenhum lançamento encontrado' : null)
     } catch (error) {
       setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
       setTableMessage(getErrorMessage(error, 'Falha ao carregar lançamentos financeiros.'))
     } finally {
       setIsLoading(false)
@@ -62,21 +67,71 @@ export function FinanceiroPage() {
     await loadData({
       dataInicio: toIsoDateTime(dataInicio),
       dataFim: toIsoDateTime(dataFim),
-    })
+    }, 1, pagination.pageSize)
   }
 
   async function handleClear() {
     setDataInicio('')
     setDataFim('')
-    await loadData()
+    await loadData(undefined, 1, pagination.pageSize)
   }
 
-  return (
-    <div className="space-y-6">
-      <PageIntro eyebrow="" title="Financeiro" description="" />
+  const columns: DataTableColumn<FinanceiroResponse>[] = [
+    {
+      key: 'cliente',
+      header: 'Cliente',
+      cellClassName: 'font-medium text-[var(--text)] dark:text-slate-900',
+      renderCell: (item) => item.clienteNome || '-',
+    },
+    {
+      key: 'equipamento',
+      header: 'Equipamento',
+      renderCell: (item) => item.equipamentoNome || '-',
+    },
+    {
+      key: 'retirada',
+      header: 'Retirada',
+      renderCell: (item) => formatDateTime(item.dataRetirada),
+    },
+    {
+      key: 'devolucao',
+      header: 'Devolução',
+      renderCell: (item) => formatDateTime(item.dataDevolucao),
+    },
+    {
+      key: 'dias',
+      header: 'Dias',
+      renderCell: (item) => item.diasLocados,
+    },
+    {
+      key: 'diaria',
+      header: 'Diária',
+      renderCell: (item) => formatCurrency(item.valorDiaria),
+    },
+    {
+      key: 'total',
+      header: 'Total',
+      renderCell: (item) => formatCurrency(item.valorTotal),
+    },
+    {
+      key: 'lancamento',
+      header: 'Lançamento',
+      renderCell: (item) => formatDateTime(item.dataLancamento),
+    },
+  ]
 
-      <Panel className="p-5 md:p-6">
-        <div className="grid gap-4 md:grid-cols-[minmax(0,240px)_minmax(0,240px)_auto_auto] md:items-end">
+  return (
+    <AdminPage title="Financeiro">
+      <AdminPanel>
+        <FilterBar
+          className="grid gap-4 md:grid-cols-[minmax(0,240px)_minmax(0,240px)_auto_auto] md:items-end"
+          actions={(
+            <>
+              <Button onClick={() => void handleSearch()} type="button">Buscar</Button>
+              <Button onClick={() => void handleClear()} type="button" variant="secondary">Limpar</Button>
+            </>
+          )}
+        >
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <span>Data inicial</span>
             <input className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-900 dark:focus:border-slate-900 dark:focus:ring-slate-200" onChange={(event) => setDataInicio(event.target.value)} type="datetime-local" value={dataInicio} />
@@ -85,55 +140,42 @@ export function FinanceiroPage() {
             <span>Data final</span>
             <input className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-900 dark:focus:border-slate-900 dark:focus:ring-slate-200" onChange={(event) => setDataFim(event.target.value)} type="datetime-local" value={dataFim} />
           </label>
-          <Button onClick={() => void handleSearch()} type="button">Buscar</Button>
-          <Button onClick={() => void handleClear()} type="button" variant="secondary">Limpar</Button>
-        </div>
+        </FilterBar>
 
-        {isLoading ? (
-          <div className="mt-6 rounded-md border border-[var(--line)] bg-[var(--surface-strong)] px-5 py-8 text-sm text-[var(--text-soft)]">Carregando financeiro...</div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-md border border-[var(--line)] dark:border-slate-300">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Cliente</th>
-                    <th className="px-4 py-3 font-semibold">Equipamento</th>
-                    <th className="px-4 py-3 font-semibold">Retirada</th>
-                    <th className="px-4 py-3 font-semibold">Devolução</th>
-                    <th className="px-4 py-3 font-semibold">Dias</th>
-                    <th className="px-4 py-3 font-semibold">Diária</th>
-                    <th className="px-4 py-3 font-semibold">Total</th>
-                    <th className="px-4 py-3 font-semibold">Lançamento</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">{item.clienteNome || '-'}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.equipamentoNome || '-'}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatDateTime(item.dataRetirada)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatDateTime(item.dataDevolucao)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{item.diasLocados}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.valorDiaria)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatCurrency(item.valorTotal)}</td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">{formatDateTime(item.dataLancamento)}</td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white/70 dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={8}>
-                        {tableMessage ?? 'Nenhum lançamento encontrado'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Panel>
-    </div>
+        <DataTable
+          columns={columns}
+          emptyMessage={tableMessage ?? 'Nenhum lançamento encontrado'}
+          getRowKey={(item) => item.id}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando financeiro..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) =>
+              void loadData(
+                dataInicio || dataFim
+                  ? {
+                      dataInicio: toIsoDateTime(dataInicio),
+                      dataFim: toIsoDateTime(dataFim),
+                    }
+                  : undefined,
+                page,
+                pagination.pageSize,
+              ),
+            onPageSizeChange: (pageSize) =>
+              void loadData(
+                dataInicio || dataFim
+                  ? {
+                      dataInicio: toIsoDateTime(dataInicio),
+                      dataFim: toIsoDateTime(dataFim),
+                    }
+                  : undefined,
+                1,
+                pageSize,
+              ),
+          }}
+        />
+      </AdminPanel>
+    </AdminPage>
   )
 }

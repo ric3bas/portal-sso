@@ -1,4 +1,4 @@
-using Portal.Domain.Usuario.Interfaces;
+﻿using Portal.Domain.Usuario.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace Portal.Domain.Base

@@ -1,4 +1,4 @@
-namespace Portal.Domain.Base
+﻿namespace Portal.Domain.Base
 {
     public abstract class BaseRequest
     {
@@ -13,7 +13,7 @@ namespace Portal.Domain.Base
 
         public List<string> ObterErros() {
             if (ValidationResult is null)
-                return new List<string> { "Requisição não validada." };
+                return new List<string> { "RequisiÃ§Ã£o nÃ£o validada." };
 
             return ValidationResult.Errors
                 .Select(e => e.ErrorMessage)

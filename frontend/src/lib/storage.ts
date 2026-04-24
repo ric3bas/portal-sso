@@ -1,5 +1,5 @@
 import type { SessionData } from '../types/api'
-import { getIsMasterFromAccessToken } from './jwt'
+import { getIsMasterFromAccessToken, getThemeColorsFromAccessToken } from './jwt'
 
 const SESSION_KEY = 'portal-sso.session'
 const SESSION_CHANGED_EVENT = 'portal-sso.session-changed'
@@ -28,6 +28,8 @@ export function getSession(): SessionData | null {
       refreshToken: parsedSession.refreshToken,
       expiresInMinutes: parsedSession.expiresInMinutes ?? null,
       login: parsedSession.login,
+      corPrimaria: parsedSession.corPrimaria ?? getThemeColorsFromAccessToken(parsedSession.accessToken).corPrimaria,
+      corSecundaria: parsedSession.corSecundaria ?? getThemeColorsFromAccessToken(parsedSession.accessToken).corSecundaria,
       isMaster:
         typeof parsedSession.isMaster === 'boolean'
           ? parsedSession.isMaster

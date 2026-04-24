@@ -1,4 +1,4 @@
-namespace Portal.Application.Cliente.UseCases.ObterClientePorId;
+﻿namespace Portal.Application.Cliente.UseCases.ObterClientePorId;
 
 public class ObterClientePorIdRequest
 {

@@ -1,4 +1,4 @@
-namespace Portal.Domain.Equipamento;
+﻿namespace Portal.Domain.Equipamento;
 
 public class EquipamentoCommand
 {

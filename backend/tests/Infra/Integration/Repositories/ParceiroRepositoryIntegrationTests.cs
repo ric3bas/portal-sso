@@ -1,4 +1,4 @@
-using Portal.Features.Escopo.Infra;
+﻿using Portal.Features.Escopo.Infra;
 using Portal.Features.Parceiro.Infra;
 using Portal.Features.Usuario.Infra;
 
@@ -216,19 +216,13 @@ public sealed class ParceiroRepositoryIntegrationTests
     public async Task Parceiro_ComPerfilEComEscopo_DeveRetornarEscoposRelacionados()
     {
         await _fixture.ResetAsync();
-        // Cria parceiro
         var parceiroId = Guid.NewGuid();
         await _fixture.ExecuteAsync("INSERT INTO sso.parceiro (id, nome, descricao, ativo) VALUES (@id, 'ParceiroEscopo', 'desc', true)", new { id = parceiroId });
-        // Cria perfil
         var perfilId = await _fixture.ExecuteScalarAsync("INSERT INTO sso.perfil (nome) VALUES ('PerfilEscopo') RETURNING id");
-        // Cria escopo
         var escopoId = await _fixture.ExecuteScalarAsync("INSERT INTO sso.escopo (nome) VALUES ('escopoTeste') RETURNING id");
-        // Relaciona perfil e escopo
         await _fixture.ExecuteAsync("INSERT INTO sso.perfil_escopo (perfil_id, escopo_id) VALUES (@perfilId, @escopoId)", new { perfilId, escopoId });
-        // Cria usuário vinculado ao parceiro e perfil
         var usuarioId = await _fixture.ExecuteScalarAsync("INSERT INTO sso.usuario (nome, email, login, senha, parceiro_id, perfil_id) VALUES ('User', 'user@t.com', 'login', 'hash', @parceiroId, @perfilId) RETURNING id", new { parceiroId, perfilId });
 
-        // Consulta escopos do usuário via AuthRepository (ou outro repo que faça a consulta)
         using var uow = _fixture.CreateUnitOfWork();
         var authRepo = new AuthRepository(uow);
         var escopos = await authRepo.ObterEscoposDoUsuarioAsync(usuarioId, CancellationToken.None);

@@ -1,4 +1,4 @@
-using Npgsql;
+﻿using Npgsql;
 using System;
 using System.IO;
 
@@ -11,19 +11,17 @@ class Program
 
         try
         {
-            // Ler o script SQL
             string sqlScript = await File.ReadAllTextAsync(scriptPath);
             
-            Console.WriteLine("🔌 Conectando ao PostgreSQL...");
+            Console.WriteLine("ðŸ”Œ Conectando ao PostgreSQL...");
             
             using var connection = new NpgsqlConnection(connectionString);
             await connection.OpenAsync();
             
-            Console.WriteLine("✅ Conectado com sucesso!");
-            Console.WriteLine("🚀 Executando script de criação do esquema l6a...");
+            Console.WriteLine("âœ… Conectado com sucesso!");
+            Console.WriteLine("ðŸš€ Executando script de criaÃ§Ã£o do esquema l6a...");
             Console.WriteLine();
 
-            // Dividir o script em comandos individuais (por GO ou ponto-e-vírgula)
             string[] commands = sqlScript.Split(new string[] { ";\n", ";\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             
             int commandsExecuted = 0;
@@ -40,45 +38,43 @@ class Program
                     await cmd.ExecuteNonQueryAsync();
                     commandsExecuted++;
                     
-                    // Log para comandos importantes
                     if (cleanCommand.Contains("CREATE TABLE"))
                     {
                         string tableName = ExtractTableName(cleanCommand);
-                        Console.WriteLine($"📋 Tabela criada: {tableName}");
+                        Console.WriteLine($"ðŸ“‹ Tabela criada: {tableName}");
                     }
                     else if (cleanCommand.Contains("CREATE SCHEMA"))
                     {
-                        Console.WriteLine($"🗂️ Esquema l6a criado");
+                        Console.WriteLine($"ðŸ—‚ï¸ Esquema l6a criado");
                     }
                     else if (cleanCommand.Contains("INSERT INTO"))
                     {
-                        Console.WriteLine($"📥 Dados iniciais inseridos");
+                        Console.WriteLine($"ðŸ“¥ Dados iniciais inseridos");
                     }
                     else if (cleanCommand.Contains("CREATE OR REPLACE FUNCTION"))
                     {
                         string functionName = ExtractFunctionName(cleanCommand);
-                        Console.WriteLine($"⚙️ Função criada: {functionName}");
+                        Console.WriteLine($"âš™ï¸ FunÃ§Ã£o criada: {functionName}");
                     }
                     else if (cleanCommand.Contains("CREATE OR REPLACE VIEW"))
                     {
                         string viewName = ExtractViewName(cleanCommand);
-                        Console.WriteLine($"👁️ View criada: {viewName}");
+                        Console.WriteLine($"ðŸ‘ï¸ View criada: {viewName}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"❌ Erro executando comando: {ex.Message}");
-                    Console.WriteLine($"📝 Comando: {cleanCommand.Substring(0, Math.Min(cleanCommand.Length, 100))}...");
+                    Console.WriteLine($"âŒ Erro executando comando: {ex.Message}");
+                    Console.WriteLine($"ðŸ“ Comando: {cleanCommand.Substring(0, Math.Min(cleanCommand.Length, 100))}...");
                 }
             }
             
             Console.WriteLine();
-            Console.WriteLine($"🎉 Script executado com sucesso!");
-            Console.WriteLine($"📊 Total de comandos executados: {commandsExecuted}");
+            Console.WriteLine($"ðŸŽ‰ Script executado com sucesso!");
+            Console.WriteLine($"ðŸ“Š Total de comandos executados: {commandsExecuted}");
             
-            // Verificar se as tabelas foram criadas
             Console.WriteLine();
-            Console.WriteLine("🔍 Verificando estrutura criada...");
+            Console.WriteLine("ðŸ” Verificando estrutura criada...");
             
             string verifyQuery = @"
                 SELECT table_name 
@@ -89,21 +85,21 @@ class Program
             using var verifyCmd = new NpgsqlCommand(verifyQuery, connection);
             using var reader = await verifyCmd.ExecuteReaderAsync();
             
-            Console.WriteLine("📋 Tabelas criadas no esquema l6a:");
+            Console.WriteLine("ðŸ“‹ Tabelas criadas no esquema l6a:");
             while (await reader.ReadAsync())
             {
-                Console.WriteLine($"   ✅ {reader.GetString("table_name")}");
+                Console.WriteLine($"   âœ… {reader.GetString("table_name")}");
             }
             
             Console.WriteLine();
-            Console.WriteLine("🎯 Sistema de Locação de Equipamentos pronto para uso!");
-            Console.WriteLine("🔗 Esquema: l6a");
-            Console.WriteLine("🚀 API pode ser iniciada agora!");
+            Console.WriteLine("ðŸŽ¯ Sistema de LocaÃ§Ã£o de Equipamentos pronto para uso!");
+            Console.WriteLine("ðŸ”— Esquema: l6a");
+            Console.WriteLine("ðŸš€ API pode ser iniciada agora!");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"💥 Erro: {ex.Message}");
-            Console.WriteLine($"🔧 Detalhes: {ex}");
+            Console.WriteLine($"ðŸ’¥ Erro: {ex.Message}");
+            Console.WriteLine($"ðŸ”§ Detalhes: {ex}");
         }
     }
     
@@ -138,7 +134,7 @@ class Program
             }
         }
         catch { }
-        return "função";
+        return "funÃ§Ã£o";
     }
     
     static string ExtractViewName(string command)

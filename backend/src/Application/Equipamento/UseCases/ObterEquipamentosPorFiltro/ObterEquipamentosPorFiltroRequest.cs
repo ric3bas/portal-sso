@@ -1,6 +1,8 @@
+﻿using Portal.Domain.Common;
+
 namespace Portal.Application.Equipamento.UseCases.ObterEquipamentosPorFiltro;
 
-public class ObterEquipamentosPorFiltroRequest
+public class ObterEquipamentosPorFiltroRequest : PaginacaoFiltro
 {
     public string? Nome { get; set; }
     public string? Marca { get; set; }

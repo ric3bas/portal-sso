@@ -59,16 +59,16 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Button({ className, variant = 'primary', ...props }: ButtonProps) {
   const styles = {
-    primary: 'border border-slate-900 bg-slate-900 text-white hover:bg-slate-800 dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200',
-    secondary: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800',
-    ghost: 'border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
+    primary: 'border border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-contrast)] hover:border-[var(--brand-dark)] hover:bg-[var(--brand-dark)]',
+    secondary: 'border border-[var(--line)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--brand-soft)]',
+    ghost: 'border border-[var(--line)] bg-[var(--surface)] text-[var(--text-soft)] hover:bg-[var(--brand-surface)] hover:text-[var(--text)]',
     danger: 'border border-red-600 bg-red-600 text-white hover:bg-red-500 dark:border-red-500 dark:bg-red-500 dark:hover:bg-red-400',
   }
 
   return (
     <button
       className={cn(
-        'inline-flex cursor-pointer items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex cursor-pointer items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60',
         styles[variant],
         className,
       )}
@@ -86,13 +86,18 @@ interface FieldProps {
   hint?: string
 }
 
+interface ColorFieldProps extends FieldProps {
+  value: string
+  onChange: (value: string) => void
+}
+
 export function TextField({ label, hint, className, ...props }: FieldProps & InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+    <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
       <span>{label}</span>
       <input
         className={cn(
-          'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-900 dark:placeholder:text-slate-500 dark:focus:border-slate-900 dark:focus:ring-slate-200',
+          'w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-sm text-[var(--text)] outline-none transition-colors placeholder:text-slate-400',
           className,
         )}
         {...props}
@@ -104,11 +109,11 @@ export function TextField({ label, hint, className, ...props }: FieldProps & Inp
 
 export function TextareaField({ label, hint, className, ...props }: FieldProps & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
-    <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+    <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
       <span>{label}</span>
       <textarea
         className={cn(
-          'min-h-28 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-900 dark:placeholder:text-slate-500 dark:focus:border-slate-900 dark:focus:ring-slate-200',
+          'min-h-24 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-sm text-[var(--text)] outline-none transition-colors placeholder:text-slate-400',
           className,
         )}
         {...props}
@@ -125,11 +130,11 @@ export function SelectField({
   ...props
 }: FieldProps & SelectHTMLAttributes<HTMLSelectElement> & { options: SelectOption[] }) {
   return (
-    <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+    <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
       <span>{label}</span>
       <select
         className={cn(
-          'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-900 focus:ring-2 focus:ring-slate-200 dark:border-slate-300 dark:bg-white dark:text-slate-900 dark:focus:border-slate-900 dark:focus:ring-slate-200',
+          'w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-sm text-[var(--text)] outline-none transition-colors',
           className,
         )}
         {...props}
@@ -144,6 +149,30 @@ export function SelectField({
   )
 }
 
+export function ColorField({ label, hint, value, onChange }: ColorFieldProps) {
+  return (
+    <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
+      <span>{label}</span>
+      <div className="flex items-center gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5">
+        <input
+          className="h-9 w-10 cursor-pointer appearance-none overflow-hidden rounded border-0 bg-transparent p-0 [&::-moz-color-swatch]:border-0 [&::-moz-color-swatch]:rounded-md [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-md"
+          onChange={(event) => onChange(event.target.value.toUpperCase())}
+          type="color"
+          value={value}
+        />
+        <input
+          className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-sm text-[var(--text)] outline-none transition-colors placeholder:text-slate-400"
+          maxLength={7}
+          onChange={(event) => onChange(event.target.value.toUpperCase())}
+          placeholder="#000000"
+          value={value}
+        />
+      </div>
+      {hint ? <span className="text-xs text-slate-500 dark:text-slate-400">{hint}</span> : null}
+    </label>
+  )
+}
+
 export function CheckboxField({
   label,
   hint,
@@ -151,11 +180,11 @@ export function CheckboxField({
   ...props
 }: FieldProps & InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <label className={cn('flex items-start gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900', className)}>
-      <input className="mt-1 h-4 w-4 accent-slate-900 dark:accent-slate-100" type="checkbox" {...props} />
+    <label className={cn('flex items-start gap-2.5 rounded-md border border-[var(--line)] bg-[var(--brand-soft)] px-3 py-2.5', className)}>
+      <input className="mt-1 h-4 w-4 accent-[var(--brand)]" type="checkbox" {...props} />
       <span className="flex flex-col">
-        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{label}</span>
-        {hint ? <span className="text-xs text-slate-500 dark:text-slate-400">{hint}</span> : null}
+        <span className="text-sm font-semibold text-[var(--text)]">{label}</span>
+        {hint ? <span className="text-xs text-[var(--text-soft)]">{hint}</span> : null}
       </span>
     </label>
   )
@@ -281,7 +310,7 @@ export function Badge({ children, tone = 'default' }: PropsWithChildren<{ tone?:
     danger: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
   }
 
-  return <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-medium', styles[tone])}>{children}</span>
+  return <span className={cn('inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium leading-4', styles[tone])}>{children}</span>
 }
 
 export function PageIntro({

@@ -1,4 +1,4 @@
-using Portal.Features.Escopo.Infra;
+﻿using Portal.Features.Escopo.Infra;
 
 namespace sso.repositories;
 

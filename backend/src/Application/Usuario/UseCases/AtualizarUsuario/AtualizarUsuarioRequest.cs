@@ -1,4 +1,4 @@
-namespace Portal.Application.Usuario.UseCases.AtualizarUsuario;
+﻿namespace Portal.Application.Usuario.UseCases.AtualizarUsuario;
 
 public class AtualizarUsuarioRequest
 {

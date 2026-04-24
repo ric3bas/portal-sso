@@ -1,4 +1,4 @@
-namespace Portal.Application.Equipamento.UseCases.CriarEquipamento;
+﻿namespace Portal.Application.Equipamento.UseCases.CriarEquipamento;
 
 public class CriarEquipamentoResponse
 {

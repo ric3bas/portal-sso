@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Perfil;
 using Portal.Domain.Perfil.Interfaces;
 
@@ -17,9 +17,9 @@ public class ClonarPerfilHandler
     {
         var perfil = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
         if (perfil is null)
-            return Result.NotFoundResult<ClonarPerfilResponse>($"Perfil {request.Id} não encontrado");
+            return Result.NotFoundResult<ClonarPerfilResponse>($"Perfil {request.Id} nÃ£o encontrado");
 
-        var novoPerfilId = await _repository.InserirAsync(new PerfilCommand { Nome = perfil.Nome + " (Cópia)" }, cancellationToken);
+        var novoPerfilId = await _repository.InserirAsync(new PerfilCommand { Nome = perfil.Nome + " (CÃ³pia)" }, cancellationToken);
         var escopoIds = perfil.Escopos.Select(e => e.Id);
         await _repository.VincularEscoposAsync(novoPerfilId, escopoIds, cancellationToken);
 

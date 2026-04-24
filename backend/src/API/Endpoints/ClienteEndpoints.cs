@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Portal.API.Extensions;
 using Portal.Application.Cliente.UseCases.AtualizarCliente;
 using Portal.Application.Cliente.UseCases.BloquearCliente;
@@ -8,11 +8,13 @@ using Portal.Application.Cliente.UseCases.InativarCliente;
 using Portal.Application.Cliente.UseCases.ObterClientePorId;
 using Portal.Application.Cliente.UseCases.ObterClientes;
 using Portal.Application.Cliente.UseCases.ObterClientesPorFiltro;
+using Portal.WebApi.Extensions;
 
 namespace Portal.API.Endpoints;
 
 public static class ClienteEndpoints
 {
+
     public static void MapClienteEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/v1/clientes")
@@ -20,31 +22,11 @@ public static class ClienteEndpoints
 
         group.MapGet("/", async (
             [FromServices] ObterClientesHandler handler,
-            CancellationToken cancellationToken) =>
+            [AsParameters] ObterClientesRequest request,
+            CancellationToken cancellationToken = default) =>
         {
             try
             {
-                var result = await handler.Handle(new ObterClientesRequest(), cancellationToken);
-                return result.ToHttpResult();
-            }
-            catch (Exception ex)
-            {
-                return Results.Problem(detail: ex.Message, statusCode: 500, title: "Erro interno do servidor");
-            }
-        })
-        .WithName("ListarClientes")
-        .WithSummary("📋 Lista todos os clientes")
-        .WithDescription("Retorna uma lista de todos os clientes disponíveis");
-
-        group.MapGet("/filtro", async (
-            [FromServices] ObterClientesPorFiltroHandler handler,
-            [FromQuery] string? nome,
-            [FromQuery] string? cpf,
-            CancellationToken cancellationToken) =>
-        {
-            try
-            {
-                var request = new ObterClientesPorFiltroRequest { Nome = nome, Cpf = cpf };
                 var result = await handler.Handle(request, cancellationToken);
                 return result.ToHttpResult();
             }
@@ -53,9 +35,30 @@ public static class ClienteEndpoints
                 return Results.Problem(detail: ex.Message, statusCode: 500, title: "Erro interno do servidor");
             }
         })
-        .WithName("ListarClientesPorFiltro")
+        .WithName("ObterClientes")
+        .WithSummary("📋 Lista todos os clientes")
+        .WithDescription("Retorna uma lista de todos os clientes disponíveis")
+        .RequireScopes("cliente.ler");
+
+        group.MapGet("/filtro", async (
+            [FromServices] ObterClientesPorFiltroHandler handler,
+            [AsParameters] ObterClientesPorFiltroRequest request,
+            CancellationToken cancellationToken = default) =>
+        {
+            try
+            {
+                var result = await handler.Handle(request, cancellationToken);
+                return result.ToHttpResult();
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(detail: ex.Message, statusCode: 500, title: "Erro interno do servidor");
+            }
+        })
+        .WithName("ObterClientesPorFiltro")
         .WithSummary("🔎 Lista clientes por filtro")
-        .WithDescription("Retorna clientes por nome e/ou CPF");
+        .WithDescription("Retorna clientes por nome e/ou CPF")
+        .RequireScopes("cliente.ler");
 
         group.MapGet("/{id:guid}", async (
             [FromServices] ObterClientePorIdHandler handler,
@@ -75,7 +78,8 @@ public static class ClienteEndpoints
         })
         .WithName("ObterClientePorId")
         .WithSummary("🎯 Obtém cliente por ID")
-        .WithDescription("Retorna um cliente específico pelo ID");
+        .WithDescription("Retorna um cliente específico pelo ID")
+        .RequireScopes("cliente.ler");
 
         group.MapPost("/", async (
             [FromServices] CriarClienteHandler handler,
@@ -85,7 +89,7 @@ public static class ClienteEndpoints
             try
             {
                 var result = await handler.Handle(request, cancellationToken);
-                return result.ToCreatedResult($"/api/v1/clientes/{result.Data?.Id}");
+                return result.ToCreatedResult(result.Data);
             }
             catch (Exception ex)
             {
@@ -94,7 +98,8 @@ public static class ClienteEndpoints
         })
         .WithName("CriarCliente")
         .WithSummary("➕ Cria um novo cliente")
-        .WithDescription("Cria um novo cliente no sistema");
+        .WithDescription("Cria um novo cliente no sistema")
+        .RequireScopes("cliente.criar");
 
         group.MapPatch("/{id:guid}", async (
             [FromServices] AtualizarClienteHandler handler,
@@ -115,7 +120,8 @@ public static class ClienteEndpoints
         })
         .WithName("AtualizarCliente")
         .WithSummary("✏️ Atualiza cliente")
-        .WithDescription("Atualiza os dados do cliente");
+        .WithDescription("Atualiza os dados do cliente")
+        .RequireScopes("cliente.atualizar");
 
         group.MapPatch("/{id:guid}/bloquear", async (
             [FromServices] BloquearClienteHandler handler,
@@ -135,7 +141,8 @@ public static class ClienteEndpoints
         })
         .WithName("BloquearCliente")
         .WithSummary("🔒 Bloqueia cliente")
-        .WithDescription("Bloqueia um cliente pelo ID");
+        .WithDescription("Bloqueia um cliente pelo ID")
+        .RequireScopes("cliente.bloquear");
 
         group.MapPatch("/{id:guid}/desbloquear", async (
             [FromServices] DesbloquearClienteHandler handler,
@@ -155,7 +162,8 @@ public static class ClienteEndpoints
         })
         .WithName("DesbloquearCliente")
         .WithSummary("🔓 Desbloqueia cliente")
-        .WithDescription("Desbloqueia um cliente pelo ID");
+        .WithDescription("Desbloqueia um cliente pelo ID")
+        .RequireScopes("cliente.desbloquear");
 
         group.MapPatch("/{id:guid}/inativar", async (
             [FromServices] InativarClienteHandler handler,
@@ -175,6 +183,8 @@ public static class ClienteEndpoints
         })
         .WithName("InativarCliente")
         .WithSummary("🚫 Inativa cliente")
-        .WithDescription("Inativa um cliente pelo ID");
+        .WithDescription("Inativa um cliente pelo ID")
+        .RequireScopes("cliente.atualizar");
     }
 }
+

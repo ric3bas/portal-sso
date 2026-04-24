@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Feedback, Panel } from '../components/ui'
+import { AuthCard, AuthHeader, AuthLayout } from '../components/auth'
+import { Button, Feedback } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { authApi } from '../services/sso'
 
@@ -43,12 +44,10 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <Panel className="w-full max-w-xl p-6 md:p-8">
+    <AuthLayout>
+      <AuthCard className="max-w-xl">
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[var(--text)]">Esqueci minha senha</h1>
-          </div>
+          <AuthHeader title="Esqueci minha senha" />
 
           <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
             <span>
@@ -76,7 +75,7 @@ export function ForgotPasswordPage() {
             </Link>
           </div>
         </form>
-      </Panel>
-    </div>
+      </AuthCard>
+    </AuthLayout>
   )
 }

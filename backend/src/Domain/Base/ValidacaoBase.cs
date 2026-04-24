@@ -1,4 +1,4 @@
-using FluentValidation;
+﻿using FluentValidation;
 
 namespace Portal.Domain.Base
 {
@@ -8,14 +8,14 @@ namespace Portal.Domain.Base
         {
             var newRule = rule.MaximumLength(maxCaracteres);
 
-            return newRule.WithMessage("Limite máximo de caracteres excedido do Campo {PropertyName}. Qtd enviada: {TotalLength}, Máximo: {MaxLength}");
+            return newRule.WithMessage("Limite mÃ¡ximo de caracteres excedido do Campo {PropertyName}. Qtd enviada: {TotalLength}, MÃ¡ximo: {MaxLength}");
         }
         
         public static IRuleBuilderOptions<T, string?> AplicaRegraMinimoCaracteres<T>(this IRuleBuilder<T, string?> rule, int minCaracteres)
         {
             var newRule = rule.MinimumLength(minCaracteres);
 
-            return newRule.WithMessage("Limite minímo de caracteres não atingido do Campo {PropertyName}. Qtd enviada: {TotalLength}, Minímo: {MinLength}");
+            return newRule.WithMessage("Limite minÃ­mo de caracteres nÃ£o atingido do Campo {PropertyName}. Qtd enviada: {TotalLength}, MinÃ­mo: {MinLength}");
         }
         public static IRuleBuilderOptions<T, TProperty> AplicaRegraCampoObrigatorio<T, TProperty>(this IRuleBuilder<T, TProperty> rule, Func<T, bool>? condicional = null)
         {
@@ -26,7 +26,7 @@ namespace Portal.Domain.Base
                 newRule.When(condicional);
             }
     
-            return newRule.WithMessage("Campo {PropertyName} obrigatório").WithErrorCode("0001");
+            return newRule.WithMessage("Campo {PropertyName} obrigatÃ³rio").WithErrorCode("0001");
         }
     }
 }

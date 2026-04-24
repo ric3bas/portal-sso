@@ -1,5 +1,7 @@
+﻿using Dapper;
 using Portal.Domain.Categoria;
 using Portal.Domain.Categoria.Interfaces;
+using Portal.Domain.Common;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
 using DataUnitOfWork = Portal.Infrastructure.Data.IUnitOfWork;
 
@@ -11,48 +13,90 @@ public class CategoriaRepository : DataDapperRepository, ICategoriaRepository
     {
     }
 
-    public async Task<IEnumerable<CategoriaQuery>> ObterTodasAsync(CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<CategoriaQuery>> ObterTodasAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1) FROM l6a.Categoria;
             SELECT Id, Nome, Ativo, parceiro_id as ParceiroId 
             FROM l6a.Categoria 
-            ORDER BY Nome";
+            ORDER BY Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<CategoriaQuery>(sql);
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, new { TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<CategoriaQuery>()).ToList();
+        return new ResultadoPaginado<CategoriaQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<CategoriaQuery>> ObterPorParceiroAsync(Guid parceiroId, CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<CategoriaQuery>> ObterPorParceiroAsync(Guid parceiroId, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+        var filtrarParceiro = parceiroId != Guid.Empty;
+        var whereParceiro = filtrarParceiro ? "WHERE parceiro_id = @ParceiroId" : string.Empty;
+
+        var sql = $@"
+            SELECT COUNT(1) 
+            FROM l6a.Categoria 
+            {whereParceiro};
+
             SELECT Id, Nome, Ativo, parceiro_id as ParceiroId 
             FROM l6a.Categoria 
-            WHERE parceiro_id = @ParceiroId 
-            ORDER BY Nome";
+            {whereParceiro}
+            ORDER BY Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<CategoriaQuery>(sql, new { ParceiroId = parceiroId });
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, new { ParceiroId = parceiroId, TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<CategoriaQuery>()).ToList();
+        return new ResultadoPaginado<CategoriaQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<CategoriaQuery>> ObterPorFiltroAsync(string nome, CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<CategoriaQuery>> ObterPorFiltroAsync(string nome, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1) 
+            FROM l6a.Categoria 
+            WHERE Nome LIKE @Nome;
+
             SELECT Id, Nome, Ativo, parceiro_id as ParceiroId 
             FROM l6a.Categoria 
             WHERE Nome LIKE @Nome 
-            ORDER BY Nome";
+            ORDER BY Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<CategoriaQuery>(sql, new { Nome = $"%{nome}%" });
+        var param = new { Nome = $"%{nome}%", TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset };
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, param);
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<CategoriaQuery>()).ToList();
+        return new ResultadoPaginado<CategoriaQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<CategoriaQuery>> ObterPorFiltroEParceiroAsync(Guid parceiroId, string nome, CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<CategoriaQuery>> ObterPorFiltroEParceiroAsync(Guid parceiroId, string nome, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Categoria 
+            WHERE parceiro_id = @ParceiroId 
+            AND Nome LIKE @Nome;
+
             SELECT Id, Nome, Ativo, parceiro_id as ParceiroId 
             FROM l6a.Categoria 
             WHERE parceiro_id = @ParceiroId 
             AND Nome LIKE @Nome 
-            ORDER BY Nome";
+            ORDER BY Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<CategoriaQuery>(sql, new { ParceiroId = parceiroId, Nome = $"%{nome}%" });
+        var param = new { ParceiroId = parceiroId, Nome = $"%{nome}%", TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset };
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, param);
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<CategoriaQuery>()).ToList();
+        return new ResultadoPaginado<CategoriaQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task<CategoriaQuery?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken)

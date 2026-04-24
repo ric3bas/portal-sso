@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using AuthRepo = Portal.Domain.Usuario.Interfaces.IAuthRepository;
 using UserRepo = Portal.Domain.Usuario.Interfaces.IUsuarioRepository;
 using TokenRepo = Portal.Domain.Usuario.Interfaces.ITokenAtualizacaoRepository;
@@ -29,15 +29,15 @@ public class LoginHandler
         var dados = await _authRepository.ObterDadosLoginAsync(request.Login, cancellationToken);
 
         if (dados?.Usuario is null)
-            return Result.BusinessResult<LoginResponse>("Usuário ou senha inválidos");
+            return Result.BusinessResult<LoginResponse>("UsuÃ¡rio ou senha invÃ¡lidos");
 
         if (!dados.Usuario.Ativo)
-            return Result.BusinessResult<LoginResponse>("Usuário inativo no sistema");
+            return Result.BusinessResult<LoginResponse>("UsuÃ¡rio inativo no sistema");
 
         var tentativaAtual = dados.Usuario.TentativasLogin + 1;
 
         if (dados.Usuario.Bloqueado)
-            return Result.BusinessResult<LoginResponse>("Usuário bloqueado por excesso de tentativas");
+            return Result.BusinessResult<LoginResponse>("UsuÃ¡rio bloqueado por excesso de tentativas");
 
         if (!BCrypt.Net.BCrypt.Verify(request.Senha, dados.Usuario.Senha))
         {
@@ -46,10 +46,10 @@ public class LoginHandler
             if (tentativaAtual == 5)
             {
                 await _usuarioRepository.BloquearUsuarioAsync(dados.Usuario.Id, cancellationToken);
-                return Result.BusinessResult<LoginResponse>("Usuário bloqueado por excesso de tentativas");
+                return Result.BusinessResult<LoginResponse>("UsuÃ¡rio bloqueado por excesso de tentativas");
             }
 
-            return Result.BusinessResult<LoginResponse>($"Usuário ou senha inválidos, voce tem mais {5 - tentativaAtual} tentativas");
+            return Result.BusinessResult<LoginResponse>($"UsuÃ¡rio ou senha invÃ¡lidos, voce tem mais {5 - tentativaAtual} tentativas");
         }
 
         await _usuarioRepository.ResetarTentativasLoginAsync(dados.Usuario.Id, cancellationToken);
@@ -69,6 +69,8 @@ public class LoginHandler
             jwtSection["Issuer"] ?? string.Empty,
             jwtSection["Audience"] ?? string.Empty,
             dados.Perfil?.IsMaster,
+            dados.Usuario.CorPrimaria,
+            dados.Usuario.CorSecundaria,
             dados.Escopos.ToArray());
 
         await _tokenRepo.InserirAsync(new TokenAtualizacaoCommand

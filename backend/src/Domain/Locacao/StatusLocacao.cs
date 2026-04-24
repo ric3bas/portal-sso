@@ -1,4 +1,4 @@
-namespace Portal.Domain.Locacao;
+﻿namespace Portal.Domain.Locacao;
 
 public enum StatusLocacao
 {

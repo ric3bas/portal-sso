@@ -1,4 +1,4 @@
-namespace Portal.Application.Equipamento.UseCases.InativarEquipamento;
+﻿namespace Portal.Application.Equipamento.UseCases.InativarEquipamento;
 
 public class InativarEquipamentoRequest
 {

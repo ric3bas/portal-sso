@@ -1,9 +1,11 @@
 import { Copy, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Button, Feedback, Modal, PageIntro, Panel } from '../components/ui'
+import { AdminPage, AdminPanel } from '../components/admin'
+import { DataTable, type DataTableColumn } from '../components/DataTable'
+import { Button, Modal } from '../components/ui'
 import { getErrorMessage } from '../lib/errors'
 import { escoposApi, perfisApi } from '../services/sso'
-import type { EscopoResponse, PerfilComEscopoResponse } from '../types/api'
+import type { EscopoResponse, PaginatedResult, PerfilComEscopoResponse } from '../types/api'
 
 interface ScopeTreeNode {
   key: string
@@ -209,6 +211,8 @@ export function PerfisPage() {
   const [escopos, setEscopos] = useState<EscopoResponse[]>([])
   const [feedback, setFeedback] = useState<{ tone: 'success' | 'danger'; message: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [tableMessage, setTableMessage] = useState<string | null>(null)
+  const [pagination, setPagination] = useState<PaginatedResult<PerfilComEscopoResponse>['pagination']>({ page: 1, pageSize: 20, totalRecords: 0, totalPages: 1 })
   const [isSaving, setIsSaving] = useState(false)
   const [actionProfileId, setActionProfileId] = useState<number | null>(null)
   const [savingProfileId, setSavingProfileId] = useState<number | null>(null)
@@ -226,14 +230,17 @@ export function PerfisPage() {
   const [expandedNodes, setExpandedNodes] = useState<ProfileExpandedNodes>({})
   const scopeTree = useMemo(() => buildScopeTree(escopos), [escopos])
 
-  async function loadData() {
+  async function loadData(page = pagination.page, pageSize = pagination.pageSize) {
     setIsLoading(true)
 
     try {
-      const [perfis, listaEscopos] = await Promise.all([perfisApi.list(), escoposApi.list()])
+      const [perfisResponse, listaEscopos] = await Promise.all([perfisApi.listPage({ Pagina: page, TamanhoPagina: pageSize }), escoposApi.list()])
+      const perfis = perfisResponse.items
       const selections = buildProfileScopeSelections(perfis)
 
       setItems(perfis)
+      setPagination(perfisResponse.pagination)
+      setTableMessage(perfis.length === 0 ? 'Nenhum perfil encontrado' : null)
       setEscopos(listaEscopos)
       setProfileScopeSelections(selections)
       setSavedProfileScopeSelections(selections)
@@ -247,6 +254,9 @@ export function PerfisPage() {
         return next
       })
     } catch (error) {
+      setItems([])
+      setPagination((current) => ({ ...current, totalRecords: 0, totalPages: 1 }))
+      setTableMessage(getErrorMessage(error, 'Falha ao carregar perfis.'))
       setFeedback({ tone: 'danger', message: getErrorMessage(error, 'Falha ao carregar perfis.') })
     } finally {
       setIsLoading(false)
@@ -452,129 +462,87 @@ export function PerfisPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageIntro
+    <AdminPage
         action={<Button onClick={() => {
           setNome('')
           setNomeError('')
           setIsCreateModalOpen(true)
         }}>Novo</Button>}
-        eyebrow=""
+        feedback={feedback}
         title="Perfis"
-        description=""
-      />
+      >
+      <AdminPanel className="p-4">
+        <DataTable
+          columns={[
+            {
+              key: 'nome',
+              header: 'Nome',
+              cellClassName: 'font-medium text-[var(--text)] dark:text-slate-900',
+              renderCell: (item) =>
+                editingNameProfileId === item.id ? (
+                  <input
+                    autoFocus
+                    className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none transition-colors focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+                    onBlur={closeNameEditor}
+                    onChange={(event) => setEditingNameValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void handleRenameProfile(item)
+                      }
 
-      {feedback ? <Feedback tone={feedback.tone}>{feedback.message}</Feedback> : null}
-
-      <Panel className="p-4">
-        {isLoading ? (
-          <div className="border border-[var(--line)] px-4 py-6 text-sm text-[var(--text-soft)]">Carregando perfis...</div>
-        ) : (
-            <div className="overflow-hidden rounded-md border border-[var(--line)] bg-white dark:border-slate-300 dark:bg-white">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse text-left text-sm">
-                <thead className="bg-[var(--surface-strong)] text-[var(--text-soft)] dark:bg-white dark:text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Id</th>
-                    <th className="px-4 py-3 font-semibold">Nome</th>
-                    <th className="px-4 py-3 font-semibold">Escopos</th>
-                    <th className="px-4 py-3 font-semibold text-right">Acoes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length > 0 ? (
-                    items.map((item) => (
-                      <tr key={item.id} className="border-t border-[var(--line)] bg-white align-top dark:border-slate-300 dark:bg-white">
-                        <td className="px-4 py-3 text-xs text-[var(--text-soft)] dark:text-slate-500">#{item.id}</td>
-                        <td className="px-4 py-3 font-medium text-[var(--text)] dark:text-slate-900">
-                          {editingNameProfileId === item.id ? (
-                            <input
-                              autoFocus
-                              className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none transition-colors focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
-                              onBlur={closeNameEditor}
-                              onChange={(event) => setEditingNameValue(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault()
-                                  void handleRenameProfile(item)
-                                }
-
-                                if (event.key === 'Escape') {
-                                  event.preventDefault()
-                                  closeNameEditor()
-                                }
-                              }}
-                              value={editingNameValue}
-                            />
-                          ) : (
-                            <button
-                              className="cursor-pointer text-left font-medium text-[var(--text)] transition-colors hover:text-[var(--brand)] dark:text-slate-900 dark:hover:text-sky-600"
-                              disabled={actionProfileId === item.id}
-                              onClick={() => openNameEditor(item)}
-                              title="Clique para editar o nome"
-                              type="button"
-                            >
-                              {item.nome}
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--text-soft)] dark:text-slate-600">
-                          {(item.escopos?.length ?? 0) > 0
-                            ? `${item.escopos?.length ?? 0} escopo(s)`
-                            : 'Nenhum escopo vinculado'}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              aria-label="Editar perfil"
-                              className="h-11 w-11 px-0"
-                              disabled={actionProfileId === item.id}
-                              onClick={() => void openEditModal(item)}
-                              title="Editar"
-                              type="button"
-                              variant="secondary"
-                            >
-                              <Pencil className="h-5 w-5" />
-                            </Button>
-                            <Button
-                              aria-label="Clonar perfil"
-                              className="h-11 w-11 px-0"
-                              disabled={actionProfileId === item.id}
-                              onClick={() => void handleCloneProfile(item.id)}
-                              title="Clonar"
-                              type="button"
-                              variant="ghost"
-                            >
-                              <Copy className="h-5 w-5" />
-                            </Button>
-                            <Button
-                              aria-label="Apagar perfil"
-                              className="h-11 w-11 px-0"
-                              disabled={actionProfileId === item.id}
-                              onClick={() => openDeleteModal(item)}
-                              title="Apagar"
-                              type="button"
-                              variant="danger"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr className="border-t border-[var(--line)] bg-white dark:border-slate-300 dark:bg-white">
-                      <td className="px-4 py-6 text-sm text-[var(--text-soft)] dark:text-slate-600" colSpan={4}>
-                        Nenhum perfil encontrado
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Panel>
+                      if (event.key === 'Escape') {
+                        event.preventDefault()
+                        closeNameEditor()
+                      }
+                    }}
+                    value={editingNameValue}
+                  />
+                ) : (
+                  <button
+                    className="cursor-pointer text-left font-medium text-[var(--text)] transition-colors hover:text-[var(--brand)] dark:text-slate-900 dark:hover:text-sky-600"
+                    disabled={actionProfileId === item.id}
+                    onClick={() => openNameEditor(item)}
+                    title="Clique para editar o nome"
+                    type="button"
+                  >
+                    {item.nome}
+                  </button>
+                ),
+            },
+            { key: 'escopos', header: 'Escopos', renderCell: (item) => (item.escopos?.length ?? 0) > 0 ? `${item.escopos?.length ?? 0} escopo(s)` : 'Nenhum escopo vinculado' },
+            {
+              key: 'acoes',
+              header: 'Acoes',
+              headerClassName: 'text-right',
+              cellClassName: 'text-right',
+              renderCell: (item) => (
+                <div className="flex justify-end gap-2">
+                  <Button aria-label="Editar perfil" className="h-8 w-8 !p-0" disabled={actionProfileId === item.id} onClick={() => void openEditModal(item)} title="Editar" type="button" variant="secondary">
+                    <Pencil className="h-[18px] w-[18px]" />
+                  </Button>
+                  <Button aria-label="Clonar perfil" className="h-8 w-8 !p-0" disabled={actionProfileId === item.id} onClick={() => void handleCloneProfile(item.id)} title="Clonar" type="button" variant="ghost">
+                    <Copy className="h-[18px] w-[18px]" />
+                  </Button>
+                  <Button aria-label="Apagar perfil" className="h-8 w-8 !p-0" disabled={actionProfileId === item.id} onClick={() => openDeleteModal(item)} title="Apagar" type="button" variant="danger">
+                    <Trash2 className="h-[18px] w-[18px]" />
+                  </Button>
+                </div>
+              ),
+            },
+          ] satisfies DataTableColumn<PerfilComEscopoResponse>[]}
+          emptyMessage={tableMessage ?? 'Nenhum perfil encontrado'}
+          getRowKey={(item) => item.id}
+          items={items}
+          loading={isLoading}
+          loadingMessage="Carregando perfis..."
+          pagination={{
+            ...pagination,
+            onPageChange: (page) => void loadData(page, pagination.pageSize),
+            onPageSizeChange: (pageSize) => void loadData(1, pageSize),
+          }}
+        />
+      </AdminPanel>
 
       <Modal
         onClose={() => {
@@ -712,6 +680,6 @@ export function PerfisPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </AdminPage>
   )
 }

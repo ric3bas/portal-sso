@@ -1,7 +1,6 @@
-using Portal.Application.Cliente.Common;
+﻿using Portal.Application.Cliente.Common;
 using Portal.Domain.Base;
 using Portal.Domain.Cliente.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Cliente.UseCases.ObterClientePorId;
 
@@ -23,7 +22,7 @@ public class ObterClientePorIdHandler
         var cliente = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
         if (cliente is null)
         {
-            return Result.NotFoundResult<ObterClientePorIdResponse>("Cliente não encontrado");
+            return Result.NotFoundResult<ObterClientePorIdResponse>("Cliente nÃ£o encontrado");
         }
 
         return Result.OkResult(cliente.ToResponse<ObterClientePorIdResponse>());

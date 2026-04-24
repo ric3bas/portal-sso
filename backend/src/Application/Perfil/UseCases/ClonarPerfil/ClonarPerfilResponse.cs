@@ -1,4 +1,4 @@
-namespace Portal.Application.Perfil.UseCases.ClonarPerfil;
+﻿namespace Portal.Application.Perfil.UseCases.ClonarPerfil;
 
 public class ClonarPerfilResponse
 {

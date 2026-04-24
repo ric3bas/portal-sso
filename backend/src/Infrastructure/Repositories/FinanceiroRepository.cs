@@ -1,5 +1,7 @@
+﻿using Dapper;
 using Portal.Domain.Financeiro;
 using Portal.Domain.Financeiro.Interfaces;
+using Portal.Domain.Common;
 using DataDapperRepository = Portal.Infrastructure.Data.DapperRepository;
 using DataUnitOfWork = Portal.Infrastructure.Data.IUnitOfWork;
 
@@ -36,9 +38,16 @@ public class FinanceiroRepository : DataDapperRepository, IFinanceiroRepository
         return id;
     }
 
-    public async Task<IEnumerable<FinanceiroQuery>> ObterTodosAsync(CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<FinanceiroQuery>> ObterTodosAsync(Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Financeiro f
+            INNER JOIN l6a.Cliente c ON f.cliente_id = c.Id
+            INNER JOIN l6a.Equipamento e ON f.equipamento_id = e.Id;
+
             SELECT f.Id, f.locacao_id as LocacaoId, f.cliente_id as ClienteId, c.Nome as ClienteNome,
                    f.equipamento_id as EquipamentoId, e.Nome as EquipamentoNome,
                    f.data_retirada as DataRetirada, f.data_devolucao as DataDevolucao,
@@ -48,14 +57,26 @@ public class FinanceiroRepository : DataDapperRepository, IFinanceiroRepository
             FROM l6a.Financeiro f
             INNER JOIN l6a.Cliente c ON f.cliente_id = c.Id
             INNER JOIN l6a.Equipamento e ON f.equipamento_id = e.Id
-            ORDER BY f.data_lancamento DESC";
+            ORDER BY c.Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<FinanceiroQuery>(sql);
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, new { TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset });
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<FinanceiroQuery>()).ToList();
+        return new ResultadoPaginado<FinanceiroQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
-    public async Task<IEnumerable<FinanceiroQuery>> ObterPorPeriodoAsync(DateTime dataInicio, DateTime dataFim, CancellationToken cancellationToken)
+    public async Task<ResultadoPaginado<FinanceiroQuery>> ObterPorPeriodoAsync(DateTime dataInicio, DateTime dataFim, Direcao direcao, int pagina, int tamanhoPagina, CancellationToken cancellationToken)
     {
-        const string sql = @"
+        var paginacao = PaginacaoHelper.Criar(direcao, pagina, tamanhoPagina);
+
+        var sql = $@"
+            SELECT COUNT(1)
+            FROM l6a.Financeiro f
+            INNER JOIN l6a.Cliente c ON f.cliente_id = c.Id
+            INNER JOIN l6a.Equipamento e ON f.equipamento_id = e.Id
+            WHERE f.data_lancamento >= @DataInicio AND f.data_lancamento <= @DataFim;
+
             SELECT f.Id, f.locacao_id as LocacaoId, f.cliente_id as ClienteId, c.Nome as ClienteNome,
                    f.equipamento_id as EquipamentoId, e.Nome as EquipamentoNome,
                    f.data_retirada as DataRetirada, f.data_devolucao as DataDevolucao,
@@ -66,9 +87,14 @@ public class FinanceiroRepository : DataDapperRepository, IFinanceiroRepository
             INNER JOIN l6a.Cliente c ON f.cliente_id = c.Id
             INNER JOIN l6a.Equipamento e ON f.equipamento_id = e.Id
             WHERE f.data_lancamento >= @DataInicio AND f.data_lancamento <= @DataFim
-            ORDER BY f.data_lancamento DESC";
+            ORDER BY c.Nome {paginacao.OrdemSql}
+            LIMIT @TamanhoPagina OFFSET @Offset";
 
-        return await QueryAsync<FinanceiroQuery>(sql, new { DataInicio = dataInicio, DataFim = dataFim });
+        var param = new { DataInicio = dataInicio, DataFim = dataFim, TamanhoPagina = paginacao.TamanhoPagina, Offset = paginacao.Offset };
+        using var multi = await _unitOfWork.Connection.QueryMultipleAsync(sql, param);
+        var total = await multi.ReadSingleAsync<int>();
+        var itens = (await multi.ReadAsync<FinanceiroQuery>()).ToList();
+        return new ResultadoPaginado<FinanceiroQuery>(itens, total, paginacao.Pagina, paginacao.TamanhoPagina);
     }
 
     public async Task<bool> ExisteLancamentoParaLocacaoAsync(Guid locacaoId, CancellationToken cancellationToken)

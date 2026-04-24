@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+ï»¿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Portal.Domain.Exceptions;
@@ -29,7 +29,6 @@ public class ParceiroServiceTests
         _logger = Substitute.For<ILogger<ParceiroService>>();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
         
-        // Setup default HttpContext with valid TenantId
         var httpContext = new DefaultHttpContext();
         var claims = new List<Claim> { new Claim("tenantId", Guid.NewGuid().ToString()) };
         httpContext.User = new ClaimsPrincipal(new ClaimsIdentity(claims));
@@ -199,7 +198,7 @@ public class ParceiroServiceTests
         var ex = await Assert.ThrowsAsync<ValidationException>(() => 
             service.CriarParceiroAsync(request, CancellationToken.None));
 
-        Assert.Contains("Já existe um parceiro com este nome.", ex.Errors);
+        Assert.Contains("JÃ¡ existe um parceiro com este nome.", ex.Errors);
     }
 
     [Fact]
@@ -272,7 +271,7 @@ public class ParceiroServiceTests
         var ex = await Assert.ThrowsAsync<ValidationException>(() => 
             service.AtualizarParceiroAsync(request, CancellationToken.None));
 
-        Assert.Contains("Já existe outro parceiro com este nome.", ex.Errors);
+        Assert.Contains("JÃ¡ existe outro parceiro com este nome.", ex.Errors);
     }
 
     [Fact]

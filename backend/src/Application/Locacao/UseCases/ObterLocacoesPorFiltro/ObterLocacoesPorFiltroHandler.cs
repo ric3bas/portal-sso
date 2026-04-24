@@ -1,7 +1,7 @@
-using Portal.Application.Locacao.Common;
+﻿using Portal.Application.Locacao.Common;
 using Portal.Domain.Base;
+using Portal.Domain.Common;
 using Portal.Domain.Locacao.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Locacao.UseCases.ObterLocacoesPorFiltro;
 
@@ -14,12 +14,12 @@ public class ObterLocacoesPorFiltroHandler
         _repository = repository;
     }
 
-    public async Task<Result<List<ObterLocacoesPorFiltroResponse>>> Handle(ObterLocacoesPorFiltroRequest request, CancellationToken cancellationToken)
+    public async Task<Result<TabelaPaginadaResponse<ObterLocacoesPorFiltroResponse>>> Handle(ObterLocacoesPorFiltroRequest request, CancellationToken cancellationToken)
     {
-        var locacoes = await _repository.ObterPorFiltroAsync(request.ClienteId, request.EquipamentoId, request.Status, request.DataRetiradaInicio, request.DataRetiradaFim, cancellationToken);
-        if (locacoes == null || !locacoes.Any())
-            return Result.NotFoundResult<List<ObterLocacoesPorFiltroResponse>>("Nenhuma locação encontrada");
+        var resultado = await _repository.ObterPorFiltroAsync(request.ClienteId, request.EquipamentoId, request.Status, request.DataRetiradaInicio, request.DataRetiradaFim, request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken);
+        var response = resultado.Itens.Select(x => x.ToResponse<ObterLocacoesPorFiltroResponse>()).ToList();
+        var tabela = TabelaPaginadaResponse<ObterLocacoesPorFiltroResponse>.Criar(response, resultado.TotalRegistros, resultado.TotalRegistros, resultado.NumeroPagina, resultado.TamanhoPagina);
 
-        return Result.OkResult(locacoes.Select(x => x.ToResponse<ObterLocacoesPorFiltroResponse>()).ToList());
+        return Result.OkResult(tabela);
     }
 }

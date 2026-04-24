@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 
 namespace Portal.Infrastructure {
     public class UnitOfWork(IDbConnection connection) : IUnitOfWork {

@@ -1,4 +1,4 @@
-using Portal.Features.Usuario.Infra;
+﻿using Portal.Features.Usuario.Infra;
 
 namespace sso.repositories;
 
@@ -16,7 +16,6 @@ public sealed class TokenAtualizacaoRepositoryIntegrationTests
     public async Task InserirEObterPorTokenAsync_DevePersistirETrazerToken()
     {
         await _fixture.ResetAsync();
-        // Cria dependência: usuario
         var parceiroId = Guid.NewGuid();
         await _fixture.ExecuteAsync("INSERT INTO sso.parceiro (id, nome, descricao, ativo) VALUES (@id, 'Parceiro', 'desc', true)", new { id = parceiroId });
         var perfilId = await _fixture.ExecuteScalarAsync("INSERT INTO sso.perfil (nome) VALUES ('User') RETURNING id");

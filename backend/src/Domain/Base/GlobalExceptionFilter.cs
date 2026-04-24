@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Portal.Domain.Exceptions;
 
@@ -18,9 +18,9 @@ namespace Portal.Domain.Base
                     _logger.LogWarning(ex, "Erro de validacao em {RequestPath}", context.HttpContext.Request.Path);
                     var problemBadRequest = new ProblemDetails
                     {
-                        Title = "Erro de validação",
+                        Title = "Erro de validaÃ§Ã£o",
                         Status = StatusCodes.Status400BadRequest,
-                        Detail = "A requisição contém erros de validação.",
+                        Detail = "A requisiÃ§Ã£o contÃ©m erros de validaÃ§Ã£o.",
                         Instance = context.HttpContext.Request.Path,
                     };
                     problemBadRequest.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
@@ -44,7 +44,7 @@ namespace Portal.Domain.Base
                     context.ExceptionHandled = true;
                     break;
                 case BusinessException ex:
-                    _logger.LogWarning(ex, "Erro de negócio em {RequestPath}", context.HttpContext.Request.Path);
+                    _logger.LogWarning(ex, "Erro de negÃ³cio em {RequestPath}", context.HttpContext.Request.Path);
                     var problemBusiness = new ProblemDetails
                     {
                         Title = "Nenhum registro encontrado",

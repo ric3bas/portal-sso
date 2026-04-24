@@ -1,4 +1,4 @@
-namespace Portal.Application.Locacao.UseCases.ObterLocacaoPorId;
+﻿namespace Portal.Application.Locacao.UseCases.ObterLocacaoPorId;
 
 public class ObterLocacaoPorIdRequest
 {

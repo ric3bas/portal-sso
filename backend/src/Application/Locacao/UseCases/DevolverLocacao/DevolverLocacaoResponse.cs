@@ -1,4 +1,4 @@
-namespace Portal.Application.Locacao.UseCases.DevolverLocacao;
+﻿namespace Portal.Application.Locacao.UseCases.DevolverLocacao;
 
 public class DevolverLocacaoResponse
 {

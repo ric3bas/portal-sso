@@ -1,4 +1,4 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
 using Portal.Domain.Locacao;
 using Portal.Domain.Locacao.Interfaces;
 
@@ -17,18 +17,18 @@ public class CancelarLocacaoHandler
     {
         var locacao = await _repository.ObterPorIdAsync(request.Id, cancellationToken);
         if (locacao is null)
-            return Result.NotFoundResult<CancelarLocacaoResponse>("Locação não encontrada");
+            return Result.NotFoundResult<CancelarLocacaoResponse>("LocaÃ§Ã£o nÃ£o encontrada");
 
         if (locacao.Status == StatusLocacao.Devolvida)
-            return Result.ValidationResult<CancelarLocacaoResponse>("Locações já devolvidas não podem ser canceladas");
+            return Result.ValidationResult<CancelarLocacaoResponse>("LocaÃ§Ãµes jÃ¡ devolvidas nÃ£o podem ser canceladas");
 
         if (locacao.Status == StatusLocacao.Cancelada)
-            return Result.ValidationResult<CancelarLocacaoResponse>("Locação já está cancelada");
+            return Result.ValidationResult<CancelarLocacaoResponse>("LocaÃ§Ã£o jÃ¡ estÃ¡ cancelada");
 
         var rows = await _repository.CancelarAsync(request.Id, cancellationToken);
         if (rows == 0)
-            return Result.NotFoundResult<CancelarLocacaoResponse>("Locação não encontrada");
+            return Result.NotFoundResult<CancelarLocacaoResponse>("LocaÃ§Ã£o nÃ£o encontrada");
 
-        return Result.OkResult(new CancelarLocacaoResponse { Mensagem = "Locação cancelada com sucesso" });
+        return Result.OkResult(new CancelarLocacaoResponse { Mensagem = "LocaÃ§Ã£o cancelada com sucesso" });
     }
 }

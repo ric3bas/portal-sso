@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Http;
+Ôªøusing Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using Portal.Domain.Base.Email;
@@ -41,7 +41,6 @@ public class AuthServiceTests
     [Fact]
     public void Constructor_InitializesAllDependencies()
     {
-        // Arrange
         var authRepository = Substitute.For<IAuthRepository>();
         var tokenRepository = Substitute.For<ITokenAtualizacaoRepository>();
         var configuration = Substitute.For<IConfiguration>();
@@ -49,7 +48,6 @@ public class AuthServiceTests
         var emailService = Substitute.For<IEmailService>();
         var usuarioRepository = Substitute.For<IUsuarioRepository>();
 
-        // Act
         var service = new AuthService(
             authRepository,
             tokenRepository,
@@ -58,7 +56,6 @@ public class AuthServiceTests
             emailService,
             usuarioRepository);
 
-        // Assert
         Assert.NotNull(service);
     }
 
@@ -67,10 +64,8 @@ public class AuthServiceTests
     [Fact]
     public async Task TrocarSenhaAsync_InvalidRequest_ThrowsValidationException()
     {
-        // Arrange - invalid request without token
         var request = new TrocarSenhaRequest();
 
-        // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.TrocarSenhaAsync(request, CancellationToken.None));
     }
@@ -78,7 +73,6 @@ public class AuthServiceTests
     [Fact]
     public async Task TrocarSenhaAsync_TokenNotFound_ThrowsBusinessException()
     {
-        // Arrange
         var request = new TrocarSenhaRequest
         {
             Token = "invalid-token",
@@ -89,16 +83,14 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
             .Returns((RecuperacaoSenhaQuery?)null);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.TrocarSenhaAsync(request, CancellationToken.None));
-        Assert.Contains("Token inv·lido", exception.Errors);
+        Assert.Contains("Token inv√°lido", exception.Errors);
     }
 
     [Fact]
     public async Task TrocarSenhaAsync_TokenAlreadyUsed_ThrowsBusinessException()
     {
-        // Arrange
         var request = new TrocarSenhaRequest
         {
             Token = "used-token",
@@ -118,16 +110,14 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
             .Returns(entity);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.TrocarSenhaAsync(request, CancellationToken.None));
-        Assert.Contains("Token j· utilizado", exception.Errors);
+        Assert.Contains("Token j√° utilizado", exception.Errors);
     }
 
     [Fact]
     public async Task TrocarSenhaAsync_TokenExpired_ThrowsBusinessException()
     {
-        // Arrange
         var request = new TrocarSenhaRequest
         {
             Token = "expired-token",
@@ -147,7 +137,6 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
             .Returns(entity);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.TrocarSenhaAsync(request, CancellationToken.None));
         Assert.Contains("Token expirado", exception.Errors);
@@ -156,7 +145,6 @@ public class AuthServiceTests
     [Fact]
     public async Task TrocarSenhaAsync_ValidRequest_UpdatesPasswordAndMarksTokenAsUsed()
     {
-        // Arrange
         var request = new TrocarSenhaRequest
         {
             Token = "valid-token",
@@ -178,10 +166,8 @@ public class AuthServiceTests
         _authRepository.AtualizarSenhaUsuarioAsync(entity.UsuarioId, Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(true);
 
-        // Act
         var result = await _service.TrocarSenhaAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.Equal("Senha alterada com sucesso", result.Data.Mensagem);
         await _authRepository.Received(1).AtualizarSenhaUsuarioAsync(
@@ -198,10 +184,8 @@ public class AuthServiceTests
     [Fact]
     public async Task ValidarTokenAsync_InvalidRequest_ThrowsValidationException()
     {
-        // Arrange - invalid request without token
         var request = new ValidarTokenRecuperacaoRequest();
 
-        // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.ValidarTokenAsync(request, CancellationToken.None));
     }
@@ -209,7 +193,6 @@ public class AuthServiceTests
     [Fact]
     public async Task ValidarTokenAsync_TokenNotFound_ThrowsBusinessException()
     {
-        // Arrange
         var request = new ValidarTokenRecuperacaoRequest
         {
             Token = "invalid-token"
@@ -218,16 +201,14 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
             .Returns((RecuperacaoSenhaQuery?)null);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.ValidarTokenAsync(request, CancellationToken.None));
-        Assert.Contains("Token inv·lido", exception.Errors);
+        Assert.Contains("Token inv√°lido", exception.Errors);
     }
 
     [Fact]
     public async Task ValidarTokenAsync_TokenAlreadyUsed_ThrowsBusinessException()
     {
-        // Arrange
         var request = new ValidarTokenRecuperacaoRequest
         {
             Token = "used-token"
@@ -245,16 +226,14 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
             .Returns(entity);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.ValidarTokenAsync(request, CancellationToken.None));
-        Assert.Contains("Token j· utilizado", exception.Errors);
+        Assert.Contains("Token j√° utilizado", exception.Errors);
     }
 
     [Fact]
     public async Task ValidarTokenAsync_TokenExpired_ThrowsBusinessException()
     {
-        // Arrange
         var request = new ValidarTokenRecuperacaoRequest
         {
             Token = "expired-token"
@@ -272,7 +251,6 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
             .Returns(entity);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.ValidarTokenAsync(request, CancellationToken.None));
         Assert.Contains("Token expirado", exception.Errors);
@@ -281,7 +259,6 @@ public class AuthServiceTests
     [Fact]
     public async Task ValidarTokenAsync_ValidToken_ReturnsSuccessResponse()
     {
-        // Arrange
         var request = new ValidarTokenRecuperacaoRequest
         {
             Token = "valid-token"
@@ -299,12 +276,10 @@ public class AuthServiceTests
         _authRepository.ObterRecuperacaoSenhaPorTokenAsync(request.Token, Arg.Any<CancellationToken>())
             .Returns(entity);
 
-        // Act
         var result = await _service.ValidarTokenAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
-        Assert.Equal("Token v·lido, pode prosseguir com alteraÁ„o de senha", result.Data.Mensagem);
+        Assert.Equal("Token v√°lido, pode prosseguir com altera√ß√£o de senha", result.Data.Mensagem);
     }
 
     #endregion
@@ -314,10 +289,8 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_InvalidRequest_ThrowsValidationException()
     {
-        // Arrange - invalid request without login/password
         var request = new LoginRequest();
 
-        // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.LoginAsync(request, CancellationToken.None));
     }
@@ -325,7 +298,6 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_UserNotFound_ThrowsBusinessException()
     {
-        // Arrange
         var request = new LoginRequest
         {
             Login = "test@example.com",
@@ -342,16 +314,14 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
             .Returns(dados);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.LoginAsync(request, CancellationToken.None));
-        Assert.Contains("Usu·rio ou senha inv·lidos", exception.Errors);
+        Assert.Contains("Usu√°rio ou senha inv√°lidos", exception.Errors);
     }
 
     [Fact]
     public async Task LoginAsync_UserBlockedByLoginAttempts_ThrowsBusinessException()
     {
-        // Arrange
         var request = new LoginRequest
         {
             Login = "test@example.com",
@@ -375,16 +345,14 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
             .Returns(dados);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.LoginAsync(request, CancellationToken.None));
-        Assert.Contains("Usu·rio bloqueado por excesso de tentativas. Aguarde ou redefina sua senha.", exception.Errors);
+        Assert.Contains("Usu√°rio bloqueado por excesso de tentativas. Aguarde ou redefina sua senha.", exception.Errors);
     }
 
     [Fact]
     public async Task LoginAsync_InvalidPassword_IncrementsAttemptsAndThrowsBusinessException()
     {
-        // Arrange
         var request = new LoginRequest
         {
             Login = "test@example.com",
@@ -408,17 +376,15 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
             .Returns(dados);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.LoginAsync(request, CancellationToken.None));
-        Assert.Contains("Usu·rio ou senha inv·lidos", exception.Errors);
+        Assert.Contains("Usu√°rio ou senha inv√°lidos", exception.Errors);
         await _usuarioRepository.Received(1).IncrementarTentativaLoginAsync(dados.Usuario.Id, Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task LoginAsync_ValidCredentials_ResetsAttemptsAndReturnsTokens()
     {
-        // Arrange
         var request = new LoginRequest
         {
             Login = "test@example.com",
@@ -453,10 +419,8 @@ public class AuthServiceTests
         configSection["Audience"].Returns("test-audience");
         _configuration.GetSection("Jwt").Returns(configSection);
 
-        // Act
         var result = await _service.LoginAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.NotNull(result.Data.AccessToken);
         Assert.NotNull(result.Data.RefreshToken);
@@ -475,10 +439,8 @@ public class AuthServiceTests
     [Fact]
     public async Task RefreshAsync_InvalidRequest_ThrowsValidationException()
     {
-        // Arrange - invalid request without refresh token
         var request = new RefreshTokenRequest();
 
-        // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.RefreshAsync(request, CancellationToken.None));
     }
@@ -486,7 +448,6 @@ public class AuthServiceTests
     [Fact]
     public async Task RefreshAsync_TokenNotFound_ThrowsBusinessException()
     {
-        // Arrange
         var request = new RefreshTokenRequest
         {
             RefreshToken = "invalid-token"
@@ -495,16 +456,14 @@ public class AuthServiceTests
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
             .Returns((TokenAtualizacaoQuery?)null);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.RefreshAsync(request, CancellationToken.None));
-        Assert.Contains("Refresh token inv·lido ou expirado", exception.Errors);
+        Assert.Contains("Refresh token inv√°lido ou expirado", exception.Errors);
     }
 
     [Fact]
     public async Task RefreshAsync_TokenRevoked_ThrowsBusinessException()
     {
-        // Arrange
         var request = new RefreshTokenRequest
         {
             RefreshToken = "revoked-token"
@@ -522,16 +481,14 @@ public class AuthServiceTests
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
             .Returns(token);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.RefreshAsync(request, CancellationToken.None));
-        Assert.Contains("Refresh token inv·lido ou expirado", exception.Errors);
+        Assert.Contains("Refresh token inv√°lido ou expirado", exception.Errors);
     }
 
     [Fact]
     public async Task RefreshAsync_TokenExpired_ThrowsBusinessException()
     {
-        // Arrange
         var request = new RefreshTokenRequest
         {
             RefreshToken = "expired-token"
@@ -549,16 +506,14 @@ public class AuthServiceTests
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
             .Returns(token);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.RefreshAsync(request, CancellationToken.None));
-        Assert.Contains("Refresh token inv·lido ou expirado", exception.Errors);
+        Assert.Contains("Refresh token inv√°lido ou expirado", exception.Errors);
     }
 
     [Fact]
     public async Task RefreshAsync_UserNotFound_ThrowsBusinessException()
     {
-        // Arrange
         var request = new RefreshTokenRequest
         {
             RefreshToken = "valid-token"
@@ -586,16 +541,14 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginPorIdAsync(token.UsuarioId, Arg.Any<CancellationToken>())
             .Returns(dados);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.RefreshAsync(request, CancellationToken.None));
-        Assert.Contains("Usu·rio n„o encontrado", exception.Errors);
+        Assert.Contains("Usu√°rio n√£o encontrado", exception.Errors);
     }
 
     [Fact]
     public async Task RefreshAsync_ValidToken_RevokesOldTokenAndReturnsNewTokens()
     {
-        // Arrange
         var request = new RefreshTokenRequest
         {
             RefreshToken = "valid-token"
@@ -639,10 +592,8 @@ public class AuthServiceTests
         configSection["Audience"].Returns("test-audience");
         _configuration.GetSection("Jwt").Returns(configSection);
 
-        // Act
         var result = await _service.RefreshAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.NotNull(result.Data.AccessToken);
         Assert.NotNull(result.Data.RefreshToken);
@@ -661,10 +612,8 @@ public class AuthServiceTests
     [Fact]
     public async Task LogoutAsync_InvalidRequest_ThrowsValidationException()
     {
-        // Arrange - invalid request without refresh token
         var request = new LogoutRequest();
 
-        // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.LogoutAsync(request, CancellationToken.None));
     }
@@ -672,7 +621,6 @@ public class AuthServiceTests
     [Fact]
     public async Task LogoutAsync_TokenNotFound_ThrowsBusinessException()
     {
-        // Arrange
         var request = new LogoutRequest
         {
             RefreshToken = "invalid-token"
@@ -681,16 +629,14 @@ public class AuthServiceTests
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
             .Returns((TokenAtualizacaoQuery?)null);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.LogoutAsync(request, CancellationToken.None));
-        Assert.Contains("Refresh token inv·lido ou j· revogado", exception.Errors);
+        Assert.Contains("Refresh token inv√°lido ou j√° revogado", exception.Errors);
     }
 
     [Fact]
     public async Task LogoutAsync_TokenAlreadyRevoked_ThrowsBusinessException()
     {
-        // Arrange
         var request = new LogoutRequest
         {
             RefreshToken = "revoked-token"
@@ -708,16 +654,14 @@ public class AuthServiceTests
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
             .Returns(token);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BusinessException>(() =>
             _service.LogoutAsync(request, CancellationToken.None));
-        Assert.Contains("Refresh token inv·lido ou j· revogado", exception.Errors);
+        Assert.Contains("Refresh token inv√°lido ou j√° revogado", exception.Errors);
     }
 
     [Fact]
     public async Task LogoutAsync_ValidToken_RevokesToken()
     {
-        // Arrange
         var request = new LogoutRequest
         {
             RefreshToken = "valid-token"
@@ -735,10 +679,8 @@ public class AuthServiceTests
         _tokenRepository.ObterPorTokenAsync(request.RefreshToken, Arg.Any<CancellationToken>())
             .Returns(token);
 
-        // Act
         await _service.LogoutAsync(request, CancellationToken.None);
 
-        // Assert
         await _tokenRepository.Received(1).RevogarAsync(request.RefreshToken, Arg.Any<CancellationToken>());
     }
 
@@ -749,7 +691,6 @@ public class AuthServiceTests
     [Fact]
     public async Task SolicitarRecuperacaoAsync_UserNotFound_ReturnsFalseEmailEnviado()
     {
-        // Arrange
         var request = new RecuperarSenhaRequest
         {
             Login = "nonexistent@example.com"
@@ -765,10 +706,8 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
             .Returns(loginData);
 
-        // Act
         var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.False(result.Data.EmailEnviado);
     }
@@ -776,7 +715,6 @@ public class AuthServiceTests
     [Fact]
     public async Task SolicitarRecuperacaoAsync_UserWithoutEmail_ReturnsFalseEmailEnviado()
     {
-        // Arrange
         var request = new RecuperarSenhaRequest
         {
             Login = "test@example.com"
@@ -797,10 +735,8 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
             .Returns(loginData);
 
-        // Act
         var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.False(result.Data.EmailEnviado);
     }
@@ -808,7 +744,6 @@ public class AuthServiceTests
     [Fact]
     public async Task SolicitarRecuperacaoAsync_UserWithEmptyEmail_ReturnsFalseEmailEnviado()
     {
-        // Arrange
         var request = new RecuperarSenhaRequest
         {
             Login = "test@example.com"
@@ -829,10 +764,8 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
             .Returns(loginData);
 
-        // Act
         var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.False(result.Data.EmailEnviado);
     }
@@ -840,7 +773,6 @@ public class AuthServiceTests
     [Fact]
     public async Task SolicitarRecuperacaoAsync_ValidUser_InsertsRecoveryTokenAndSendsEmail()
     {
-        // Arrange
         var request = new RecuperarSenhaRequest
         {
             Login = "test@example.com"
@@ -862,10 +794,8 @@ public class AuthServiceTests
         _authRepository.ObterDadosLoginAsync(request.Login, Arg.Any<CancellationToken>())
             .Returns(loginData);
 
-        // Act
         var result = await _service.SolicitarRecuperacaoAsync(request, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result.Data);
         Assert.True(result.Data.EmailEnviado);
         
@@ -878,7 +808,7 @@ public class AuthServiceTests
 
         await _emailService.Received(1).EnviarEmailAsync(
             "test@example.com",
-            "RecuperaÁ„o de Senha",
+            "Recupera√ß√£o de Senha",
             Arg.Is<string>(corpo => corpo.Contains("<html>") && corpo.Contains("Link")));
     }
 

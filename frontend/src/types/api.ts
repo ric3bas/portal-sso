@@ -71,11 +71,15 @@ export interface CategoriaResponse {
 export interface ParceiroRequest {
   nome: string
   descricao: string
+  corPrimaria: string
+  corSecundaria: string
 }
 
 export interface AtualizarParceiroRequest {
   nome: string
   descricao: string
+  corPrimaria: string
+  corSecundaria: string
   ativo: boolean
 }
 
@@ -83,6 +87,8 @@ export interface ParceiroResponse {
   id: string
   nome?: string | null
   descricao?: string | null
+  corPrimaria?: string | null
+  corSecundaria?: string | null
   ativo: boolean
 }
 
@@ -327,6 +333,22 @@ export interface FinanceiroPeriodoParams {
   dataFim?: string
 }
 
+export interface CollectionQueryParams {
+  Direcao?: 'asc' | 'desc'
+  Pagina?: number
+  TamanhoPagina?: number
+}
+
+export interface PaginatedResult<T> {
+  items: T[]
+  pagination: {
+    page: number
+    pageSize: number
+    totalRecords: number
+    totalPages: number
+  }
+}
+
 export interface LocacoesFilterParams {
   ClienteId?: string
   EquipamentoId?: string
@@ -341,6 +363,8 @@ export interface SessionData {
   expiresInMinutes?: string | null
   login?: string
   isMaster: boolean
+  corPrimaria?: string
+  corSecundaria?: string
 }
 
 export interface SelectOption {

@@ -1,4 +1,4 @@
-namespace Portal.Domain.Common.Interfaces;
+﻿namespace Portal.Domain.Common.Interfaces;
 
 public interface IRepository<T> where T : BaseEntity
 {

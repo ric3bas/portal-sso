@@ -1,5 +1,4 @@
-using FluentValidation;
-using Portal.Application.Cliente.Common;
+﻿using Portal.Application.Cliente.Common;
 using Portal.Domain.Base;
 using Portal.Domain.Cliente;
 using Portal.Domain.Cliente.Interfaces;
@@ -9,37 +8,30 @@ namespace Portal.Application.Cliente.UseCases.CriarCliente;
 public class CriarClienteHandler
 {
     private readonly IClienteRepository _repository;
-    private readonly IValidator<CriarClienteRequest> _validator;
     private readonly ILogger<CriarClienteHandler> _logger;
 
     public CriarClienteHandler(
         IClienteRepository repository,
-        IValidator<CriarClienteRequest> validator,
         ILogger<CriarClienteHandler> logger)
     {
         _repository = repository;
-        _validator = validator;
         _logger = logger;
     }
 
-    public async Task<Result<CriarClienteResponse>> Handle(CriarClienteRequest request, CancellationToken cancellationToken)
+    public async Task<Result<string>> Handle(CriarClienteRequest request, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Criando cliente: {Nome}", request.Nome);
 
-        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            return Result.ValidationResult<CriarClienteResponse>(validationResult.Errors.Select(e => e.ErrorMessage));
-        }
+        if (!request.IsValid()) return Result.ValidationResult<string>(request.ObterErros());
 
         if (await _repository.ExisteCpfAsync(request.Cpf, cancellationToken: cancellationToken))
         {
-            return Result.ValidationResult<CriarClienteResponse>("Já existe um cliente com este CPF");
+            return Result.ValidationResult<string>("Já existe um cliente com este CPF");
         }
 
         if (await _repository.ExisteEmailAsync(request.Email, cancellationToken: cancellationToken))
         {
-            return Result.ValidationResult<CriarClienteResponse>("Já existe um cliente com este email");
+            return Result.ValidationResult<string>("Já existe um cliente com este email");
         }
 
         var entity = new ClienteCommand
@@ -65,11 +57,7 @@ public class CriarClienteHandler
             }
         };
 
-        var id = await _repository.CriarAsync(entity, cancellationToken);
-        return Result.OkResult(new CriarClienteResponse
-        {
-            Id = id,
-            Mensagem = "Cliente criado com sucesso"
-        });
+        _ = await _repository.CriarAsync(entity, cancellationToken);
+        return Result.OkResult("Cliente criado com sucesso");
     }
 }

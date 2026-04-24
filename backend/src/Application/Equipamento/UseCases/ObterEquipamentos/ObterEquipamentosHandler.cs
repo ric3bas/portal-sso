@@ -1,6 +1,6 @@
-using Portal.Domain.Base;
+﻿using Portal.Domain.Base;
+using Portal.Domain.Common;
 using Portal.Domain.Equipamento.Interfaces;
-using Portal.Domain.Portal.Extensions;
 
 namespace Portal.Application.Equipamento.UseCases.ObterEquipamentos;
 
@@ -13,14 +13,12 @@ public class ObterEquipamentosHandler
         _repository = repository;
     }
 
-    public async Task<Result<List<ObterEquipamentosResponse>>> Handle(ObterEquipamentosRequest request, CancellationToken cancellationToken)
+    public async Task<Result<TabelaPaginadaResponse<ObterEquipamentosResponse>>> Handle(ObterEquipamentosRequest request, CancellationToken cancellationToken)
     {
-        var equipamentos = await _repository.ObterTodosAsync(cancellationToken);
-        if (equipamentos == null || !equipamentos.Any())
-        {
-            return Result.NotFoundResult<List<ObterEquipamentosResponse>>("Nenhum equipamento encontrado");
-        }
+        var resultado = await _repository.ObterTodosAsync(request.DirecaoEnum, request.Pagina, request.TamanhoPagina, cancellationToken);
+        var response = resultado.Itens.Select(x => x.ToResponse<ObterEquipamentosResponse>()).ToList();
+        var tabela = TabelaPaginadaResponse<ObterEquipamentosResponse>.Criar(response, resultado.TotalRegistros, resultado.TotalRegistros, resultado.NumeroPagina, resultado.TamanhoPagina);
 
-        return Result.OkResult(equipamentos.Select(x => x.ToResponse<ObterEquipamentosResponse>()).ToList());
+        return Result.OkResult(tabela);
     }
 }

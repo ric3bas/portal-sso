@@ -1,6 +1,6 @@
-namespace Portal.Application.Usuario.UseCases.ListarUsuarios;
+﻿namespace Portal.Application.Usuario.UseCases.ObterUsuarios;
 
-public class ListarUsuariosResponse
+public class ObterUsuariosResponse
 {
     public int Id { get; set; }
     public string Nome { get; set; } = string.Empty;
@@ -11,3 +11,4 @@ public class ListarUsuariosResponse
     public bool Ativo { get; set; }
     public bool Bloqueado { get; set; }
 }
+
